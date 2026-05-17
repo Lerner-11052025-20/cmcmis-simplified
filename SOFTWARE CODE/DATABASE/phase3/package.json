@@ -1,0 +1,23 @@
+{
+  "name": "cmcmis-phase3-migrations",
+  "version": "2.0.0",
+  "description": "CMCMIS_SIMPLIFIED — Phase 3 schema migrations + bootstrap (v2.0 LOCKED)",
+  "main": "runner/run-migrations.js",
+  "scripts": {
+    "migrate": "node runner/run-migrations.js",
+    "migrate:dry": "node runner/run-migrations.js --dry-run",
+    "migrate:status": "node runner/run-migrations.js --status",
+    "migrate:reset": "node runner/run-migrations.js --reset",
+    "test:bootstrap": "node runner/test-bootstrap.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.11.0"
+  },
+  "author": "Deep Sorathiya (DS)",
+  "license": "Proprietary — Organisation Internal"
+}

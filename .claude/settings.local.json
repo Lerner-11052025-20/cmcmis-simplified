@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//e/e/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/BE/**)",
+      "Bash(node --check src/server.js)",
+      "Bash(node --check src/modules/auth/auth.routes.js)",
+      "Bash(node --check src/modules/auth/auth.controller.js)",
+      "Bash(node --check src/modules/auth/auth.service.js)",
+      "Bash(node --check src/modules/auth/users.repo.js)"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+# ============================================================================
+# Phase 3 — Database migration runner  ·  Git ignore
+# ----------------------------------------------------------------------------
+# The migration runner is a Node script with its own deps. Local state
+# (node_modules, .env with DB creds, runner-side cache) must never ship.
+# ============================================================================
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local DB credentials for the migration runner
+.env
+.env.local
+
+# Runner-side state (if the migration script persists a "last applied" cursor)
+.migration-state
+*.migration.log
+
+# Verifier output (if redirected to a file)
+verifier.out
+verifier.err

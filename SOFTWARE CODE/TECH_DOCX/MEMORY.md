@@ -1,0 +1,18 @@
+- [User Role & Context](user_role.md) — Software Developer intern, solo, 10-week timeline, treats me as senior pair
+- [Response Style Preference](feedback_response_style.md) — Always structured, table+flowchart+diagram heavy, beginner→advanced
+- [Code Style — HIGH COMMENTS](feedback_code_style_high_comments.md) — CMCMIS code uses HIGH-COMMENT mode; OVERRIDES default no-comments rule
+- [Shell Preference](feedback_shell_preference.md) — Always use Bash tool, NEVER PowerShell
+- [JavaScript only — NEVER TypeScript](feedback_javascript_only.md) — CMCMIS is JS-only end-to-end; .jsx for components, .js elsewhere; ignore .tsx in any spec/doc
+- [CMCMIS Project Overview](project_cmcmis_overview.md) — Industry-grade calibration/maintenance MIS for ISRO SAC-like defence/space-grade org
+- [CMCMIS Tech Stack](project_cmcmis_tech_stack.md) — React+Vite+Tailwind / Node+Express / MySQL via phpMyAdmin (locked)
+- [CMCMIS Modules & Roles](project_cmcmis_modules_roles.md) — 9 modules, **5 roles only (NO Admin role)**, 3-layer RBAC; equipment:create open to all except View-Only
+- [CMCMIS MVP Scope](project_cmcmis_mvp_scope.md) — 10-week MVP: Auth+RBAC, Equipment, Job Requests, Job Cards, Dashboard, Inquiry, PDF, audit, responsive
+- [CMCMIS Constraints](project_cmcmis_constraints.md) — NO SSO/email/Redis/storage/backup/mobile/QR in MVP; existing 64-table DB to be reviewed in Phase 3
+- [CMCMIS Business Rules + FR + NFR](project_cmcmis_business_rules.md) — Full BR/FR/NFR contract: equipment PENDING_VERIFICATION state, single-role per user, 2 super admin seed, 60-min idle session
+- [CMCMIS Decisions Register](project_cmcmis_decisions.md) — D1-D11 + C1-C5 all LOCKED: JS+JSDoc+Zod, Raw SQL+Repo, RQ+Zustand+pdfkit+Pino, feature-FE folders, Nginx prod, +6 confirmed stack adds
+- [CMCMIS Existing DB Inventory](project_cmcmis_existing_db.md) — 64 legacy tables audit (Phase 3 Day 1, SUPERSEDED for design by v2.0)
+- [CMCMIS DB Design v2.0 LOCKED](project_cmcmis_db_v2_locked.md) — Two-universe strategy, 53 active (15 new + 6 alter + 32 keep) + 26 isolated _legacy_*, fresh auth, password ^[A-Z]{2}[0-9]{5}$ bcrypt-12 lifetime
+- [CMCMIS DB v2.0 Migration Answers](project_cmcmis_db_v2_migration_answers.md) — M1-M12 all LOCKED: Admin SM_ID=9999, password=employee_id, no auto-create users, defaults accepted
+- [CMCMIS Phase 3 DELIVERED](project_cmcmis_phase3_delivered.md) — PHASE3_COMPLETE_v2.0 bundle: 16 files / ~2,800 lines / 12 migrations + Node runner + 7-test E2E; 14-check verifier; DB RUNTIME READY
+- [CMCMIS Phase 4 — Software Coding Active](project_cmcmis_next_phase_code.md) — Phase 4 active 2026-05-17; build order starts at scaffold + auth module; high-comment mandate; .jsx not .tsx
+- [CMCMIS Phase 4 DELIVERED](project_cmcmis_phase4_delivered.md) — Auth module shipped 2026-05-17: 21 BE + 19 FE files (pure JS), JWT+httpOnly+CSRF wired, browser-verified. Locks module template for Phase 5+

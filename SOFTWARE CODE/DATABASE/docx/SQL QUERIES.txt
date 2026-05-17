@@ -1,0 +1,15 @@
+SELECT u.employee_id, r.role_code 
+FROM users u
+LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+LEFT JOIN roles r ON r.role_id = ur.role_id;
+
+SELECT 
+  u.user_id,
+  u.employee_id,
+  u.is_active,
+  u.is_locked,
+  r.role_code
+FROM users u
+LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+LEFT JOIN roles r ON r.role_id = ur.role_id
+ORDER BY u.user_id;

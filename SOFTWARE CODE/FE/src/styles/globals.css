@@ -1,0 +1,32 @@
+/* ===========================================================================
+ * src/styles/globals.css  —  Tailwind directives + tiny base layer
+ * ---------------------------------------------------------------------------
+ * Tailwind expands these three lines into the entire utility CSS bundle at
+ * build time. The `@layer base` block sets the global background + body
+ * text color so EVERY page starts on the design-system tokens, even
+ * before any component renders.
+ * =========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-base text-ink font-sans antialiased;
+    /* Tabular numerals so timestamps, IDs, and counts align in tables. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Native focus ring for keyboard accessibility — same accent color as
+   * our buttons, but offset so it stays visible on dense layouts. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-base;
+  }
+}

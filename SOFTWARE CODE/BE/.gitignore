@@ -1,0 +1,36 @@
+# ============================================================================
+# CMCMIS Phase 4 Backend  —  Git ignore rules
+# ----------------------------------------------------------------------------
+# Anything matched here will NEVER be committed. The cardinal sin in this
+# project is committing `.env` (real secrets) or `node_modules` (multi-GB
+# transient state). Keep this list short, audited, and conservative.
+# ============================================================================
+
+# Node runtime artefacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Log output
+logs/
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Coverage / build output (kept for forward compatibility — Phase 9+)
+coverage/
+dist/
+build/

@@ -1,0 +1,1931 @@
+# CMCMIS Database Schema + Key Analysis
+Source file: `test.sql` inside `test.sql.zip`
+Database from dump header: `cmcmis_redev`
+## Executive Summary
+- Total tables found: **64**
+- Total columns found: **749**
+- Tables with primary key: **50**
+- Tables without primary key: **14**
+- Foreign key constraints found: **58**
+- Normal secondary indexes found: **33**
+- Unique keys found: **1**
+- Inserted rows visible in dump: **418,050**
+
+## Main Insights
+1. The schema is strongly centered around equipment/instrument lifecycle management, with `cmms_eqip_mst` as the major equipment master table and many detail/history tables referencing its composite key.
+2. Job-card workflow is the largest operational area. Many tables reference `cmms_jobcard_mst`.`JM_SectionJobNo`, including attended-by, awaiting info, calibration details, observations, contract/warranty, equipment-used, faulty category/section, inspection, repair, request, spares, and status/history tables.
+3. The database uses many composite primary keys. This is important for backend API design because URL params and SQL WHERE clauses must include all parts of the key.
+4. Several tables have no primary key in the dump. These tables need careful handling for update/delete APIs because row identity is not guaranteed from DB constraints.
+5. RBAC exists through `cmms_accessright_mst`, `cmms_role_mst`, `cmms_module_mst`, `cmms_emp_mst`, `cmms_section_user_mst`, and `cmms_userrole_mst`. `cmms_accessright_mst` connects roles to modules.
+6. Scheduling is modeled through `cmms_schedule_mst` and `cmms_schedule_eqip_dtl`, with schedule details linking back to equipment master using composite equipment keys.
+7. Procurement/inventory/vendor/AMC areas are present through `cmms_pur_mst`, `cmms_pur_dtl`, `cmms_inv_mst`, `cmms_po_mst`, `cmms_amc_mst`, `cmms_cont_mst`, and `cmms_device_spares_mst`.
+8. Audit/history exists but is inconsistent table-wise: several `_hist` / `_history` tables exist, but not every operational table appears to have a matching history table.
+9. There are legacy/helper tables such as `cf001`–`cf004` and `chklistvendor`. These look like checklist-related or migration/helper snapshots and must not be assumed as normalized core tables without checking application usage.
+
+## Tables Without Primary Key
+`cf001`, `cf002`, `cf003`, `cf004`, `chklistvendor`, `cmms_cal_jobcard_feedback_spec`, `cmms_checklist_hist`, `cmms_checklist_tasks_hist`, `cmms_division_hist`, `cmms_jobcard_status_hist`, `cmms_parameter_master`, `cmms_parameter_master_bkp`, `cmms_parameter_master_incharge`, `cmms_parameter_master_jun2016`
+
+## Largest Tables by Inserted Rows in Dump
+| Table | Inserted Rows | Columns | Primary Key | Foreign Keys |
+|---|---:|---:|---|---:|
+| `cmms_jobcard_cal_observations` | 77,171 | 4 | `JobcardNumber`, `TaskID` | 2 |
+| `cmms_jobcard_eq_used` | 38,316 | 4 | `JEU_JobCardNo`, `JEU_EquipType`, `JEU_EquipId` | 2 |
+| `cmms_jobcard_attendedby_dtl` | 27,890 | 4 | `JMA_SECTIONJOBNO`, `JMA_USERID`, `JMA_ISAWAITING` | 2 |
+| `cmms_jobcard_request_project_dtl` | 22,316 | 2 | `JRP_JOBCARDNO`, `JRP_PROJECTID` | 2 |
+| `cmms_jobcard_status_hist` | 22,214 | 5 | — | 1 |
+| `cmms_jobcard_mst_history` | 22,143 | 37 | `HistoryId` | 0 |
+| `cmms_jobrequest_mst` | 21,485 | 37 | `JR_JOBREQUESTNO` | 4 |
+| `cmms_jobrequest_project_dtl` | 19,624 | 2 | `JR_JOBREQUESTNO`, `JR_PROJECTID` | 2 |
+| `cmms_jobcard_mst` | 19,432 | 34 | `JM_SectionJobNo` | 1 |
+| `cmms_jobcard_request_info` | 19,432 | 27 | `JRI_JobCardNo` | 1 |
+| `cmms_jobcard_contract_warranty_dtl` | 17,225 | 17 | `CWD_JobCardNo` | 1 |
+| `cmms_jobcard_request_item_dtl` | 11,064 | 10 | `JR_SECTIONJOBNO`, `JR_ITEM_ID` | 1 |
+| `cmms_jobcard_cal_dtl` | 9,065 | 21 | `JCD_JobCardNo` | 1 |
+| `cmms_jobcard_faulty_category` | 8,605 | 3 | `JobcardNumber`, `FaultyType`, `FaultyCategory` | 2 |
+| `cmms_checklist_tasks_hist` | 8,450 | 4 | — | 0 |
+| `cmms_jobcard_faulty_section` | 8,131 | 3 | `JobcardNumber`, `FaultyType`, `FaultySection` | 2 |
+| `cmms_jobcard_repair_info` | 8,118 | 18 | `JobcardNumber` | 1 |
+| `cmms_jobrequest_item_dtl` | 7,786 | 11 | `JR_JOBREQUESTNO`, `JR_ITEM_ID` | 1 |
+| `cmms_checklist_tasks` | 7,536 | 2 | `CLTSK_ID`, `CLTSK_TASKID` | 2 |
+| `cmms_jobcard_awaitinginfo` | 7,261 | 19 | `JobcardNumber` | 1 |
+
+## Table-wise Schema and Keys
+
+### `cf001`
+- Rows in dump: **6**
+- Columns: **7**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cf001` (
+  `CHKL_ID` int NOT NULL,
+  `CHKL_TYPE` varchar(50) NOT NULL,
+  `CHKL_MAKE` int NOT NULL,
+  `CHKL_MODEL` varchar(50) NOT NULL,
+  `CHKL_STATE` tinyint(1) NOT NULL,
+  `CHKL_UPDATED_BY` varchar(7) NOT NULL,
+  `CHKL_UPDATED_ON` datetime(6) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cf002`
+- Rows in dump: **553**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cf002` (
+  `CLTSK_ID` int NOT NULL,
+  `CLTSK_TASKID` int NOT NULL,
+  `CLTSK_UPDATED_BY` longtext,
+  `CLTSK_UPDATED_ON` datetime(6) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cf003`
+- Rows in dump: **570**
+- Columns: **9**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cf003` (
+  `CHKL_ID` int NOT NULL,
+  `CHKL_TYPE` varchar(50) NOT NULL,
+  `CHKL_MAKE` int NOT NULL,
+  `CHKL_MODEL` varchar(50) NOT NULL,
+  `CHKL_STATE` tinyint(1) NOT NULL,
+  `CHKL_CREATED_BY` varchar(7) NOT NULL,
+  `CHKL_CREATED_ON` datetime(6) NOT NULL,
+  `CHKL_UPDATED_BY` varchar(7) NOT NULL,
+  `CHKL_UPDATED_ON` datetime(6) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cf004`
+- Rows in dump: **3,449**
+- Columns: **2**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cf004` (
+  `CLTSK_ID` int NOT NULL,
+  `CLTSK_TASKID` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `chklistvendor`
+- Rows in dump: **238**
+- Columns: **3**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `chklistvendor` (
+  `chklistno` int DEFAULT NULL,
+  `mfrid` int DEFAULT NULL,
+  `modelno` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_accessright_mst`
+- Rows in dump: **3,221**
+- Columns: **11**
+- Primary Key: `ACC_MOD_ID`, `ACC_ROLE`
+- Foreign Keys:
+  - `FK_CMMS_ACCESSRIGHT_MST_CMMS_MODULE_MST`: (`ACC_MOD_ID`) → `cmms_module_mst` (`MOD_ID`)
+  - `FK_CMMS_ACCESSRIGHT_MST_CMMS_ROLE_MST`: (`ACC_ROLE`) → `cmms_role_mst` (`ROLE_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_ACCESSRIGHT_MST_CMMS_ROLE_MST`: (`ACC_ROLE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_accessright_mst` (
+  `ACC_MOD_ID` int NOT NULL,
+  `ACC_ROLE` int NOT NULL,
+  `ACC_ADD` tinyint unsigned NOT NULL,
+  `ACC_MODIFY` tinyint unsigned NOT NULL,
+  `ACC_VIEW` tinyint unsigned NOT NULL,
+  `ACC_DELETE` tinyint unsigned NOT NULL,
+  `ACC_PRINT` tinyint unsigned NOT NULL,
+  `ACC_CREATED_BY` varchar(7) DEFAULT NULL,
+  `ACC_CREATED_ON` datetime(6) DEFAULT NULL,
+  `ACC_UPDATED_BY` varchar(7) DEFAULT NULL,
+  `ACC_UPDATED_ON` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`ACC_MOD_ID`,`ACC_ROLE`),
+  KEY `FK_CMMS_ACCESSRIGHT_MST_CMMS_ROLE_MST` (`ACC_ROLE`),
+  CONSTRAINT `FK_CMMS_ACCESSRIGHT_MST_CMMS_MODULE_MST` FOREIGN KEY (`ACC_MOD_ID`) REFERENCES `cmms_module_mst` (`MOD_ID`),
+  CONSTRAINT `FK_CMMS_ACCESSRIGHT_MST_CMMS_ROLE_MST` FOREIGN KEY (`ACC_ROLE`) REFERENCES `cmms_role_mst` (`ROLE_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_amc_mst`
+- Rows in dump: **0**
+- Columns: **11**
+- Primary Key: `AMC_ID`
+- Foreign Keys:
+  - `FK_CMMS_AMC_MST_CMMS_BUDGET_MST`: (`AMC_BUDGET_ID`) → `cmms_lineitem_mst` (`LITM_ID`)
+  - `FK_CMMS_AMC_MST_CMMS_CONT_MST`: (`AMC_VENDERID`) → `cmms_cont_mst` (`CMM_CONT_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_AMC_MST_CMMS_BUDGET_MST`: (`AMC_BUDGET_ID`)
+  - `FK_CMMS_AMC_MST_CMMS_CONT_MST`: (`AMC_VENDERID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_amc_mst` (
+  `AMC_ID` int NOT NULL,
+  `AMC_DATE` datetime NOT NULL,
+  `AMC_VENDERID` int NOT NULL,
+  `AMC_BUDGET_ID` varchar(15) DEFAULT NULL,
+  `AMC_COST` bigint NOT NULL,
+  `AMC_STARTDATE` datetime NOT NULL,
+  `AMC_ENDDATE` datetime NOT NULL,
+  `CREATED_BY` varchar(7) NOT NULL,
+  `CREATED_ON` datetime NOT NULL,
+  `UPDATED_BY` bigint DEFAULT NULL,
+  `UPDATED_ON` varchar(7) NOT NULL,
+  PRIMARY KEY (`AMC_ID`),
+  KEY `FK_CMMS_AMC_MST_CMMS_BUDGET_MST` (`AMC_BUDGET_ID`),
+  KEY `FK_CMMS_AMC_MST_CMMS_CONT_MST` (`AMC_VENDERID`),
+  CONSTRAINT `FK_CMMS_AMC_MST_CMMS_BUDGET_MST` FOREIGN KEY (`AMC_BUDGET_ID`) REFERENCES `cmms_lineitem_mst` (`LITM_ID`),
+  CONSTRAINT `FK_CMMS_AMC_MST_CMMS_CONT_MST` FOREIGN KEY (`AMC_VENDERID`) REFERENCES `cmms_cont_mst` (`CMM_CONT_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_cal_jobcard_feedback_spec`
+- Rows in dump: **0**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_cal_jobcard_feedback_spec` (
+  `CAL_JOBCARD_ID` int NOT NULL,
+  `CAL_JOBCARD_FILENAME` varchar(255) NOT NULL,
+  `CAL_JOBCARD_IMAGE` longblob,
+  `CAL_JOBCARD_PATH` longtext
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_checklist_hist`
+- Rows in dump: **811**
+- Columns: **7**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_checklist_hist` (
+  `CHKL_ID` int NOT NULL,
+  `CHKL_TYPE` varchar(50) NOT NULL,
+  `CHKL_MAKE` int NOT NULL,
+  `CHKL_MODEL` varchar(50) NOT NULL,
+  `CHKL_STATE` tinyint(1) NOT NULL,
+  `CHKL_UPDATED_BY` varchar(7) NOT NULL,
+  `CHKL_UPDATED_ON` datetime(6) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_checklist_mst`
+- Rows in dump: **928**
+- Columns: **9**
+- Primary Key: `CHKL_ID`
+- Foreign Keys:
+  - `FK_CMMS_CHECKLIST_MST_CMMS_CONT_MST`: (`CHKL_MAKE`) → `cmms_cont_mst` (`CMM_CONT_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_CHECKLIST_MST_CMMS_CONT_MST`: (`CHKL_MAKE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_checklist_mst` (
+  `CHKL_ID` int NOT NULL,
+  `CHKL_TYPE` varchar(50) NOT NULL,
+  `CHKL_MAKE` int NOT NULL,
+  `CHKL_MODEL` varchar(50) NOT NULL,
+  `CHKL_STATE` tinyint(1) NOT NULL,
+  `CHKL_CREATED_BY` varchar(7) NOT NULL,
+  `CHKL_CREATED_ON` datetime(6) NOT NULL,
+  `CHKL_UPDATED_BY` varchar(7) NOT NULL,
+  `CHKL_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`CHKL_ID`),
+  KEY `FK_CMMS_CHECKLIST_MST_CMMS_CONT_MST` (`CHKL_MAKE`),
+  CONSTRAINT `FK_CMMS_CHECKLIST_MST_CMMS_CONT_MST` FOREIGN KEY (`CHKL_MAKE`) REFERENCES `cmms_cont_mst` (`CMM_CONT_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_checklist_tasks`
+- Rows in dump: **7,536**
+- Columns: **2**
+- Primary Key: `CLTSK_ID`, `CLTSK_TASKID`
+- Foreign Keys:
+  - `FK_CMMS_CHECKLIST_TASKS_CMMS_CHECKLIST_MST`: (`CLTSK_ID`) → `cmms_checklist_mst` (`CHKL_ID`)
+  - `FK_CMMS_CHECKLIST_TASKS_CMMS_TASK_MST`: (`CLTSK_TASKID`) → `cmms_task_mst` (`TSK_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_CHECKLIST_TASKS_CMMS_TASK_MST`: (`CLTSK_TASKID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_checklist_tasks` (
+  `CLTSK_ID` int NOT NULL,
+  `CLTSK_TASKID` int NOT NULL,
+  PRIMARY KEY (`CLTSK_ID`,`CLTSK_TASKID`),
+  KEY `FK_CMMS_CHECKLIST_TASKS_CMMS_TASK_MST` (`CLTSK_TASKID`),
+  CONSTRAINT `FK_CMMS_CHECKLIST_TASKS_CMMS_CHECKLIST_MST` FOREIGN KEY (`CLTSK_ID`) REFERENCES `cmms_checklist_mst` (`CHKL_ID`),
+  CONSTRAINT `FK_CMMS_CHECKLIST_TASKS_CMMS_TASK_MST` FOREIGN KEY (`CLTSK_TASKID`) REFERENCES `cmms_task_mst` (`TSK_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_checklist_tasks_hist`
+- Rows in dump: **8,450**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_checklist_tasks_hist` (
+  `CLTSK_ID` int NOT NULL,
+  `CLTSK_TASKID` int NOT NULL,
+  `CLTSK_UPDATED_BY` longtext,
+  `CLTSK_UPDATED_ON` datetime(6) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_designation_mst`
+- Rows in dump: **40**
+- Columns: **8**
+- Primary Key: `DG_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_designation_mst` (
+  `DG_ID` int NOT NULL,
+  `DG_NAME` varchar(150) NOT NULL,
+  `DG_DESCRIPTION` longtext,
+  `DG_STATE` tinyint(1) NOT NULL,
+  `DG_CREATED_BY` varchar(7) NOT NULL,
+  `DG_CREATED_ON` datetime(6) NOT NULL,
+  `DG_UPDATED_BY` varchar(7) NOT NULL,
+  `DG_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`DG_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_device_spares_mst`
+- Rows in dump: **67**
+- Columns: **8**
+- Primary Key: `DS_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_device_spares_mst` (
+  `DS_TYPE` char(1) NOT NULL COMMENT 'S- Spare / D - Device',
+  `DS_ID` int NOT NULL,
+  `DS_NAME` varchar(50) NOT NULL,
+  `DS_STATE` tinyint(1) NOT NULL,
+  `DS_CREATED_BY` varchar(7) NOT NULL,
+  `DS_CREATED_ON` datetime(6) NOT NULL,
+  `DS_UPDATED_BY` varchar(7) NOT NULL,
+  `DS_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`DS_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_division_hist`
+- Rows in dump: **3,676**
+- Columns: **7**
+- Primary Key: —
+- Foreign Keys:
+  - `FK_CMMS_DIVISION_HIST_CMMS_EQIP_MST`: (`EQD_EQM_TYPE`, `EQD_EQM_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_DIVISION_HIST_CMMS_EQIP_MST`: (`EQD_EQM_TYPE`, `EQD_EQM_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_division_hist` (
+  `EQD_EQM_TYPE` varchar(15) NOT NULL,
+  `EQD_EQM_ID` int NOT NULL,
+  `EQD_DIVID` int NOT NULL,
+  `EQD_DIV_DATE` datetime(6) NOT NULL,
+  `EQD_STATUS` varchar(50) NOT NULL,
+  `EQD_STATUS_DATE` datetime(6) NOT NULL,
+  `EQM_DIV_UPD_REASON` longtext,
+  KEY `FK_CMMS_DIVISION_HIST_CMMS_EQIP_MST` (`EQD_EQM_TYPE`,`EQD_EQM_ID`),
+  CONSTRAINT `FK_CMMS_DIVISION_HIST_CMMS_EQIP_MST` FOREIGN KEY (`EQD_EQM_TYPE`, `EQD_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_documentno_mst`
+- Rows in dump: **151**
+- Columns: **6**
+- Primary Key: `DocumentType`, `DocumentYear`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_documentno_mst` (
+  `DocumentType` varchar(20) NOT NULL,
+  `Description` varchar(50) NOT NULL,
+  `DocumentYear` int NOT NULL,
+  `CurrentNo` int NOT NULL,
+  `MaximumNo` int DEFAULT NULL,
+  `SequenceNo` smallint DEFAULT NULL,
+  PRIMARY KEY (`DocumentType`,`DocumentYear`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_emp_mst`
+- Rows in dump: **57**
+- Columns: **30**
+- Primary Key: `EMM_ID`
+- Foreign Keys:
+  - `FK_CMMS_EMP_MST_CMMS_ROLE_MST`: (`EMM_ROLE`) → `cmms_role_mst` (`ROLE_ID`)
+  - `FK_CMMS_EMP_MST_CMMS_SECTION_MST`: (`EMM_DEPT`) → `cmms_section_mst` (`SM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_EMP_MST_CMMS_SECTION_MST`: (`EMM_DEPT`)
+  - `FK_CMMS_EMP_MST_CMMS_ROLE_MST`: (`EMM_ROLE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_emp_mst` (
+  `EMM_ID` varchar(7) NOT NULL,
+  `EMM_NAME` varchar(100) NOT NULL,
+  `EMM_DESIGNATION` varchar(200) NOT NULL,
+  `EMM_DESIGDATE` datetime(6) DEFAULT NULL,
+  `EMM_DEPT` int NOT NULL,
+  `EMM_DEPTDATE` datetime(6) DEFAULT NULL,
+  `EMM_DOB` datetime(6) DEFAULT NULL,
+  `EMM_DOJ` datetime(6) DEFAULT NULL,
+  `EMM_BLOODGRP` varchar(50) DEFAULT NULL,
+  `EMM_ADD` varchar(200) DEFAULT NULL,
+  `EMM_CITY` varchar(100) DEFAULT NULL,
+  `EMM_STATE` varchar(100) DEFAULT NULL,
+  `EMM_ZIP` varchar(100) DEFAULT NULL,
+  `EMM_PH1` varchar(100) DEFAULT NULL,
+  `EMM_PH2` varchar(100) DEFAULT NULL,
+  `EMM_FAX` varchar(100) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_EMAIL` varchar(100) DEFAULT NULL,
+  `EMM_MOBILE` varchar(100) DEFAULT NULL,
+  `EMM_PAGER` varchar(100) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_STARTDT` datetime(6) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_APP_LVL` bigint DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_MAX_PURCHASE` decimal(10,2) DEFAULT NULL,
+  `EMM_REMARKS` varchar(500) DEFAULT NULL,
+  `EMM_CREATED_BY` varchar(7) NOT NULL,
+  `EMM_CREATED_ON` datetime(6) NOT NULL,
+  `EMM_UPDATED_BY` varchar(7) NOT NULL,
+  `EMM_UPDATED_ON` datetime(6) NOT NULL,
+  `EMM_RESIPH` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_ROLE` int DEFAULT NULL,
+  `EMM_INACTIVE` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`EMM_ID`),
+  KEY `FK_CMMS_EMP_MST_CMMS_SECTION_MST` (`EMM_DEPT`),
+  KEY `FK_CMMS_EMP_MST_CMMS_ROLE_MST` (`EMM_ROLE`),
+  CONSTRAINT `FK_CMMS_EMP_MST_CMMS_ROLE_MST` FOREIGN KEY (`EMM_ROLE`) REFERENCES `cmms_role_mst` (`ROLE_ID`),
+  CONSTRAINT `FK_CMMS_EMP_MST_CMMS_SECTION_MST` FOREIGN KEY (`EMM_DEPT`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_eqip_detail_spec`
+- Rows in dump: **3**
+- Columns: **4**
+- Primary Key: `EDS_EQIP_TYPE`, `EDS_EQIP_ID`, `EDS_FILENAME`
+- Foreign Keys:
+  - `FK_CMMS_EQIP_DETAIL_SPEC_CMMS_EQIP_MST`: (`EDS_EQIP_TYPE`, `EDS_EQIP_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_eqip_detail_spec` (
+  `EDS_EQIP_TYPE` varchar(15) NOT NULL,
+  `EDS_EQIP_ID` int NOT NULL,
+  `EDS_FILENAME` varchar(255) NOT NULL,
+  `EDS_IMAGE` longblob,
+  PRIMARY KEY (`EDS_EQIP_TYPE`,`EDS_EQIP_ID`,`EDS_FILENAME`),
+  CONSTRAINT `FK_CMMS_EQIP_DETAIL_SPEC_CMMS_EQIP_MST` FOREIGN KEY (`EDS_EQIP_TYPE`, `EDS_EQIP_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_eqip_mst`
+- Rows in dump: **5,704**
+- Columns: **47**
+- Primary Key: `EQM_TYPE`, `EQM_ID`
+- Foreign Keys:
+  - `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST`: (`EQM_PMCHKLSTNO`) → `cmms_checklist_mst` (`CHKL_ID`)
+  - `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST1`: (`EQM_CALCHKLSTNO`) → `cmms_checklist_mst` (`CHKL_ID`)
+  - `FK_CMMS_EQIP_MST_CMMS_CONT_MST`: (`EQM_MFRID`) → `cmms_cont_mst` (`CMM_CONT_ID`)
+  - `FK_CMMS_EQIP_MST_CMMS_PRODUCT_MST`: (`EQM_INST_TYPE`) → `cmms_product_mst` (`PROD_ID`)
+  - `FK_CMMS_EQIP_MST_CMMS_SECTION_MST`: (`EQM_DIVID`) → `cmms_section_mst` (`SM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_EQIP_MST_CMMS_SECTION_MST`: (`EQM_DIVID`)
+  - `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST`: (`EQM_PMCHKLSTNO`)
+  - `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST1`: (`EQM_CALCHKLSTNO`)
+  - `FK_CMMS_EQIP_MST_CMMS_CONT_MST`: (`EQM_MFRID`)
+  - `FK_CMMS_EQIP_MST_CMMS_PRODUCT_MST`: (`EQM_INST_TYPE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_eqip_mst` (
+  `EQM_TYPE` varchar(15) NOT NULL,
+  `EQM_ID` int NOT NULL,
+  `EQM_NAME` varchar(100) NOT NULL,
+  `EQM_DIVID` int NOT NULL,
+  `EQM_PM_FREQ` varchar(2) DEFAULT NULL,
+  `EQM_PMCHKLSTNO` int DEFAULT NULL,
+  `EQM_CAL_FREQ` varchar(2) DEFAULT NULL COMMENT 'This is changed from smallint to Varchar(2) due to parameter table has varchar',
+  `EQM_CALCHKLSTNO` int DEFAULT NULL,
+  `EQM_CALSOURCE` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EQM_INST_TYPE` int DEFAULT NULL,
+  `EQM_TMPLTID` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EQM_MFRID` int NOT NULL,
+  `EQM_MFG_MODEL_NAME` varchar(100) DEFAULT NULL,
+  `EQM_VENID` varchar(50) DEFAULT NULL COMMENT 'NA as per new design',
+  `EQM_SRNO` varchar(50) DEFAULT NULL,
+  `EQM_MODELNO` varchar(50) DEFAULT NULL,
+  `EQM_OPTIONNDESC` varchar(250) DEFAULT NULL,
+  `EQM_ASSETNO` varchar(50) DEFAULT NULL,
+  `EQM_SRVNO` varchar(50) DEFAULT NULL,
+  `EQM_SRVDATE` datetime(6) DEFAULT NULL,
+  `EQM_PONO` varchar(50) DEFAULT NULL,
+  `EQM_PODATE` datetime(6) DEFAULT NULL,
+  `EQM_BUDGETCODE` varchar(50) DEFAULT NULL,
+  `EQM_EQIPCOST` decimal(18,2) DEFAULT NULL,
+  `EQM_COSTCURRENCY` varchar(50) DEFAULT NULL,
+  `EQM_WRNTY_EXPIRY_DATE` datetime(6) DEFAULT NULL,
+  `EQM_INSTALL_DATE` datetime(6) DEFAULT NULL,
+  `EQM_DIV_ABBR` varchar(50) DEFAULT NULL COMMENT 'Division Short Name',
+  `EQM_DIV_UPD_DATE` datetime(6) DEFAULT NULL,
+  `EQM_DIV_STATUS` varchar(50) DEFAULT NULL,
+  `EQM_STATUS_UPD_DATE` datetime(6) DEFAULT NULL,
+  `EQM_EndOfSupportDate` datetime(6) DEFAULT NULL,
+  `EQM_REMARKS` varchar(500) DEFAULT NULL,
+  `EQM_CREATED_BY` varchar(7) DEFAULT NULL,
+  `EQM_REGISTRATION_FLAG` tinyint(1) DEFAULT NULL,
+  `EQM_STANDARD` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_DUE_DATE` datetime(6) DEFAULT NULL,
+  `EQM_PM_DUE_DATE` datetime(6) DEFAULT NULL,
+  `EQM_CREATED_ON` datetime(6) DEFAULT NULL,
+  `EQM_UPDATED_BY` varchar(7) DEFAULT NULL,
+  `EQM_UPDATED_ON` datetime(6) DEFAULT NULL,
+  `EQM_BUDGETAMT` decimal(19,4) DEFAULT NULL COMMENT 'NA as per new design',
+  `EQM_CAL_NABL_TYPE` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_NORMAL_TYPE` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_AT` varchar(50) DEFAULT NULL,
+  `EQM_DIV_UPD_REASON` longtext,
+  `EQM_IICHKLSTNO` int DEFAULT NULL,
+  PRIMARY KEY (`EQM_TYPE`,`EQM_ID`),
+  KEY `FK_CMMS_EQIP_MST_CMMS_SECTION_MST` (`EQM_DIVID`),
+  KEY `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST` (`EQM_PMCHKLSTNO`),
+  KEY `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST1` (`EQM_CALCHKLSTNO`),
+  KEY `FK_CMMS_EQIP_MST_CMMS_CONT_MST` (`EQM_MFRID`),
+  KEY `FK_CMMS_EQIP_MST_CMMS_PRODUCT_MST` (`EQM_INST_TYPE`),
+  CONSTRAINT `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST` FOREIGN KEY (`EQM_PMCHKLSTNO`) REFERENCES `cmms_checklist_mst` (`CHKL_ID`),
+  CONSTRAINT `FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST1` FOREIGN KEY (`EQM_CALCHKLSTNO`) REFERENCES `cmms_checklist_mst` (`CHKL_ID`),
+  CONSTRAINT `FK_CMMS_EQIP_MST_CMMS_CONT_MST` FOREIGN KEY (`EQM_MFRID`) REFERENCES `cmms_cont_mst` (`CMM_CONT_ID`),
+  CONSTRAINT `FK_CMMS_EQIP_MST_CMMS_PRODUCT_MST` FOREIGN KEY (`EQM_INST_TYPE`) REFERENCES `cmms_product_mst` (`PROD_ID`),
+  CONSTRAINT `FK_CMMS_EQIP_MST_CMMS_SECTION_MST` FOREIGN KEY (`EQM_DIVID`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_eqip_mst_hist`
+- Rows in dump: **519**
+- Columns: **49**
+- Primary Key: `EQM_HIST_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_eqip_mst_hist` (
+  `EQM_HIST_ID` int NOT NULL,
+  `EQM_TYPE` varchar(15) NOT NULL,
+  `EQM_ID` int NOT NULL,
+  `EQM_NAME` varchar(100) NOT NULL,
+  `EQM_DIVID` int NOT NULL,
+  `EQM_PM_FREQ` varchar(2) DEFAULT NULL,
+  `EQM_PMCHKLSTNO` int DEFAULT NULL,
+  `EQM_CAL_FREQ` varchar(2) DEFAULT NULL,
+  `EQM_CALCHKLSTNO` int DEFAULT NULL,
+  `EQM_CALSOURCE` varchar(50) DEFAULT NULL,
+  `EQM_INST_TYPE` int DEFAULT NULL,
+  `EQM_TMPLTID` varchar(50) DEFAULT NULL,
+  `EQM_MFRID` int NOT NULL,
+  `EQM_MFG_MODEL_NAME` varchar(100) DEFAULT NULL,
+  `EQM_VENID` varchar(50) DEFAULT NULL,
+  `EQM_SRNO` varchar(50) DEFAULT NULL,
+  `EQM_MODELNO` varchar(50) DEFAULT NULL,
+  `EQM_OPTIONNDESC` varchar(250) DEFAULT NULL,
+  `EQM_ASSETNO` varchar(50) DEFAULT NULL,
+  `EQM_SRVNO` varchar(50) DEFAULT NULL,
+  `EQM_SRVDATE` datetime(6) DEFAULT NULL,
+  `EQM_PONO` varchar(50) DEFAULT NULL,
+  `EQM_PODATE` datetime(6) DEFAULT NULL,
+  `EQM_BUDGETCODE` varchar(50) DEFAULT NULL,
+  `EQM_EQIPCOST` decimal(18,2) DEFAULT NULL,
+  `EQM_COSTCURRENCY` varchar(50) DEFAULT NULL,
+  `EQM_WRNTY_EXPIRY_DATE` datetime(6) DEFAULT NULL,
+  `EQM_INSTALL_DATE` datetime(6) DEFAULT NULL,
+  `EQM_DIV_ABBR` varchar(50) DEFAULT NULL,
+  `EQM_DIV_UPD_DATE` datetime(6) DEFAULT NULL,
+  `EQM_DIV_STATUS` varchar(50) DEFAULT NULL,
+  `EQM_STATUS_UPD_DATE` datetime(6) DEFAULT NULL,
+  `EQM_EndOfSupportDate` datetime(6) DEFAULT NULL,
+  `EQM_REMARKS` varchar(500) DEFAULT NULL,
+  `EQM_CREATED_BY` varchar(7) DEFAULT NULL,
+  `EQM_REGISTRATION_FLAG` tinyint(1) DEFAULT NULL,
+  `EQM_STANDARD` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_DUE_DATE` datetime(6) DEFAULT NULL,
+  `EQM_PM_DUE_DATE` datetime(6) DEFAULT NULL,
+  `EQM_CREATED_ON` datetime(6) DEFAULT NULL,
+  `EQM_UPDATED_BY` varchar(7) DEFAULT NULL,
+  `EQM_UPDATED_ON` datetime(6) DEFAULT NULL,
+  `EQM_BUDGETAMT` decimal(19,4) DEFAULT NULL,
+  `EQM_CAL_NABL_TYPE` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_NORMAL_TYPE` tinyint(1) DEFAULT NULL,
+  `EQM_CAL_AT` varchar(50) DEFAULT NULL,
+  `EQM_CAL_Freq_Change` tinyint(1) DEFAULT NULL,
+  `EQM_DIV_UPD_REASON` longtext,
+  `EQM_CAL_FREQ_Current` varchar(2) DEFAULT NULL,
+  PRIMARY KEY (`EQM_HIST_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_eqipinst_identification`
+- Rows in dump: **2,286**
+- Columns: **10**
+- Primary Key: `EMD_EQIP_TYPE`, `EQM_ID`, `EII_ID`
+- Foreign Keys:
+  - `FK_CMMS_EQIPINST_IDENTIFICATION_CMMS_EQIP_MST`: (`EMD_EQIP_TYPE`, `EQM_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_eqipinst_identification` (
+  `EMD_EQIP_TYPE` varchar(15) NOT NULL,
+  `EQM_ID` int NOT NULL,
+  `EII_ID` int NOT NULL,
+  `EII_TYPE` varchar(50) NOT NULL,
+  `EII_NAME` varchar(50) NOT NULL,
+  `EII_MODELNO` varchar(50) NOT NULL,
+  `EII_SRNO` varchar(50) NOT NULL,
+  `EII_INUSE` tinyint(1) NOT NULL,
+  `EII_CALREQ` tinyint(1) NOT NULL,
+  `EII_REMARKS` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`EMD_EQIP_TYPE`,`EQM_ID`,`EII_ID`),
+  CONSTRAINT `FK_CMMS_EQIPINST_IDENTIFICATION_CMMS_EQIP_MST` FOREIGN KEY (`EMD_EQIP_TYPE`, `EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_fault_mst`
+- Rows in dump: **30**
+- Columns: **8**
+- Primary Key: `FM_FAULT_ID`, `FM_TYPE`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_fault_mst` (
+  `FM_FAULT_ID` int NOT NULL,
+  `FM_FAULT` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `FM_TYPE` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `FM_JOTYPE` varchar(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `FM_CREATED_BY` varchar(7) DEFAULT NULL,
+  `FM_CREATED_ON` datetime(6) DEFAULT NULL,
+  `FM_UPDATED_BY` varchar(7) DEFAULT NULL,
+  `FM_UPDATED_ON` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`FM_FAULT_ID`,`FM_TYPE`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_ins_accuracy_info`
+- Rows in dump: **1,501**
+- Columns: **5**
+- Primary Key: `EIA_INS_ID`, `EIA_TYPE`, `EIA_ACCURACY`
+- Foreign Keys:
+  - `FK_CMMS_INS_ACCURACY_INFO_CMMS_EQIP_MST`: (`EIA_TYPE`, `EIA_INS_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_INS_ACCURACY_INFO_CMMS_EQIP_MST`: (`EIA_TYPE`, `EIA_INS_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_ins_accuracy_info` (
+  `EIA_INS_ID` int NOT NULL,
+  `EIA_TYPE` varchar(15) NOT NULL,
+  `EIA_ACCURACY` varchar(50) NOT NULL,
+  `EIA_RANGE` varchar(50) DEFAULT NULL,
+  `EIA_UNIT` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`EIA_INS_ID`,`EIA_TYPE`,`EIA_ACCURACY`),
+  KEY `FK_CMMS_INS_ACCURACY_INFO_CMMS_EQIP_MST` (`EIA_TYPE`,`EIA_INS_ID`),
+  CONSTRAINT `FK_CMMS_INS_ACCURACY_INFO_CMMS_EQIP_MST` FOREIGN KEY (`EIA_TYPE`, `EIA_INS_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_inv_mst`
+- Rows in dump: **42**
+- Columns: **29**
+- Primary Key: `INV_PARTNO`
+- Foreign Keys:
+  - `FK_CMMS_INV_MST_CMMS_CONT_MST`: (`INV_MCODE`) → `cmms_cont_mst` (`CMM_CONT_ID`)
+  - `FK_CMMS_INV_MST_CMMS_DEVICE_SPARES_MST`: (`INV_INTLSPARESID`) → `cmms_device_spares_mst` (`DS_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_INV_MST_CMMS_CONT_MST`: (`INV_MCODE`)
+  - `FK_CMMS_INV_MST_CMMS_DEVICE_SPARES_MST`: (`INV_INTLSPARESID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_inv_mst` (
+  `INV_PARTNO` int NOT NULL,
+  `INV_PNAME` varchar(100) NOT NULL,
+  `INV_CATEGORYID` int DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_PLOC` varchar(50) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_MCODE` int NOT NULL COMMENT 'Mfg Code',
+  `INV_MPNO` varchar(50) DEFAULT NULL COMMENT 'Mfg Part No',
+  `INV_VCODE` smallint DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_INTLSPARESID` int NOT NULL COMMENT 'Spare Type',
+  `INV_INTLSPARESNO` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `INV_LOC` varchar(50) DEFAULT NULL COMMENT 'Location',
+  `INV_DESC` varchar(100) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_WHEREUSED` int DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_BALQTY` decimal(13,2) DEFAULT NULL COMMENT 'Balance Qty',
+  `INV_COST` decimal(13,2) DEFAULT NULL COMMENT 'Cost',
+  `INV_ONHND` decimal(13,2) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_USEDQTY` decimal(13,2) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_MINQTY` decimal(8,2) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_ROL` decimal(8,2) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_LEADTIME` bigint DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_UOM` varchar(50) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_LASTPO` varchar(50) DEFAULT NULL COMMENT 'Last PO No',
+  `INV_LASTPODT` datetime(6) DEFAULT NULL COMMENT 'Last PO Date',
+  `INV_LASTCOST` decimal(13,2) DEFAULT NULL COMMENT 'Last PO Cost',
+  `INV_QTY_ONORDER` decimal(13,3) DEFAULT NULL COMMENT 'NA as per new design',
+  `INV_STATE` tinyint(1) NOT NULL COMMENT 'Inactive',
+  `INV_CREATED_BY` varchar(7) NOT NULL,
+  `INV_CREATED_ON` datetime(6) NOT NULL,
+  `INV_UPDATED_BY` varchar(7) NOT NULL,
+  `INV_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`INV_PARTNO`),
+  KEY `FK_CMMS_INV_MST_CMMS_CONT_MST` (`INV_MCODE`),
+  KEY `FK_CMMS_INV_MST_CMMS_DEVICE_SPARES_MST` (`INV_INTLSPARESID`),
+  CONSTRAINT `FK_CMMS_INV_MST_CMMS_CONT_MST` FOREIGN KEY (`INV_MCODE`) REFERENCES `cmms_cont_mst` (`CMM_CONT_ID`),
+  CONSTRAINT `FK_CMMS_INV_MST_CMMS_DEVICE_SPARES_MST` FOREIGN KEY (`INV_INTLSPARESID`) REFERENCES `cmms_device_spares_mst` (`DS_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_attendedby_dtl`
+- Rows in dump: **27,890**
+- Columns: **4**
+- Primary Key: `JMA_SECTIONJOBNO`, `JMA_USERID`, `JMA_ISAWAITING`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_EMP_MST`: (`JMA_USERID`) → `cmms_emp_mst` (`EMM_ID`)
+  - `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_JOBCARD_MST`: (`JMA_SECTIONJOBNO`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_EMP_MST`: (`JMA_USERID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_attendedby_dtl` (
+  `JMA_SECTIONJOBNO` varchar(9) NOT NULL,
+  `JMA_USERID` varchar(7) NOT NULL,
+  `JMA_ISAWAITING` tinyint(1) NOT NULL DEFAULT '1',
+  `JMA_SRNO` int DEFAULT NULL,
+  PRIMARY KEY (`JMA_SECTIONJOBNO`,`JMA_USERID`,`JMA_ISAWAITING`),
+  KEY `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_EMP_MST` (`JMA_USERID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_EMP_MST` FOREIGN KEY (`JMA_USERID`) REFERENCES `cmms_emp_mst` (`EMM_ID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_ATTENDEDBY_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JMA_SECTIONJOBNO`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_awaitinginfo`
+- Rows in dump: **7,261**
+- Columns: **19**
+- Primary Key: `JobcardNumber`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_AWAITINGINFO_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_awaitinginfo` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `AwaitingFromDate` datetime(6) DEFAULT NULL,
+  `AwaitingFor` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JobStartDate` datetime(6) DEFAULT NULL,
+  `AwaitingClearDate` datetime(6) DEFAULT NULL,
+  `RepairStatus` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `ServiceEngr` tinyint(1) NOT NULL,
+  `Operator` tinyint(1) NOT NULL,
+  `Apprentice` tinyint(1) NOT NULL,
+  `AttendedBy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `IndentNo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `IndentDate` datetime(6) DEFAULT NULL,
+  `PurchaseOrderNo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PurchaseOrderDate` datetime(6) DEFAULT NULL,
+  `PurchaseCostinRs` decimal(13,2) DEFAULT NULL,
+  `Supplier` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `SRVNo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `SRVDate` datetime(6) DEFAULT NULL,
+  `SupplierId` int DEFAULT NULL,
+  PRIMARY KEY (`JobcardNumber`),
+  CONSTRAINT `FK_CMMS_JOBCARD_AWAITINGINFO_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_cal_adjustments_dtl`
+- Rows in dump: **1,831**
+- Columns: **6**
+- Primary Key: `JCAD_JobCardNo`, `JCAD_Parameter`, `JCAD_TestValue`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_CAL_ADJUSTMENTS_DTL_CMMS_JOBCARD_MST`: (`JCAD_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_cal_adjustments_dtl` (
+  `JCAD_JobCardNo` varchar(9) NOT NULL,
+  `JCAD_Parameter` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `JCAD_TestValue` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `JCAD_SpecLimit` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCAD_BeforeAdj` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCAD_AfterAdj` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  PRIMARY KEY (`JCAD_JobCardNo`,`JCAD_Parameter`,`JCAD_TestValue`),
+  CONSTRAINT `FK_CMMS_JOBCARD_CAL_ADJUSTMENTS_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JCAD_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_cal_dtl`
+- Rows in dump: **9,065**
+- Columns: **21**
+- Primary Key: `JCD_JobCardNo`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_CAL_DTL_CMMS_JOBCARD_MST`: (`JCD_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_cal_dtl` (
+  `JCD_JobCardNo` varchar(9) NOT NULL,
+  `JCD_RecdWith` int DEFAULT NULL,
+  `JCD_RecdOn` datetime(6) DEFAULT NULL,
+  `JCD_JobStartedOn` datetime(6) DEFAULT NULL,
+  `JCD_JobCompletedOn` datetime(6) DEFAULT NULL,
+  `JCD_CalDueDate` datetime(6) DEFAULT NULL,
+  `JCD_CALRefNo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_CalBy` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_CALStatus` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_ReasonForNoCAL` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_EQStatusAsRecd` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_Adjustments` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_WorkThruContract` tinyint(1) NOT NULL,
+  `JCD_RepairedBy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JCD_SentToInstLabOn` datetime(6) DEFAULT NULL,
+  `JCD_RecdFromInstLabOn` datetime(6) DEFAULT NULL,
+  `JCD_Temprature` smallint DEFAULT NULL,
+  `JCD_RH` smallint DEFAULT NULL,
+  `JCD_RH2` smallint DEFAULT NULL,
+  `JCD_TempraturePM` decimal(18,2) DEFAULT NULL,
+  `JM_CalProcedureRef` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`JCD_JobCardNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_CAL_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JCD_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_cal_observations`
+- Rows in dump: **77,171**
+- Columns: **4**
+- Primary Key: `JobcardNumber`, `TaskID`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+  - `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_TASK_MST`: (`TaskID`) → `cmms_task_mst` (`TSK_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_TASK_MST`: (`TaskID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_cal_observations` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `TaskID` int NOT NULL,
+  `Status` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `Is_NABL` tinyint unsigned DEFAULT NULL,
+  PRIMARY KEY (`JobcardNumber`,`TaskID`),
+  KEY `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_TASK_MST` (`TaskID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_CAL_OBSERVATIONS_CMMS_TASK_MST` FOREIGN KEY (`TaskID`) REFERENCES `cmms_task_mst` (`TSK_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_contract_warranty_dtl`
+- Rows in dump: **17,225**
+- Columns: **17**
+- Primary Key: `CWD_JobCardNo`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_CONTRACT_WARRANTY_DTL_CMMS_JOBCARD_MST`: (`CWD_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_contract_warranty_dtl` (
+  `CWD_JobCardNo` varchar(9) NOT NULL,
+  `CWD_VendorSupplierName` varchar(50) DEFAULT NULL,
+  `CWD_Intimation_SentOn` datetime(6) DEFAULT NULL,
+  `CWD_GatePassNo` varchar(50) DEFAULT NULL,
+  `CWD_GatePassIssuedOn` datetime(6) DEFAULT NULL,
+  `CWD_GatePassIssuedBy` varchar(50) DEFAULT NULL,
+  `CWD_StoreRefNo` varchar(50) DEFAULT NULL,
+  `CWD_SentToStoreOn` datetime(6) DEFAULT NULL,
+  `CWD_SentToVenderOn` datetime(6) DEFAULT NULL,
+  `CWD_RecdFromVenderOn` datetime(6) DEFAULT NULL,
+  `CWD_Cost` decimal(13,2) DEFAULT NULL,
+  `CWD_LabourCharges` decimal(13,2) DEFAULT NULL,
+  `CWD_TransCharges` decimal(13,2) DEFAULT NULL,
+  `CWD_InvoiceNo` varchar(50) DEFAULT NULL,
+  `CWD_InvoiceRecdOn` datetime(6) DEFAULT NULL,
+  `CWD_InvoiceClearedOn` datetime(6) DEFAULT NULL,
+  `CWD_VendorSupplierID` int DEFAULT NULL,
+  PRIMARY KEY (`CWD_JobCardNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_CONTRACT_WARRANTY_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`CWD_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_eq_used`
+- Rows in dump: **38,316**
+- Columns: **4**
+- Primary Key: `JEU_JobCardNo`, `JEU_EquipType`, `JEU_EquipId`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_EQ_USED_CMMS_EQIP_MST`: (`JEU_EquipType`, `JEU_EquipId`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+  - `FK_CMMS_JOBCARD_EQ_USED_CMMS_JOBCARD_MST`: (`JEU_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_EQ_USED_CMMS_EQIP_MST`: (`JEU_EquipType`, `JEU_EquipId`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_eq_used` (
+  `JEU_JobCardNo` varchar(9) NOT NULL,
+  `JEU_EquipType` varchar(15) NOT NULL,
+  `JEU_EquipId` int NOT NULL,
+  `JEU_Notes` longtext,
+  PRIMARY KEY (`JEU_JobCardNo`,`JEU_EquipType`,`JEU_EquipId`),
+  KEY `FK_CMMS_JOBCARD_EQ_USED_CMMS_EQIP_MST` (`JEU_EquipType`,`JEU_EquipId`),
+  CONSTRAINT `FK_CMMS_JOBCARD_EQ_USED_CMMS_EQIP_MST` FOREIGN KEY (`JEU_EquipType`, `JEU_EquipId`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_EQ_USED_CMMS_JOBCARD_MST` FOREIGN KEY (`JEU_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_faulty_category`
+- Rows in dump: **8,605**
+- Columns: **3**
+- Primary Key: `JobcardNumber`, `FaultyType`, `FaultyCategory`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_FAULT_MST`: (`FaultyCategory`, `FaultyType`) → `cmms_fault_mst` (`FM_FAULT_ID`, `FM_TYPE`)
+  - `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_FAULT_MST`: (`FaultyCategory`, `FaultyType`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_faulty_category` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `FaultyType` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `FaultyCategory` int NOT NULL,
+  PRIMARY KEY (`JobcardNumber`,`FaultyType`,`FaultyCategory`),
+  KEY `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_FAULT_MST` (`FaultyCategory`,`FaultyType`),
+  CONSTRAINT `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_FAULT_MST` FOREIGN KEY (`FaultyCategory`, `FaultyType`) REFERENCES `cmms_fault_mst` (`FM_FAULT_ID`, `FM_TYPE`),
+  CONSTRAINT `FK_CMMS_JOBCARD_FAULTY_CATEGORY_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_faulty_section`
+- Rows in dump: **8,131**
+- Columns: **3**
+- Primary Key: `JobcardNumber`, `FaultyType`, `FaultySection`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_FAULT_MST`: (`FaultySection`, `FaultyType`) → `cmms_fault_mst` (`FM_FAULT_ID`, `FM_TYPE`)
+  - `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_FAULT_MST`: (`FaultySection`, `FaultyType`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_faulty_section` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `FaultyType` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `FaultySection` int NOT NULL,
+  PRIMARY KEY (`JobcardNumber`,`FaultyType`,`FaultySection`),
+  KEY `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_FAULT_MST` (`FaultySection`,`FaultyType`),
+  CONSTRAINT `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_FAULT_MST` FOREIGN KEY (`FaultySection`, `FaultyType`) REFERENCES `cmms_fault_mst` (`FM_FAULT_ID`, `FM_TYPE`),
+  CONSTRAINT `FK_CMMS_JOBCARD_FAULTY_SECTION_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_insp_maint_dtl`
+- Rows in dump: **0**
+- Columns: **6**
+- Primary Key: `JMD_JobCardNo`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_INSP_MAINT_DTL_CMMS_JOBCARD_MST`: (`JMD_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_insp_maint_dtl` (
+  `JMD_JobCardNo` varchar(9) NOT NULL,
+  `JMD_JobStartDate` datetime(6) DEFAULT NULL,
+  `JMD_JobCompleteDate` datetime(6) DEFAULT NULL,
+  `JMD_AttendedBy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JMD_EqAccepted` tinyint(1) NOT NULL,
+  `JMD_NotAcceptedReason` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  PRIMARY KEY (`JMD_JobCardNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_INSP_MAINT_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JMD_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_inspection_info`
+- Rows in dump: **2,214**
+- Columns: **21**
+- Primary Key: `JobcardNumber`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_INSPECTION_INFO_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_inspection_info` (
+  `InstrumentID` int DEFAULT NULL,
+  `JobcardNumber` varchar(9) NOT NULL,
+  `JobStartDate` datetime(6) DEFAULT NULL,
+  `JobCompleteDate` datetime(6) DEFAULT NULL,
+  `EqRecdStatus` tinyint unsigned DEFAULT NULL,
+  `EqNotRecdReason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `WarrantyExpiresOn` datetime(6) DEFAULT NULL,
+  `CriticalTestResults` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `InspectionResult` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `RejectionReasons` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `FaultDescription` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `ActionTakenBySupplier` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `AccRejInfoGivenTo` varchar(35) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `AccRejInfoGivenDate` datetime(6) DEFAULT NULL,
+  `IntimationOn` datetime(6) DEFAULT NULL,
+  `FinalStatus` tinyint unsigned DEFAULT NULL,
+  `FinalStatusDate` datetime(6) DEFAULT NULL,
+  `Remarks` longtext,
+  `FirstVisitOn` datetime(6) DEFAULT NULL,
+  `EquipmentRecdOn` datetime(6) DEFAULT NULL,
+  `upsize_ts` binary(8) DEFAULT NULL,
+  PRIMARY KEY (`JobcardNumber`),
+  CONSTRAINT `FK_CMMS_JOBCARD_INSPECTION_INFO_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_mst`
+- Rows in dump: **19,432**
+- Columns: **34**
+- Primary Key: `JM_SectionJobNo`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST`: (`JM_EQM_TYPE`, `JM_EQM_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST`: (`JM_EQM_TYPE`, `JM_EQM_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_mst` (
+  `JM_JobCardNO` int NOT NULL,
+  `JM_EQM_TYPE` varchar(15) NOT NULL,
+  `JM_EQM_ID` int NOT NULL,
+  `JM_FNPETYPE` char(1) DEFAULT NULL,
+  `JM_SectionJobNo` varchar(9) NOT NULL,
+  `JM_JCRecdDate` datetime(6) NOT NULL,
+  `JM_InstRecdDate` datetime(6) NOT NULL,
+  `JM_JobStatus` char(2) NOT NULL,
+  `JM_Job` varchar(50) DEFAULT NULL COMMENT 'NA as per new design. (Accepted / Rejected)',
+  `JM_PlannedStartDate` datetime(6) NOT NULL,
+  `JM_PlannedComletedDate` datetime(6) NOT NULL,
+  `JM_JobStartDate` datetime(6) DEFAULT NULL,
+  `JM_JobEndDate` datetime(6) DEFAULT NULL,
+  `JM_WarrantyRepairs` tinyint(1) NOT NULL,
+  `JM_ContractRepairs` tinyint(1) NOT NULL,
+  `JM_ServiceEngr` tinyint(1) DEFAULT NULL,
+  `JM_Operator` tinyint(1) DEFAULT NULL,
+  `JM_Apprentice` tinyint(1) DEFAULT NULL,
+  `JM_AttendedBy` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing. For this there is new table',
+  `JM_EQGivenTo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JM_EQGivenOn` datetime(6) DEFAULT NULL,
+  `JM_Remarks` varchar(550) DEFAULT NULL,
+  `JM_CalPMDueDate` datetime(6) DEFAULT NULL,
+  `JM_DESC` longtext COMMENT 'NA as per new desing',
+  `JM_PLANID` int DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_DUEIN` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_JOBTYPE` tinyint unsigned NOT NULL DEFAULT '0',
+  `JM_REPAIRTYPE` tinyint unsigned DEFAULT NULL,
+  `JM_CREATED_BY` varchar(7) NOT NULL,
+  `JM_CREATED_ON` datetime(6) NOT NULL,
+  `JM_UPDATED_BY` varchar(50) NOT NULL,
+  `JM_UPDATED_ON` datetime(6) NOT NULL,
+  `JM_COMPLAINTANDSYMPTOMS` varchar(400) DEFAULT NULL,
+  `JM_CALTYPE` tinyint unsigned DEFAULT NULL,
+  PRIMARY KEY (`JM_SectionJobNo`),
+  KEY `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST` (`JM_EQM_TYPE`,`JM_EQM_ID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST` FOREIGN KEY (`JM_EQM_TYPE`, `JM_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_mst_history`
+- Rows in dump: **22,143**
+- Columns: **37**
+- Primary Key: `HistoryId`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_mst_history` (
+  `HistoryId` int NOT NULL,
+  `JM_JobCardNO` int NOT NULL,
+  `JM_EQM_TYPE` varchar(15) NOT NULL,
+  `JM_EQM_ID` int NOT NULL,
+  `JM_FNPETYPE` char(1) DEFAULT NULL,
+  `JM_SectionJobNo` varchar(9) NOT NULL,
+  `JM_JCRecdDate` datetime(6) NOT NULL,
+  `JM_InstRecdDate` datetime(6) NOT NULL,
+  `JM_JobStatus` char(2) NOT NULL,
+  `JM_Job` varchar(50) DEFAULT NULL COMMENT 'NA as per new design. (Accepted / Rejected)',
+  `JM_PlannedStartDate` datetime(6) NOT NULL,
+  `JM_PlannedComletedDate` datetime(6) NOT NULL,
+  `JM_JobStartDate` datetime(6) DEFAULT NULL,
+  `JM_JobEndDate` datetime(6) DEFAULT NULL,
+  `JM_WarrantyRepairs` tinyint(1) NOT NULL,
+  `JM_ContractRepairs` tinyint(1) NOT NULL,
+  `JM_ServiceEngr` tinyint(1) DEFAULT NULL,
+  `JM_Operator` tinyint(1) DEFAULT NULL,
+  `JM_Apprentice` tinyint(1) DEFAULT NULL,
+  `JM_AttendedBy` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing. For this there is new table',
+  `JM_EQGivenTo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JM_EQGivenOn` datetime(6) DEFAULT NULL,
+  `JM_Remarks` varchar(550) DEFAULT NULL,
+  `JM_CalPMDueDate` datetime(6) DEFAULT NULL,
+  `JM_DESC` longtext COMMENT 'NA as per new desing',
+  `JM_PLANID` int DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_DUEIN` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_JOBTYPE` tinyint unsigned NOT NULL DEFAULT '0',
+  `JM_REPAIRTYPE` tinyint unsigned DEFAULT NULL,
+  `JM_CREATED_BY` varchar(7) NOT NULL,
+  `JM_CREATED_ON` datetime(6) NOT NULL,
+  `JM_UPDATED_BY` varchar(50) NOT NULL,
+  `JM_UPDATED_ON` datetime(6) NOT NULL,
+  `JM_COMPLAINTANDSYMPTOMS` varchar(400) DEFAULT NULL,
+  `JM_CALTYPE` tinyint unsigned DEFAULT NULL,
+  `HU_UPDATED_ON` datetime(6) DEFAULT NULL,
+  `HU_UPDATED_BY` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`HistoryId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_repair_info`
+- Rows in dump: **8,118**
+- Columns: **18**
+- Primary Key: `JobcardNumber`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_REPAIR_INFO_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_repair_info` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `JobStartdate` datetime(6) DEFAULT NULL,
+  `JobEndDate` datetime(6) DEFAULT NULL,
+  `RepairResult` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `ReasonsForNotRepaired` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `FaultDescription` varchar(550) DEFAULT NULL,
+  `ActionTaken` varchar(550) DEFAULT NULL,
+  `JobcardFromCalLab` tinyint(1) NOT NULL,
+  `SentToCALLabOn` datetime(6) DEFAULT NULL,
+  `WarrantyRepairs` tinyint unsigned DEFAULT NULL,
+  `RepairsThroughContract` tinyint(1) NOT NULL,
+  `PrSystemStatus` tinyint(1) DEFAULT NULL,
+  `ComplaintAndSymptoms` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `SystemCheckedBy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `SystemCheckedOn` datetime(6) DEFAULT NULL,
+  `Remarks` varchar(550) DEFAULT NULL,
+  `PresentSystemStatus` int DEFAULT NULL,
+  `upsize_ts` binary(8) DEFAULT NULL,
+  PRIMARY KEY (`JobcardNumber`),
+  CONSTRAINT `FK_CMMS_JOBCARD_REPAIR_INFO_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_request_info`
+- Rows in dump: **19,432**
+- Columns: **27**
+- Primary Key: `JRI_JobCardNo`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_REQUEST_INFO_CMMS_JOBCARD_MST`: (`JRI_JobCardNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_request_info` (
+  `JRI_JobCardNo` varchar(9) NOT NULL,
+  `JRI_AfterRepairs` tinyint(1) NOT NULL,
+  `JRI_SubmittedByID` varchar(7) DEFAULT NULL,
+  `JRI_SubmittedByName` varchar(100) DEFAULT NULL,
+  `JRI_ProjectID` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_SubSystem` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_OperationManualReceived` tinyint(1) NOT NULL,
+  `JRI_ServiceManualReceived` tinyint(1) NOT NULL,
+  `JRI_AccessoryKitReceived` tinyint(1) NOT NULL,
+  `JRI_InstallAcceptReject` tinyint(1) NOT NULL,
+  `JRI_Designation` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_Division` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_PhoneLab` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_PhoneRoom` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `JRI_Complaintandsymptoms` varchar(400) DEFAULT NULL,
+  `JRI_RequestFor` varchar(15) DEFAULT NULL,
+  `JRI_PONO` varchar(100) DEFAULT NULL,
+  `JRI_PODate` datetime(6) DEFAULT NULL,
+  `JRI_SRVNO` varchar(100) DEFAULT NULL,
+  `JRI_SRVDate` datetime(6) DEFAULT NULL,
+  `JRI_BudgetCode` varchar(15) DEFAULT NULL,
+  `JRI_EquipCost` decimal(18,2) DEFAULT NULL,
+  `JRI_EquipCostCurrency` varchar(100) DEFAULT NULL,
+  `JRI_Eqiuip_Warranty_Expiry_Date` smallint DEFAULT NULL,
+  `JRI_Working_Status` varchar(20) DEFAULT NULL,
+  `JRI_Remarks` varchar(500) DEFAULT NULL,
+  `EmailId` varchar(300) DEFAULT NULL,
+  PRIMARY KEY (`JRI_JobCardNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_REQUEST_INFO_CMMS_JOBCARD_MST` FOREIGN KEY (`JRI_JobCardNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_request_item_dtl`
+- Rows in dump: **11,064**
+- Columns: **10**
+- Primary Key: `JR_SECTIONJOBNO`, `JR_ITEM_ID`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_REQUEST_ITEM_DTL_CMMS_JOBCARD_MST`: (`JR_SECTIONJOBNO`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_request_item_dtl` (
+  `JR_SECTIONJOBNO` varchar(9) NOT NULL,
+  `JR_ITEM_ID` varchar(20) NOT NULL,
+  `JR_ITEM_TYPE` varchar(60) NOT NULL,
+  `JR_ITEM_NAME` varchar(100) NOT NULL,
+  `JR_ITEM_MODELNO` varchar(100) NOT NULL,
+  `JR_ITEM_SRNO` varchar(100) NOT NULL,
+  `JR_ITEM_INUSE` tinyint(1) NOT NULL,
+  `JR_ITEM_REMARKS` varchar(100) DEFAULT NULL,
+  `JR_ITEM_CALREQUIRED` tinyint(1) NOT NULL,
+  `JR_ITEM_SUBMITTED` tinyint(1) NOT NULL,
+  PRIMARY KEY (`JR_SECTIONJOBNO`,`JR_ITEM_ID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_REQUEST_ITEM_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JR_SECTIONJOBNO`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_request_project_dtl`
+- Rows in dump: **22,316**
+- Columns: **2**
+- Primary Key: `JRP_JOBCARDNO`, `JRP_PROJECTID`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_JOBCARD_MST`: (`JRP_JOBCARDNO`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+  - `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_PROJ_MST`: (`JRP_PROJECTID`) → `cmms_proj_mst` (`PR_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_PROJ_MST`: (`JRP_PROJECTID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_request_project_dtl` (
+  `JRP_JOBCARDNO` varchar(9) NOT NULL,
+  `JRP_PROJECTID` int NOT NULL,
+  PRIMARY KEY (`JRP_JOBCARDNO`,`JRP_PROJECTID`),
+  KEY `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_PROJ_MST` (`JRP_PROJECTID`),
+  CONSTRAINT `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_JOBCARD_MST` FOREIGN KEY (`JRP_JOBCARDNO`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_REQUEST_PROJECT_DTL_CMMS_PROJ_MST` FOREIGN KEY (`JRP_PROJECTID`) REFERENCES `cmms_proj_mst` (`PR_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_spares_equip`
+- Rows in dump: **2,804**
+- Columns: **9**
+- Primary Key: `JobcardNumber`, `Sr_No`
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_SPARES_EQUIP_CMMS_JOBCARD_MST`: (`JobcardNumber`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys:
+  - `IX_CMMS_JOBCARD_SPARES_EQUIP`: (`JobcardNumber`, `FaultyDevice`, `PartNo`)
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_spares_equip` (
+  `JobcardNumber` varchar(9) NOT NULL,
+  `Sr_No` int NOT NULL,
+  `FaultyDevice` int NOT NULL,
+  `Source` varchar(15) DEFAULT NULL,
+  `PartNo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `Quantity` int DEFAULT NULL,
+  `CostRs` decimal(13,2) DEFAULT NULL,
+  `PartName` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `FaultyDeviceName` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  PRIMARY KEY (`JobcardNumber`,`Sr_No`),
+  UNIQUE KEY `IX_CMMS_JOBCARD_SPARES_EQUIP` (`JobcardNumber`,`FaultyDevice`,`PartNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_SPARES_EQUIP_CMMS_JOBCARD_MST` FOREIGN KEY (`JobcardNumber`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobcard_status_hist`
+- Rows in dump: **22,214**
+- Columns: **5**
+- Primary Key: —
+- Foreign Keys:
+  - `FK_CMMS_JOBCARD_STATUS_HIST_CMMS_JOBCARD_MST`: (`JH_SectionJobNo`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBCARD_STATUS_HIST_CMMS_JOBCARD_MST`: (`JH_SectionJobNo`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobcard_status_hist` (
+  `JH_SectionJobNo` varchar(9) NOT NULL,
+  `JH_FNPETYPE` varchar(1) DEFAULT NULL,
+  `JH_JobStatus` varchar(2) NOT NULL,
+  `JH_StatusUpdatedOn` datetime(6) NOT NULL,
+  `JH_StatusUpdatedBy` varchar(7) NOT NULL,
+  KEY `FK_CMMS_JOBCARD_STATUS_HIST_CMMS_JOBCARD_MST` (`JH_SectionJobNo`),
+  CONSTRAINT `FK_CMMS_JOBCARD_STATUS_HIST_CMMS_JOBCARD_MST` FOREIGN KEY (`JH_SectionJobNo`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobrequest_item_dtl`
+- Rows in dump: **7,786**
+- Columns: **11**
+- Primary Key: `JR_JOBREQUESTNO`, `JR_ITEM_ID`
+- Foreign Keys:
+  - `FK_CMMS_JOBREQUEST_ITEM_DTL_CMMS_JOBREQUEST_MST`: (`JR_JOBREQUESTNO`) → `cmms_jobrequest_mst` (`JR_JOBREQUESTNO`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobrequest_item_dtl` (
+  `JR_JOBREQUESTNO` int NOT NULL,
+  `JR_ITEM_ID` int NOT NULL,
+  `JR_ITEM_TYPE` varchar(60) NOT NULL,
+  `JR_ITEM_NAME` varchar(100) NOT NULL,
+  `JR_ITEM_MODELNO` varchar(100) NOT NULL,
+  `JR_ITEM_SRNO` varchar(100) NOT NULL,
+  `JR_ITEM_INUSE` tinyint(1) NOT NULL DEFAULT '0',
+  `JR_ITEM_CALREQ` tinyint(1) NOT NULL DEFAULT '0',
+  `JR_ITEM_REMARK` varchar(100) DEFAULT NULL,
+  `JR_ITEM_CHANGED_FLAG` tinyint(1) NOT NULL,
+  `JR_ITEM_SUBMITTED` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`JR_JOBREQUESTNO`,`JR_ITEM_ID`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_ITEM_DTL_CMMS_JOBREQUEST_MST` FOREIGN KEY (`JR_JOBREQUESTNO`) REFERENCES `cmms_jobrequest_mst` (`JR_JOBREQUESTNO`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobrequest_mst`
+- Rows in dump: **21,485**
+- Columns: **37**
+- Primary Key: `JR_JOBREQUESTNO`
+- Foreign Keys:
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST`: (`JR_EQM_TYPE`, `JR_EQM_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST`: (`JR_SECTIONJOB_NO`) → `cmms_jobcard_mst` (`JM_SectionJobNo`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST`: (`JR_INST_TYPE`) → `cmms_product_mst` (`PROD_ID`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST`: (`JR_DIVISION`) → `cmms_section_mst` (`SM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST`: (`JR_DIVISION`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST`: (`JR_EQM_TYPE`, `JR_EQM_ID`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST`: (`JR_SECTIONJOB_NO`)
+  - `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST`: (`JR_INST_TYPE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobrequest_mst` (
+  `JR_JOBREQUESTNO` int NOT NULL,
+  `JR_REQUEST_TYPE` varchar(25) NOT NULL,
+  `JR_JOBREQUESTDATE` datetime NOT NULL,
+  `JR_SECTIONJOB_NO` varchar(9) DEFAULT NULL,
+  `JR_EQM_ID` int DEFAULT NULL,
+  `JR_EQM_TYPE` varchar(15) NOT NULL,
+  `JR_EQM_NAME` varchar(200) DEFAULT NULL,
+  `JR_EQM_MFRID` int DEFAULT NULL,
+  `JR_EQM_MFR_NAME` varchar(100) DEFAULT NULL,
+  `JR_EQM_MODELNO` varchar(100) DEFAULT NULL,
+  `JR_EQM_SRNO` varchar(100) DEFAULT NULL,
+  `JR_INST_TYPE` int DEFAULT NULL,
+  `JR_EQM_OPTNDESC` varchar(200) DEFAULT NULL,
+  `JR_SUBMITTEDBYID` varchar(7) DEFAULT NULL,
+  `JR_SUBMITTEDBYNAME` varchar(100) DEFAULT NULL,
+  `JR_PROJECTID` varchar(100) DEFAULT NULL,
+  `JR_SUBSYSTEM` varchar(100) DEFAULT NULL,
+  `JR_DESIGNATION` varchar(100) DEFAULT NULL,
+  `JR_DIVISION` int DEFAULT NULL,
+  `JR_PHOENLAB` varchar(100) DEFAULT NULL,
+  `JR_PHONEROOM` varchar(100) DEFAULT NULL,
+  `JR_AFTERREPAIRS` tinyint(1) DEFAULT NULL,
+  `JR_COMPLAINTANDSYMPTOMS` varchar(400) DEFAULT NULL,
+  `JR_REQUESTFOR` varchar(15) DEFAULT NULL,
+  `JR_PONO` varchar(100) DEFAULT NULL,
+  `JR_PODATE` datetime DEFAULT NULL,
+  `JR_SRVNO` varchar(100) DEFAULT NULL,
+  `JR_SRVDATE` datetime DEFAULT NULL,
+  `JR_BUDGETCODE` varchar(15) DEFAULT NULL,
+  `JR_EQIPCOST` decimal(19,2) DEFAULT NULL,
+  `JR_EQM_COSTCURRENCY` varchar(100) DEFAULT NULL,
+  `JR_EQM_WRNTY_EXPIRY_DATE` smallint DEFAULT NULL,
+  `JR_WORKING_STATUS` varchar(20) DEFAULT NULL,
+  `JR_DIVISION_CHANGE_FLAG` tinyint(1) DEFAULT NULL,
+  `JR_ITEM_CHANGE_FLAG` tinyint(1) DEFAULT NULL,
+  `JR_REMARKS` varchar(500) DEFAULT NULL,
+  `Email` varchar(300) DEFAULT NULL,
+  PRIMARY KEY (`JR_JOBREQUESTNO`),
+  KEY `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST` (`JR_DIVISION`),
+  KEY `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST` (`JR_EQM_TYPE`,`JR_EQM_ID`),
+  KEY `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST` (`JR_SECTIONJOB_NO`),
+  KEY `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST` (`JR_INST_TYPE`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST` FOREIGN KEY (`JR_EQM_TYPE`, `JR_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST` FOREIGN KEY (`JR_SECTIONJOB_NO`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST` FOREIGN KEY (`JR_INST_TYPE`) REFERENCES `cmms_product_mst` (`PROD_ID`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST` FOREIGN KEY (`JR_DIVISION`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_jobrequest_project_dtl`
+- Rows in dump: **19,624**
+- Columns: **2**
+- Primary Key: `JR_JOBREQUESTNO`, `JR_PROJECTID`
+- Foreign Keys:
+  - `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_JOBREQUEST_MST`: (`JR_JOBREQUESTNO`) → `cmms_jobrequest_mst` (`JR_JOBREQUESTNO`)
+  - `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_PROJ_MST`: (`JR_PROJECTID`) → `cmms_proj_mst` (`PR_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_PROJ_MST`: (`JR_PROJECTID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_jobrequest_project_dtl` (
+  `JR_JOBREQUESTNO` int NOT NULL,
+  `JR_PROJECTID` int NOT NULL,
+  PRIMARY KEY (`JR_JOBREQUESTNO`,`JR_PROJECTID`),
+  KEY `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_PROJ_MST` (`JR_PROJECTID`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_JOBREQUEST_MST` FOREIGN KEY (`JR_JOBREQUESTNO`) REFERENCES `cmms_jobrequest_mst` (`JR_JOBREQUESTNO`),
+  CONSTRAINT `FK_CMMS_JOBREQUEST_PROJECTDTL_CMMS_PROJ_MST` FOREIGN KEY (`JR_PROJECTID`) REFERENCES `cmms_proj_mst` (`PR_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_lineitem_mst`
+- Rows in dump: **24**
+- Columns: **9**
+- Primary Key: `LITM_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_lineitem_mst` (
+  `LITM_ID` varchar(15) NOT NULL,
+  `LITM_NAME` varchar(100) NOT NULL,
+  `LITM_AMT` bigint DEFAULT NULL,
+  `LITM_YEAR` varchar(9) DEFAULT NULL,
+  `LITM_STATE` tinyint(1) NOT NULL,
+  `LITM_CREATED_BY` varchar(7) NOT NULL,
+  `LITM_CREATED_ON` datetime(6) NOT NULL,
+  `LITM_UPDATED_BY` varchar(7) NOT NULL,
+  `LITM_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`LITM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_module_mst`
+- Rows in dump: **163**
+- Columns: **13**
+- Primary Key: `MOD_ID`
+- Foreign Keys:
+  - `FK_CMMS_MODULE_MST_CMMS_MODULE_MST`: (`MOD_PARENT_ID`) → `cmms_module_mst` (`MOD_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_MODULE_MST_CMMS_MODULE_MST`: (`MOD_PARENT_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_module_mst` (
+  `MOD_MENU_TYPE` smallint NOT NULL DEFAULT '1' COMMENT '"0" for non timcf and "1" for timcf',
+  `MOD_ID` int NOT NULL,
+  `MOD_NAME` varchar(50) NOT NULL,
+  `MOD_PARENT_ID` int DEFAULT NULL,
+  `MOD_LEVEL` smallint NOT NULL,
+  `MOD_POSITION` int DEFAULT NULL,
+  `MOD_NAVIGATE_URL` varchar(100) DEFAULT '#',
+  `MOD_CREATED_BY` varchar(7) DEFAULT NULL,
+  `MOD_CREATED_ON` datetime(6) DEFAULT NULL,
+  `MOD_UPDATED_BY` varchar(7) DEFAULT NULL,
+  `MOD_UPDATED_ON` datetime(6) DEFAULT NULL,
+  `MOD_IS_LEAF` int DEFAULT '1',
+  `MOD_DESC` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`MOD_ID`),
+  KEY `FK_CMMS_MODULE_MST_CMMS_MODULE_MST` (`MOD_PARENT_ID`),
+  CONSTRAINT `FK_CMMS_MODULE_MST_CMMS_MODULE_MST` FOREIGN KEY (`MOD_PARENT_ID`) REFERENCES `cmms_module_mst` (`MOD_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_parameter_master`
+- Rows in dump: **337**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_parameter_master` (
+  `CategoryID` smallint NOT NULL,
+  `CategoryDescription` varchar(50) NOT NULL,
+  `SrID` varchar(15) NOT NULL,
+  `Value` varchar(150) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_parameter_master_bkp`
+- Rows in dump: **4**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_parameter_master_bkp` (
+  `CategoryID` smallint NOT NULL,
+  `CategoryDescription` varchar(50) NOT NULL,
+  `SrID` varchar(15) NOT NULL,
+  `Value` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_parameter_master_incharge`
+- Rows in dump: **9**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_parameter_master_incharge` (
+  `CategoryID` smallint NOT NULL,
+  `CategoryDescription` varchar(50) NOT NULL,
+  `SrID` varchar(15) NOT NULL,
+  `Value` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_parameter_master_jun2016`
+- Rows in dump: **233**
+- Columns: **4**
+- Primary Key: —
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_parameter_master_jun2016` (
+  `CategoryID` smallint NOT NULL,
+  `CategoryDescription` varchar(50) NOT NULL,
+  `SrID` varchar(15) NOT NULL,
+  `Value` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_po_mst`
+- Rows in dump: **115**
+- Columns: **16**
+- Primary Key: `PO_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_po_mst` (
+  `PO_TYPE` char(4) DEFAULT NULL,
+  `PO_ID` int NOT NULL,
+  `PO_LINEITEMCODE` varchar(50) NOT NULL,
+  `PO_INDENT_DESC` varchar(50) NOT NULL,
+  `PO_INDENT_NO` varchar(50) NOT NULL,
+  `PO_INDENT_DATE` datetime(6) NOT NULL,
+  `PO_INDENT_COST` decimal(13,2) DEFAULT NULL,
+  `PO_VENDORID` int DEFAULT NULL,
+  `PO_NO` varchar(50) DEFAULT NULL,
+  `PO_DATE` datetime(6) DEFAULT NULL,
+  `PO_AMC_STATRTDT` datetime(6) DEFAULT NULL,
+  `PO_AMC_ENDDATE` datetime(6) DEFAULT NULL,
+  `PO_CREATED_BY` varchar(7) NOT NULL,
+  `PO_CREATED_ON` datetime(6) NOT NULL,
+  `PO_UPDATED_BY` varchar(7) NOT NULL,
+  `PO_UPDATED_DATE` datetime(6) NOT NULL,
+  PRIMARY KEY (`PO_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_product_mst`
+- Rows in dump: **32**
+- Columns: **11**
+- Primary Key: `PROD_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_product_mst` (
+  `PROD_ID` int NOT NULL,
+  `PROD_NAME` varchar(50) NOT NULL,
+  `PROD_DESC` varchar(200) DEFAULT NULL,
+  `PROD_TYPE` tinyint(1) NOT NULL DEFAULT '0',
+  `PROD_INSTR_TYPE` tinyint(1) NOT NULL DEFAULT '0',
+  `PROD_TNME_TYPE` tinyint(1) NOT NULL DEFAULT '0',
+  `PROD_STATE` tinyint(1) NOT NULL DEFAULT '0',
+  `PROD_CREATED_BY` varchar(7) NOT NULL,
+  `PROD_CREATED_ON` datetime(6) NOT NULL,
+  `PROD_UPDATED_BY` varchar(7) NOT NULL,
+  `PROD_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`PROD_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_proj_mst`
+- Rows in dump: **182**
+- Columns: **7**
+- Primary Key: `PR_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_proj_mst` (
+  `PR_ID` int NOT NULL,
+  `PR_NAME` varchar(50) NOT NULL,
+  `PR_STATE` tinyint(1) NOT NULL,
+  `PR_CREATED_BY` varchar(7) NOT NULL,
+  `PR_CREATED_ON` datetime(6) NOT NULL,
+  `PR_UPDATED_BY` varchar(7) NOT NULL,
+  `PR_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`PR_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_pur_dtl`
+- Rows in dump: **0**
+- Columns: **13**
+- Primary Key: `PUD_NO`, `PUD_PARTNO`
+- Foreign Keys:
+  - `FK_CMMS_PUR_DTL_CMMS_PUR_MST`: (`PUD_NO`) → `cmms_pur_mst` (`PUM_NO`)
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_pur_dtl` (
+  `PUD_NO` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `PUD_PARTNO` varchar(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `PUD_VEN_PARTNO` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUD_ACC_GL` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUD_UNIT_COST` decimal(7,2) DEFAULT NULL,
+  `PUD_QTY_ORDERED` decimal(8,2) DEFAULT NULL,
+  `PUD_QTY_PHYREC` decimal(8,2) DEFAULT NULL,
+  `PUD_QTY_PHYRECDT` datetime(6) DEFAULT NULL,
+  `PUD_QTY_DUE` decimal(8,2) DEFAULT NULL,
+  `PUD_CREATED_BY` mediumint DEFAULT NULL,
+  `PUD_CREATED_ON` datetime(6) DEFAULT NULL,
+  `PUD_UPDATED_BY` mediumint DEFAULT NULL,
+  `PUD_UPDATED_ON` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`PUD_NO`,`PUD_PARTNO`),
+  CONSTRAINT `FK_CMMS_PUR_DTL_CMMS_PUR_MST` FOREIGN KEY (`PUD_NO`) REFERENCES `cmms_pur_mst` (`PUM_NO`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_pur_mst`
+- Rows in dump: **0**
+- Columns: **22**
+- Primary Key: `PUM_NO`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_pur_mst` (
+  `PUM_NO` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `PUM_REQ_WHO` bigint DEFAULT NULL,
+  `PUM_DT` datetime(6) DEFAULT NULL,
+  `PUM_VEND_CODE` varchar(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_COST_CENTER` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_PARTSTOTAL` decimal(10,2) DEFAULT NULL,
+  `PUM_FRIGHT` decimal(10,2) DEFAULT NULL,
+  `PUM_OTHERCHARGE` decimal(10,2) DEFAULT NULL,
+  `PUM_GTOTAL` decimal(22,2) DEFAULT NULL,
+  `PUM_BILLTO` varchar(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_GST` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_INSU` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_OCTROI` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `PUM_APPROVAL1` bigint DEFAULT NULL,
+  `PUM_APPROVAL2` bigint DEFAULT NULL,
+  `PUM_APP1_DATE` datetime(6) DEFAULT NULL,
+  `PUM_APP2_DATE` datetime(6) DEFAULT NULL,
+  `PUM_CREATED_BY` mediumint DEFAULT NULL,
+  `PUM_CREATED_ON` datetime(6) DEFAULT NULL,
+  `PUM_UPDATED_BY` mediumint DEFAULT NULL,
+  `PUM_UPDATED_ON` datetime(6) DEFAULT NULL,
+  `PUM_REMARKS` longtext,
+  PRIMARY KEY (`PUM_NO`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_role_mst`
+- Rows in dump: **23**
+- Columns: **7**
+- Primary Key: `ROLE_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_role_mst` (
+  `ROLE_ID` int NOT NULL,
+  `ROLE_TYPE` int DEFAULT NULL,
+  `ROLE_DESC` varchar(50) NOT NULL,
+  `ROLE_CREATED_BY` varchar(50) DEFAULT NULL,
+  `ROLE_CREATED_ON` datetime(6) DEFAULT NULL,
+  `ROLE_UPDATED_BY` varchar(50) DEFAULT NULL,
+  `ROLE_UPDATED_ON` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`ROLE_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_schedule_eqip_dtl`
+- Rows in dump: **316**
+- Columns: **5**
+- Primary Key: `SC_PLAN_ID`, `SC_TYPE`, `SC_EQM_ID`, `SC_EQM_TYPE`, `SC_SCHEDULE_DATE`
+- Foreign Keys:
+  - `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_EQIP_MST`: (`SC_EQM_TYPE`, `SC_EQM_ID`) → `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+  - `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_SCHEDULE_MST`: (`SC_PLAN_ID`, `SC_TYPE`) → `cmms_schedule_mst` (`SC_PLAN_ID`, `SC_TYPE`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_EQIP_MST`: (`SC_EQM_TYPE`, `SC_EQM_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_schedule_eqip_dtl` (
+  `SC_PLAN_ID` int NOT NULL,
+  `SC_TYPE` varchar(3) NOT NULL,
+  `SC_EQM_ID` int NOT NULL,
+  `SC_EQM_TYPE` varchar(15) NOT NULL,
+  `SC_SCHEDULE_DATE` datetime(6) NOT NULL,
+  PRIMARY KEY (`SC_PLAN_ID`,`SC_TYPE`,`SC_EQM_ID`,`SC_EQM_TYPE`,`SC_SCHEDULE_DATE`),
+  KEY `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_EQIP_MST` (`SC_EQM_TYPE`,`SC_EQM_ID`),
+  CONSTRAINT `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_EQIP_MST` FOREIGN KEY (`SC_EQM_TYPE`, `SC_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`),
+  CONSTRAINT `FK_CMMS_SCHEDULE_EQIP_DTL_CMMS_SCHEDULE_MST` FOREIGN KEY (`SC_PLAN_ID`, `SC_TYPE`) REFERENCES `cmms_schedule_mst` (`SC_PLAN_ID`, `SC_TYPE`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_schedule_mst`
+- Rows in dump: **6**
+- Columns: **8**
+- Primary Key: `SC_PLAN_ID`, `SC_TYPE`
+- Foreign Keys:
+  - `FK_CMMS_SCHEDULE_MST_CMMS_SECTION_MST`: (`SC_SM_ID`) → `cmms_section_mst` (`SM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_SCHEDULE_MST_CMMS_SECTION_MST`: (`SC_SM_ID`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_schedule_mst` (
+  `SC_PLAN_ID` int NOT NULL,
+  `SC_TYPE` varchar(3) NOT NULL,
+  `SC_YEAR` varchar(50) NOT NULL,
+  `SC_SM_ID` int NOT NULL,
+  `SC_CREATED_BY` varchar(7) DEFAULT NULL,
+  `SC_CREATED_ON` datetime(6) DEFAULT NULL,
+  `SC_UPDATED_BY` varchar(50) DEFAULT NULL,
+  `SC_UPDATED_ON` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`SC_PLAN_ID`,`SC_TYPE`),
+  KEY `FK_CMMS_SCHEDULE_MST_CMMS_SECTION_MST` (`SC_SM_ID`),
+  CONSTRAINT `FK_CMMS_SCHEDULE_MST_CMMS_SECTION_MST` FOREIGN KEY (`SC_SM_ID`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_section_mst`
+- Rows in dump: **293**
+- Columns: **14**
+- Primary Key: `SM_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_section_mst` (
+  `SM_ID` int NOT NULL,
+  `SM_SHORTNAME` varchar(50) NOT NULL,
+  `SM_NAME` varchar(80) DEFAULT NULL,
+  `SM_HEAD_NAME` varchar(50) DEFAULT NULL,
+  `SM_HEAD_PH_NO` varchar(50) DEFAULT NULL,
+  `SM_HEAD_USER_ID` varchar(7) DEFAULT NULL,
+  `SM_STATE` tinyint(1) NOT NULL,
+  `SM_CREATED_BY` varchar(7) NOT NULL,
+  `SM_CREATED_ON` datetime(6) NOT NULL,
+  `SM_UPDATED_BY` varchar(7) NOT NULL,
+  `SM_UPDATED_ON` datetime(6) NOT NULL,
+  `SM_HEAD_DESIGNATION` varchar(200) DEFAULT NULL,
+  `SM_ISGROUP` tinyint(1) NOT NULL DEFAULT '0',
+  `SM_Email` varchar(150) DEFAULT NULL,
+  PRIMARY KEY (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_section_user_mst`
+- Rows in dump: **294**
+- Columns: **4**
+- Primary Key: `SM_ID`, `SM_USER_ID`
+- Foreign Keys:
+  - `FK_CMMS_SECTION_USER_MST_CMMS_ROLE_MST`: (`SM_USER_ROLE`) → `cmms_role_mst` (`ROLE_ID`)
+  - `FK_CMMS_SECTION_USER_MST_CMMS_SECTION_MST`: (`SM_ID`) → `cmms_section_mst` (`SM_ID`)
+- Unique Keys: —
+- Indexes:
+  - `FK_CMMS_SECTION_USER_MST_CMMS_ROLE_MST`: (`SM_USER_ROLE`)
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_section_user_mst` (
+  `SM_ID` int NOT NULL,
+  `SM_USER_ID` varchar(7) NOT NULL,
+  `SM_USER_NAME` varchar(50) NOT NULL,
+  `SM_USER_ROLE` int NOT NULL,
+  PRIMARY KEY (`SM_ID`,`SM_USER_ID`),
+  KEY `FK_CMMS_SECTION_USER_MST_CMMS_ROLE_MST` (`SM_USER_ROLE`),
+  CONSTRAINT `FK_CMMS_SECTION_USER_MST_CMMS_ROLE_MST` FOREIGN KEY (`SM_USER_ROLE`) REFERENCES `cmms_role_mst` (`ROLE_ID`),
+  CONSTRAINT `FK_CMMS_SECTION_USER_MST_CMMS_SECTION_MST` FOREIGN KEY (`SM_ID`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_task_mst`
+- Rows in dump: **1,489**
+- Columns: **11**
+- Primary Key: `TSK_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_task_mst` (
+  `TSK_ID` int NOT NULL,
+  `TSK_EMP_ID` varchar(7) DEFAULT NULL COMMENT 'NA ',
+  `TSK_NAME` varchar(100) NOT NULL,
+  `TSK_TYPE` varchar(50) NOT NULL COMMENT 'Calibration/PM',
+  `TSK_DESC` varchar(200) DEFAULT NULL,
+  `TSK_EST_HOUR` decimal(18,2) DEFAULT NULL COMMENT 'NA',
+  `TSK_STATE` tinyint(1) NOT NULL,
+  `TSK_CREATED_BY` varchar(7) NOT NULL,
+  `TSK_CREATED_ON` datetime(6) NOT NULL,
+  `TSK_UPDATED_BY` varchar(7) NOT NULL,
+  `TSK_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`TSK_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+### `cmms_userrole_mst`
+- Rows in dump: **565**
+- Columns: **9**
+- Primary Key: `USER_ID`, `USER_DIVISION_ID`
+- Foreign Keys: —
+- Unique Keys: —
+- Indexes: —
+
+#### Columns / Schema
+```sql
+CREATE TABLE `cmms_userrole_mst` (
+  `USER_ID` varchar(7) NOT NULL,
+  `USER_DIVISION_ID` int NOT NULL,
+  `USER_ROLE` int NOT NULL,
+  `USER_PASSWORD` varchar(10) NOT NULL,
+  `USER_STATE` tinyint(1) NOT NULL,
+  `USER_CREATED_BY` varchar(7) NOT NULL,
+  `USER_CREATED_ON` datetime(6) NOT NULL,
+  `USER_UPDATED_BY` varchar(7) NOT NULL,
+  `USER_UPDATED_ON` datetime(6) NOT NULL,
+  PRIMARY KEY (`USER_ID`,`USER_DIVISION_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
