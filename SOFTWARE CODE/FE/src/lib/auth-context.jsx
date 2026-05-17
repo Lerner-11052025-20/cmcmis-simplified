@@ -36,6 +36,20 @@ import {
   clearAuthTokens,
 } from './api-client.js';
 
+// ── Module-level singleton for the mount-time silent refresh ─────────────
+// React.StrictMode in development double-invokes effects to surface side-
+// effect bugs. Without this guard, AuthProvider's mount useEffect would
+// fire TWO network calls to /auth/refresh in dev. We capture the FIRST
+// promise here so the second mount reuses it instead of starting a new
+// request. Production (no StrictMode double-mount) behaves identically.
+let bootRefreshPromise = null;
+function bootRefreshOnce() {
+  if (!bootRefreshPromise) {
+    bootRefreshPromise = api.post('/auth/refresh');
+  }
+  return bootRefreshPromise;
+}
+
 /**
  * @typedef {Object} User
  * @property {string}   sub          The employee_id (canonical subject).
@@ -67,14 +81,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // ── Mount-time silent refresh ─────────────────────────────────────────
-  // Fire-and-forget /auth/refresh once when the provider first renders.
-  // If a previous session's cookies are still good we land back in the
-  // app without prompting; otherwise we stay anonymous and Login.jsx
-  // takes over.
+  // Single-shot /auth/refresh on first render. bootRefreshOnce() returns
+  // a module-level singleton promise so StrictMode's double-mount in dev
+  // reuses ONE network call instead of firing two. If a previous session's
+  // cookies are still good we hydrate; otherwise we stay anonymous and
+  // Login.jsx takes over.
   useEffect(() => {
     let cancelled = false;
-    api
-      .post('/auth/refresh')
+    bootRefreshOnce()
       .then((r) => {
         if (cancelled) return;
         setAccessToken(r.data.data.accessToken);
@@ -82,15 +96,11 @@ export function AuthProvider({ children }) {
         setUser(r.data.data.user);
       })
       .catch(() => {
-        // No valid session — that's normal on first visit. Stay anonymous.
+        // No valid session — normal on first visit. Stay anonymous.
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
-    // Cleanup guards against the React-StrictMode double-mount in dev:
-    // if the effect re-runs while the first refresh is still in flight,
-    // we don't want a late `setUser` to flash old data.
     return () => {
       cancelled = true;
     };

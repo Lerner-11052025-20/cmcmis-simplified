@@ -8,7 +8,8 @@
     "migrate:dry": "node runner/run-migrations.js --dry-run",
     "migrate:status": "node runner/run-migrations.js --status",
     "migrate:reset": "node runner/run-migrations.js --reset",
-    "test:bootstrap": "node runner/test-bootstrap.js"
+    "test:bootstrap": "node runner/test-bootstrap.js",
+    "migrate:legacy-users": "node scripts/migrate-legacy-employees.js"
   },
   "engines": {
     "node": ">=18.0.0"

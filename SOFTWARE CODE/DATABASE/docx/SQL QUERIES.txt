@@ -13,3 +13,80 @@ FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.user_id
 LEFT JOIN roles r ON r.role_id = ur.role_id
 ORDER BY u.user_id;
+
+
+
+
+
+cd "E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\DATABASE\phase3"
+npm run migrate:legacy-users
+
+E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\DATABASE\phase3>npm run migrate:legacy-users
+
+> cmcmis-phase3-migrations@2.0.0 migrate:legacy-users
+> node scripts/migrate-legacy-employees.js
+
+[19:50:05] DB pool ready {"db":"final"}
+[19:50:05] Default role resolved -> NORMAL_USER (id=4) 
+[19:50:05] Legacy candidates fetched {"count":60}
+[19:50:05] Existing users in target {"count":3}
+[19:50:05] migrated  AC00157  NP PANDYA {"is_active":0}
+[19:50:06] migrated  AC00169  PANJWANI {"is_active":0}
+[19:50:06] migrated  AC00463  J N KAVTHEKAR {"is_active":0}
+[19:50:06] migrated  AC02080  D V PANCHAL {"is_active":0}
+[19:50:06] migrated  AC03032  A M SUCHDAY {"is_active":0}
+[19:50:06] migrated  AC05072  H V PATEL {"is_active":0}
+[19:50:06] migrated  AC05084  NK SAVSANI {"is_active":0}
+[19:50:06] migrated  AC05194  N G BAPODRA {"is_active":0}
+[19:50:06] migrated  AC05209  S J OZARKAR {"is_active":0}
+[19:50:06] migrated  AC05669  J V HINGORANI {"is_active":0}
+[19:50:06] migrated  AC06143  N R PATEL {"is_active":0}
+[19:50:06] migrated  AC06216  K B PATEL {"is_active":1}
+[19:50:06] migrated  AC06350  N S PATADIA {"is_active":0}
+[19:50:07] migrated  AC06448  A N BHAVSAR {"is_active":0}
+[19:50:07] migrated  AC06580  CP SHAH {"is_active":0}
+[19:50:07] migrated  AC06854  M C KOLADYIA {"is_active":0}
+[19:50:07] migrated  AC07054  V B SAVALIYA {"is_active":0}
+[19:50:07] migrated  AC07179  B.A.PATEL {"is_active":1}
+[19:50:07] migrated  AC07228  J M SHAH {"is_active":0}
+[19:50:07] migrated  AC07299  RAJESHKUMAR CHAVDA {"is_active":1}
+[19:50:07] migrated  AC08020  R PRADHAN {"is_active":1}
+[19:50:07] migrated  AC08085  V A MODHWADIYA {"is_active":1}
+[19:50:07] migrated  AC08217  R B NAIK {"is_active":0}
+[19:50:07] migrated  AC08228  SUDHEER KUMAR {"is_active":1}
+[19:50:07] migrated  AC08248  S K GOLHANI {"is_active":1}
+[19:50:08] migrated  AC08312  N R CHAUDHARY {"is_active":1}
+[19:50:08] migrated  AC08596  B A CHAVDA {"is_active":1}
+[19:50:08] migrated  AC08727  RAHUL AGARWAL {"is_active":1}
+[19:50:08] migrated  AC08917  CHAUHAN FENIL JASHVANTLAL {"is_active":1}
+[19:50:08] migrated  AC09994  APPRENTICE {"is_active":1}
+[19:50:08] migrated  AC09995  EQDC {"is_active":0}
+[19:50:08] migrated  AC09996  VENDOR {"is_active":1}
+[19:50:08] migrated  AC11098  PATNI AJAYBHAI CHIMANBHAI {"is_active":1}
+[19:50:08] migrated  AC11191  MUKESH KUMAR {"is_active":1}
+[19:50:08] migrated  AC11205  RAVINDRA KALYA VASAVE {"is_active":1}
+[19:50:08] migrated  AC16272  R S Sharma {"is_active":0}
+[19:50:08] migrated  AC55669  J  V HINGORANI {"is_active":1}
+[19:50:09] migrated  AC64480  A N BHAVSAR-1 {"is_active":0}
+[19:50:09] migrated  AC66350  NS PATADIA-1 {"is_active":0}
+[19:50:09] migrated  AC88228  SUDHEER KUMAR {"is_active":1}
+[19:50:09] migrated  CP00666  A V SHAH {"is_active":0}
+[19:50:09] migrated  CP00675  ASHKA BHATT {"is_active":0}
+[19:50:09] migrated  CP00676  KILLOL BHATT {"is_active":0}
+[19:50:09] migrated  CP00741  I K SOLANKI {"is_active":0}
+[19:50:09] migrated  CP00750  F J CHAUHAN {"is_active":0}
+[19:50:09] migrated  CP01067  N A SHAH {"is_active":0}
+[19:50:09] migrated  CP01447  DHRUVAL DAVE {"is_active":0}
+[19:50:09] migrated  CP01694  V B PATEL {"is_active":0}
+[19:50:09] migrated  CP01789  PINAL KORAT {"is_active":0}
+[19:50:10] migrated  CP01793  S S SAVALIYA {"is_active":0}
+[19:50:10] migrated  CP02327  KULDEEP D DASADIYA {"is_active":0}
+[19:50:10] migrated  CP02950  PATEL RIDDHI K {"is_active":0}
+[19:50:10] migrated  CP03836  HETVI VIVEKBHAI BHAVSAR {"is_active":1}
+[19:50:10] migrated  NR02094  B P KHOBRAGADE {"is_active":1}
+[19:50:10] migrated  TE00078  CHAUHAN FENIL J {"is_active":0}
+[19:50:10] migrated  TE00197  MUKESH KUMAR {"is_active":0}
+[19:50:10] migrated  TE00225  RAVINDRA K VASAVE {"is_active":0}
+[19:50:10] Migration complete {"inserted":57,"skipped":3,"invalid":0,"inactiveSeededAsLockedOut":37,"totalLegacy":60}
+
+E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\DATABASE\phase3>
