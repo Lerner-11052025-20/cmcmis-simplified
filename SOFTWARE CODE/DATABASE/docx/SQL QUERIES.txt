@@ -90,3 +90,42 @@ E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\DATABASE\phase3>npm run migra
 [19:50:10] Migration complete {"inserted":57,"skipped":3,"invalid":0,"inactiveSeededAsLockedOut":37,"totalLegacy":60}
 
 E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\DATABASE\phase3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+please keep in mind, we have entire database ready with us with all the schemas of tables, please note this in prompt.
+
+
+
+
+
+please locked in with phase 4 ready locked as from phase 0----->4 done. stay with me.
+
+
+
+please take care of this you are senior software developer with this context PLEASE WRITE END TO END STEP BY STEP PROMPT FOR THE AI AGENTs in block so that i copied it from here and given to the AI agent for the Equipment module generation with frontend as well as while writing prompt please keep in mind that please put your all extra and highest efforts.|
+
+
+
+
+
+please think as SENIOR SOFTWARE DEVELOPER ENGINEER and put higher and complex as extra as efforts.
+
+
+
+put your all the energy to FOR THE WRITING AI AGENT PROMPT as in depth.
