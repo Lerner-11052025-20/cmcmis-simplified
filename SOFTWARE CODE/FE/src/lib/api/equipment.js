@@ -1,0 +1,57 @@
+// ============================================================================
+// src/lib/api/equipment.js  —  Equipment-module HTTP wrappers
+// ----------------------------------------------------------------------------
+// Thin wrappers around the central `api` axios instance. Centralising
+// them here means a future API change (e.g. /equipment → /eqip) is a
+// one-file edit, not 17 sprinkled fetch() calls.
+//
+// Every function returns the unwrapped `data` payload from the standard
+// envelope { data: ... } so callers don't repeat `.data.data`.
+// ============================================================================
+
+import { api } from '../api-client.js';
+
+/**
+ * Paginated list with filters.
+ * @param {Object} [params]
+ * @param {number} [params.page]
+ * @param {number} [params.page_size]
+ * @param {string} [params.q]
+ * @param {number} [params.type_id]
+ * @param {string} [params.status]
+ * @param {string} [params.eqm_type]
+ * @param {string} [params.sort]
+ * @param {string} [params.order]
+ * @param {AbortSignal} [signal]
+ */
+export async function fetchEquipmentList(params = {}, signal) {
+  const r = await api.get('/equipment', { params, signal });
+  return r.data.data;     // → { items, pagination }
+}
+
+/** Equipment-type dropdown options. */
+export async function fetchTypes(signal) {
+  const r = await api.get('/equipment/types', { signal });
+  return r.data.data.items;
+}
+
+/** Make / manufacturer dropdown options. */
+export async function fetchMakes(signal) {
+  const r = await api.get('/equipment/makes', { signal });
+  return r.data.data.items;
+}
+
+/** Division dropdown options. */
+export async function fetchDivisions(signal) {
+  const r = await api.get('/equipment/divisions', { signal });
+  return r.data.data.items;
+}
+
+/**
+ * Register new equipment (Phase 5 K.6 path — equipment-row + audit only).
+ * @param {Object} body  Conforms to FE equipmentSchema.
+ */
+export async function createEquipment(body) {
+  const r = await api.post('/equipment', body);
+  return r.data.data;     // → { equipment_id, equipment_code, status }
+}

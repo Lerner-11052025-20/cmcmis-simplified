@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="ISRO SAC placeholder logo">
+  <!-- Phase-5 placeholder — replace with the real ISRO SAC logo asset when supplied. -->
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#4F5DFF"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="url(#g)"/>
+  <!-- Stylised mountain + sun (very rough nod to the ISRO SAC mark) -->
+  <circle cx="20" cy="22" r="5" fill="#FFE066" opacity="0.95"/>
+  <path d="M6 50 L24 26 L38 42 L46 32 L58 50 Z" fill="#FFFFFF" opacity="0.92"/>
+  <path d="M6 50 L58 50" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+</svg>

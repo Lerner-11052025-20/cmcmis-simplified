@@ -184,6 +184,13 @@ app.use(`${env.API_BASE_PATH}/auth`, authRoutes);
 const usersRoutes = require('./modules/users/users.routes');
 app.use(`${env.API_BASE_PATH}`, usersRoutes);
 
+// ── Equipment module (Phase 5) ──────────────────────────────────────────
+// Mounted at /api/v1/equipment — see modules/equipment/equipment.routes.js
+// for the full route table. Read-list + create implemented this phase;
+// detail/update/verify/condemn/delete stubbed with 404 until Phase 6.
+const equipmentRoutes = require('./modules/equipment/equipment.routes');
+app.use(`${env.API_BASE_PATH}/equipment`, equipmentRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.

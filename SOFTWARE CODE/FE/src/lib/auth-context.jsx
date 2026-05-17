@@ -80,20 +80,31 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(/** @type {User|null} */ (null));
   const [loading, setLoading] = useState(true);
 
-  // ── Mount-time silent refresh ─────────────────────────────────────────
-  // Single-shot /auth/refresh on first render. bootRefreshOnce() returns
-  // a module-level singleton promise so StrictMode's double-mount in dev
-  // reuses ONE network call instead of firing two. If a previous session's
-  // cookies are still good we hydrate; otherwise we stay anonymous and
-  // Login.jsx takes over.
+  // ── Mount-time silent refresh + profile enrichment ────────────────────
+  // Phase 4: just /auth/refresh.
+  // Phase 5: AFTER a successful refresh, also call GET /me to enrich
+  //          the user object with display_name / designation / email
+  //          (needed for the Equipment Form's Section 5 auto-fill).
+  // bootRefreshOnce() is a module-level singleton so StrictMode's
+  // double-mount in dev reuses ONE network call.
   useEffect(() => {
     let cancelled = false;
     bootRefreshOnce()
-      .then((r) => {
+      .then(async (r) => {
         if (cancelled) return;
         setAccessToken(r.data.data.accessToken);
         setCsrfToken(r.data.data.csrfToken);
-        setUser(r.data.data.user);
+        // First, hydrate with whatever /refresh returned.
+        const base = r.data.data.user;
+        setUser(base);
+        // Then enrich with /me. Best-effort: if /me fails, the user is
+        // still signed in with the base JWT fields.
+        try {
+          const me = await api.get('/me');
+          if (!cancelled) setUser({ ...base, ...me.data.data });
+        } catch {
+          // ignore — base user stays
+        }
       })
       .catch(() => {
         // No valid session — normal on first visit. Stay anonymous.
@@ -119,7 +130,15 @@ export function AuthProvider({ children }) {
     });
     setAccessToken(r.data.data.accessToken);
     setCsrfToken(r.data.data.csrfToken);
-    setUser(r.data.data.user);
+    const base = r.data.data.user;
+    setUser(base);
+    // Enrich with display_name / designation / email from cmms_emp_mst.
+    try {
+      const me = await api.get('/me');
+      setUser({ ...base, ...me.data.data });
+    } catch {
+      // ignore — base user stays
+    }
   }, []);
 
   const logout = useCallback(async () => {
