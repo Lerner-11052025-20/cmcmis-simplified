@@ -124,14 +124,14 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // ── 6. pino-http ────────────────────────────────────────────────────────
-// Logs one JSON line per request: method, url, status, durationMs,
-// requestId, and (redacted) headers. Also attaches `req.log` so app
-// code can write structured lines that automatically carry the
-// requestId — invaluable for correlating user behaviour with audit data.
+// One log line per request. The custom serializers strip the noisy header
+// blob and verbose req/res objects so each line is a single readable row:
+//   method, url, status, durationMs, requestId, ip.
+// errorHandler.js does NOT emit extra log lines — pino-http's single
+// completion line is the canonical record for every request.
 app.use(
   pinoHttp({
     logger,
-    // Suppress 200/304 noise in dev; keep all lines in production for ops.
     autoLogging: {
       ignore: (req) => env.NODE_ENV === 'development' && req.url === '/healthz',
     },
@@ -139,6 +139,23 @@ app.use(
       if (err || res.statusCode >= 500) return 'error';
       if (res.statusCode >= 400) return 'warn';
       return 'info';
+    },
+    customSuccessMessage: (req, res) =>
+      `${req.method} ${req.url} → ${res.statusCode}`,
+    customErrorMessage: (req, res) =>
+      `${req.method} ${req.url} → ${res.statusCode}`,
+    // Slim serializers — drop headers, drop res body, keep just the fields
+    // we actually want to read at 2am.
+    serializers: {
+      req: (req) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        ip: req.remoteAddress,
+      }),
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
     },
   }),
 );

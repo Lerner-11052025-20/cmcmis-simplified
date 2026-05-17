@@ -91,8 +91,9 @@ function errorHandler(err, req, res, _next) {
   // 1) Zod validation errors → 422. The `validate.js` middleware calls
   //    schema.parse() and forwards the thrown ZodError here. We unpack it
   //    into a clean details[] the frontend can highlight per-field.
+  //    NOTE: no manual log here — pino-http already emits one WARN line per
+  //    completed 4xx response, which is sufficient context.
   if (err && err.name === 'ZodError' && Array.isArray(err.errors)) {
-    req.log?.info?.({ zodErrors: err.errors.length }, 'Validation failed');
     return res.status(422).json({
       error: {
         code: 'VALIDATION_ERROR',
@@ -122,12 +123,10 @@ function errorHandler(err, req, res, _next) {
   }
 
   // 4) AppError instances we threw deliberately → use their statusCode.
+  //    No manual log: pino-http's request-completion line already records
+  //    method/url/status/responseTime at the correct level (warn for 4xx,
+  //    error for 5xx). Logging here too would duplicate every error line.
   if (err instanceof AppError) {
-    // Log at info: these are *expected* application-level outcomes.
-    req.log?.info?.(
-      { code: err.code, status: err.statusCode, path: req.originalUrl },
-      'AppError',
-    );
     return res.status(err.statusCode).json({
       error: { code: err.code, message: err.message, details: err.details },
     });
