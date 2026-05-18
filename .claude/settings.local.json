@@ -10,7 +10,10 @@
       "Bash(cd \"/e/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/TECH_DOCX\" && grep -n \"cmms_eqip_mst\" phase5-schema-audit.md | head -10)",
       "Read(//e/e/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/TECH_DOCX/**)",
       "Bash(grep -A 30 \"^### \\\\`audit_log\\\\`$\" phase5-schema-audit.md)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(node runner/run-migrations.js --status)",
+      "Bash(node runner/run-migrations.js --dry-run)",
+      "Bash(node runner/run-migrations.js)"
     ]
   }
 }
