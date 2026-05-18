@@ -1,7 +1,7 @@
 // ============================================================================
-// src/components/Sidebar.jsx  —  ISRO SAC primary navigation (Phase 5 redesign)
+// src/components/Sidebar.jsx  —  ISRO SAC primary navigation
 // ----------------------------------------------------------------------------
-// LAYOUT (matches the reference mockup at SOFTWARE CODE/TECH_DOCX):
+// LAYOUT (EXPANDED — w-64):
 //
 //   ┌──────────────────┐
 //   │ [▣] CMCMIS       │   ← logo + wordmark
@@ -11,21 +11,34 @@
 //   │ ▤ Job Requests   │   ← permission-filtered nav
 //   │ ▥ Job Cards      │      (active item in accent color)
 //   │ 🔧 Equipment     │
-//   │ 📅 Schedule      │
-//   │ 📦 Procurement   │
 //   │ 🔍 Inquiry       │
-//   │ 📊 Reports       │
 //   │ ⚙ Admin          │
 //   ├──────────────────┤
-//   │ [×]              │   ← collapse-toggle placeholder (visual only this phase)
+//   │ [«] Collapse     │   ← collapse trigger (mirrors TopBar hamburger)
 //   └──────────────────┘
 //
-// CHANGES FROM PHASE 4:
-//   • Logo block replaces the simple Brand wordmark.
-//   • Identity card (employee_id + role pill) MOVED to TopBar.
-//   • Sign-out button MOVED to TopBar (Phase 6 will add menu).
-//   • Logo asset path: src/assets/isro-sac-logo.svg — gracefully falls back
-//     to an Image icon if the SVG is missing.
+// LAYOUT (COLLAPSED — w-16):
+//
+//   ┌────┐
+//   │ ▣  │       ← logo only
+//   ├────┤
+//   │ ▢  │       ← icons centred, label is `title` tooltip
+//   │ ▤  │
+//   │ ▥  │       ← active item still highlighted in accent
+//   │ 🔧 │
+//   │ 🔍 │
+//   │ ⚙  │
+//   ├────┤
+//   │ »  │       ← expand trigger
+//   └────┘
+//
+// PHASE 7 PATCH (2026-05-19)
+//   • Accept `collapsed` + `onToggle` props from Layout.
+//   • Switch width between w-64 and w-16 with a CSS transition.
+//   • In collapsed mode: hide labels, centre icons, surface labels as
+//     hover tooltips via the native `title` attribute (zero JS cost).
+//   • Footer button is now wired — it calls onToggle and shows the right
+//     icon depending on state (PanelLeftClose / PanelLeftOpen).
 //
 // PERMISSION FILTERING (BR-RBAC-03):
 //   visibleNavItems(user.permissions) is the only gate the FE applies.
@@ -34,12 +47,21 @@
 
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
-import { Image as ImageIcon, X } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context.jsx';
 import { visibleNavItems } from '../lib/permissions.js';
 
-export function Sidebar() {
+/**
+ * @param {Object} props
+ * @param {boolean} [props.collapsed=false] Render in icons-only mode when true.
+ * @param {() => void} [props.onToggle]    Called by the footer collapse button.
+ */
+export function Sidebar({ collapsed = false, onToggle }) {
   const { user } = useAuth();
   if (!user) return null;
 
@@ -47,26 +69,53 @@ export function Sidebar() {
 
   return (
     <aside
-      className="w-64 shrink-0 min-h-screen flex flex-col bg-base-elev border-r border-border"
+      // Width is the only thing that changes between the two modes — letting
+      // CSS do the work keeps the toggle smooth and means we don't have to
+      // remount the nav items (NavLink active state stays intact).
+      className={clsx(
+        'shrink-0 min-h-screen flex flex-col bg-base-elev border-r border-border',
+        'transition-[width] duration-200 ease-in-out',
+        collapsed ? 'w-16' : 'w-64',
+      )}
       aria-label="Primary navigation"
     >
-      {/* ── Header: logo + wordmark + caption ───────────────────── */}
-      <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+      {/* ── Header: logo + (conditionally) wordmark ─────────────── */}
+      <div
+        className={clsx(
+          'border-b border-border flex items-center',
+          collapsed ? 'justify-center px-2 py-4' : 'px-5 py-4 gap-3',
+        )}
+      >
         <Logo />
-        <div className="leading-tight">
-          <div className="text-base font-semibold text-ink">CMCMIS</div>
-          <div className="text-[11px] text-ink-soft uppercase tracking-wider">
-            ISRO SAC
+        {/* The wordmark disappears in collapsed mode. Using a conditional
+            render (vs. visibility:hidden) means the flex layout can shrink
+            cleanly without a phantom-width gap. */}
+        {!collapsed ? (
+          <div className="leading-tight">
+            <div className="text-base font-semibold text-ink">CMCMIS</div>
+            <div className="text-[11px] text-ink-soft uppercase tracking-wider">
+              ISRO SAC
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       {/* ── Nav list ──────────────────────────────────────────── */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav
+        className={clsx(
+          'flex-1 overflow-y-auto space-y-1',
+          collapsed ? 'p-2' : 'p-3',
+        )}
+      >
         {items.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-ink-soft">
-            No accessible modules. Contact your Super Admin.
-          </p>
+          // Friendly empty state — only shown to the unusual case of a
+          // signed-in user with zero permissions. Hidden completely in
+          // collapsed mode to avoid a cluttered icon strip.
+          collapsed ? null : (
+            <p className="px-3 py-2 text-xs text-ink-soft">
+              No accessible modules. Contact your Super Admin.
+            </p>
+          )
         ) : (
           items.map((item) => {
             const Icon = item.icon;
@@ -75,9 +124,16 @@ export function Sidebar() {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/dashboard'}
+                // `title` doubles as the hover tooltip in collapsed mode.
+                // Always set, so keyboard navigators get a screen-reader hint
+                // even when the visible label is showing.
+                title={item.label}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                    'flex items-center rounded-md text-sm transition-colors',
+                    collapsed
+                      ? 'justify-center h-10 w-12 mx-auto'
+                      : 'gap-3 px-3 py-2',
                     isActive
                       ? 'bg-accent text-white font-medium'
                       : 'text-ink hover:bg-base hover:text-accent',
@@ -85,22 +141,41 @@ export function Sidebar() {
                 }
               >
                 <Icon size={18} strokeWidth={1.5} aria-hidden="true" />
-                <span>{item.label}</span>
+                {/* Label disappears in collapsed mode — `title` keeps a11y
+                    intact via the hover/focus tooltip. */}
+                {!collapsed ? <span>{item.label}</span> : null}
               </NavLink>
             );
           })
         )}
       </nav>
 
-      {/* ── Footer: collapse placeholder ─────────────────────── */}
-      <div className="p-3 border-t border-border">
+      {/* ── Footer: collapse / expand trigger ─────────────────── */}
+      <div
+        className={clsx(
+          'border-t border-border',
+          collapsed ? 'p-2 flex justify-center' : 'p-3',
+        )}
+      >
         <button
           type="button"
-          aria-label="Collapse sidebar (coming in Phase 6)"
-          title="Collapse sidebar — coming in Phase 6"
-          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-ink-soft hover:bg-base hover:text-ink"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={clsx(
+            'inline-flex items-center justify-center h-8 rounded-md text-ink-soft hover:bg-base hover:text-ink transition-colors',
+            collapsed ? 'w-8' : 'w-full gap-2 px-3 text-xs',
+          )}
         >
-          <X size={16} strokeWidth={1.5} />
+          {collapsed ? (
+            <PanelLeftOpen size={16} strokeWidth={1.5} />
+          ) : (
+            <>
+              <PanelLeftClose size={16} strokeWidth={1.5} />
+              <span>Collapse</span>
+            </>
+          )}
         </button>
       </div>
     </aside>

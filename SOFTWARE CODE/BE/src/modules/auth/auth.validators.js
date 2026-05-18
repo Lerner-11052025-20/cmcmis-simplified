@@ -2,46 +2,59 @@
 // src/modules/auth/auth.validators.js  —  Zod schemas for auth endpoints
 // ----------------------------------------------------------------------------
 // PURPOSE
-//   The single source of truth for what the auth endpoints accept. The
-//   frontend imports an identical schema (re-stated in TS for type
-//   inference) — so the same rule rejects malformed input at both edges.
+//   The single source of truth for what shape the auth endpoints accept.
+//   The frontend imports an identical-shape schema so the same rule
+//   rejects malformed input at both edges of the wire.
 //
-// WHY a regex AND a length check?
-//   `.regex(...)` alone would accept any string that matches the pattern,
-//   regardless of length (the regex is anchored, so it's already
-//   effectively length-7, but explicit .length(7) makes intent clear and
-//   gives a precise error if a user pastes whitespace or extra chars).
+// SCOPE OF THIS VALIDATOR (post Phase-7 patch, 2026-05-19)
+//   This schema is now ONLY a shape check:
+//     • employee_id : non-empty string, ≤ 50 chars
+//     • password    : non-empty string, ≤ 256 chars
+//     • no extra fields (.strict())
 //
-// SECURITY pay-off
-//   bcrypt.compare is intentionally slow (~80ms with cost 10). If we let
-//   garbage strings through to the service layer, every "abc" attack
-//   wave costs us 80ms × N of CPU. Catching malformed input HERE — in
-//   the middleware, before service.login() runs — closes that door in
-//   under a millisecond per request. This is in addition to express-
-//   rate-limit on /login (10 attempts/15min/IP).
+//   The actual decision of "is this credential valid?" is made by the
+//   service layer doing a row lookup + bcrypt.compare. The DB row is
+//   the only source of truth.
+//
+// WHY WE REMOVED THE ^[A-Z]{2}[0-9]{5}$ REGEX
+//   The legacy employee directory contains IDs that do NOT conform to
+//   the original tight pattern. The user explicitly requested: if the
+//   credential exists in the database, the user must be allowed in.
+//   A regex gate would lock out legitimate users.
+//
+// WHY THE SANITY CAPS REMAIN
+//   • bcrypt silently truncates inputs longer than 72 bytes — clamping
+//     at 256 stops a megabyte-string DoS that costs us 80ms of CPU per
+//     bcrypt.compare without ever returning true.
+//   • An unbounded string into a query parameter is a footgun even with
+//     parameterised queries (memory pressure, log bloat).
+//
+// THE REAL BRUTE-FORCE DEFENCE
+//   express-rate-limit fronts /auth/login (10 attempts / 15 min / IP).
+//   That's the gate that stops "abc-abc-abc" attack waves now that the
+//   regex is gone.
 // ============================================================================
 
 'use strict';
 
 const { z } = require('zod');
 
-// Canonical employee-id / v1-password format: two upper-case letters
-// followed by exactly five digits. Locked in Phase 2; bcrypted in Phase 3
-// against the same regex. Frontend mirrors this exactly.
-const PASSWORD_REGEX = /^[A-Z]{2}[0-9]{5}$/;
-const FORMAT_HINT = 'Format: 2 uppercase letters + 5 digits (e.g. SA79900)';
+// Sanity caps — high enough that no real workflow hits them, low enough
+// that an oversized payload can't waste a bcrypt compare cycle.
+const EMP_ID_MAX = 50;
+const PASSWORD_MAX = 256;
 
-// POST /api/v1/auth/login  — body schema
+// POST /api/v1/auth/login  — body schema (shape-only, no format)
 const loginSchema = z
   .object({
     employee_id: z
       .string()
-      .length(7, FORMAT_HINT)
-      .regex(PASSWORD_REGEX, FORMAT_HINT),
+      .min(1, 'Employee ID is required')
+      .max(EMP_ID_MAX, `Employee ID must be ${EMP_ID_MAX} characters or fewer`),
     password: z
       .string()
-      .length(7, FORMAT_HINT)
-      .regex(PASSWORD_REGEX, FORMAT_HINT),
+      .min(1, 'Password is required')
+      .max(PASSWORD_MAX, `Password must be ${PASSWORD_MAX} characters or fewer`),
   })
   // .strict() rejects extra/unknown fields. We do NOT want clients to
   // smuggle keys like { employee_id, password, isAdmin: true } past us.
@@ -55,5 +68,4 @@ const refreshSchema = z.object({}).strict();
 module.exports = {
   loginSchema,
   refreshSchema,
-  PASSWORD_REGEX,
 };

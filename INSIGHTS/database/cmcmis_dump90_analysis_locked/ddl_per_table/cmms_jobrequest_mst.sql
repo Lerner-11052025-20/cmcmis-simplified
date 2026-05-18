@@ -1,0 +1,83 @@
+-- CMCMIS dump90tables schema-only extraction
+-- Source: dump90tables.sql inside dump90tables.zip
+-- Extracted: 2026-05-18 15:10:22
+-- Source SHA256: dd57e353524636a960f04c0fcd658fb8428ecd6e88e653e52a399b81381ffc6a
+-- Note: data INSERT statements intentionally removed. Review before running in production.
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
+
+CREATE TABLE `cmms_jobrequest_mst` (
+  `JR_JOBREQUESTNO` int(11) NOT NULL,
+  `JR_REQUEST_TYPE` varchar(25) NOT NULL,
+  `JR_JOBREQUESTDATE` datetime NOT NULL,
+  `JR_SECTIONJOB_NO` varchar(9) DEFAULT NULL,
+  `JR_EQM_ID` int(11) DEFAULT NULL,
+  `JR_EQM_TYPE` varchar(15) NOT NULL,
+  `JR_EQM_NAME` varchar(200) DEFAULT NULL,
+  `JR_EQM_MFRID` int(11) DEFAULT NULL,
+  `JR_EQM_MFR_NAME` varchar(100) DEFAULT NULL,
+  `JR_EQM_MODELNO` varchar(100) DEFAULT NULL,
+  `JR_EQM_SRNO` varchar(100) DEFAULT NULL,
+  `JR_INST_TYPE` int(11) DEFAULT NULL,
+  `JR_EQM_OPTNDESC` varchar(200) DEFAULT NULL,
+  `JR_SUBMITTEDBYID` varchar(7) DEFAULT NULL,
+  `JR_SUBMITTEDBYNAME` varchar(100) DEFAULT NULL,
+  `JR_PROJECTID` varchar(100) DEFAULT NULL,
+  `JR_SUBSYSTEM` varchar(100) DEFAULT NULL,
+  `JR_DESIGNATION` varchar(100) DEFAULT NULL,
+  `JR_DIVISION` int(11) DEFAULT NULL,
+  `JR_PHOENLAB` varchar(100) DEFAULT NULL,
+  `JR_PHONEROOM` varchar(100) DEFAULT NULL,
+  `JR_AFTERREPAIRS` tinyint(1) DEFAULT NULL,
+  `JR_COMPLAINTANDSYMPTOMS` varchar(400) DEFAULT NULL,
+  `JR_REQUESTFOR` varchar(15) DEFAULT NULL,
+  `JR_PONO` varchar(100) DEFAULT NULL,
+  `JR_PODATE` datetime DEFAULT NULL,
+  `JR_SRVNO` varchar(100) DEFAULT NULL,
+  `JR_SRVDATE` datetime DEFAULT NULL,
+  `JR_BUDGETCODE` varchar(15) DEFAULT NULL,
+  `JR_EQIPCOST` decimal(19,2) DEFAULT NULL,
+  `JR_EQM_COSTCURRENCY` varchar(100) DEFAULT NULL,
+  `JR_EQM_WRNTY_EXPIRY_DATE` smallint(6) DEFAULT NULL,
+  `JR_WORKING_STATUS` varchar(20) DEFAULT NULL,
+  `JR_DIVISION_CHANGE_FLAG` tinyint(1) DEFAULT NULL,
+  `JR_ITEM_CHANGE_FLAG` tinyint(1) DEFAULT NULL,
+  `JR_REMARKS` varchar(500) DEFAULT NULL,
+  `Email` varchar(300) DEFAULT NULL,
+  `JR_MVP_STATUS` enum('DRAFT','SUBMITTED','ASSIGNED','IN_PROGRESS','COMPLETED','VERIFIED_CLOSED','REJECTED','REOPENED') NOT NULL DEFAULT 'DRAFT',
+  `JR_MVP_STATUS_AT` datetime(6) DEFAULT NULL,
+  `JR_APPROVED_BY` varchar(7) DEFAULT NULL,
+  `JR_APPROVED_ON` datetime(6) DEFAULT NULL,
+  `JR_REJECTED_BY` varchar(7) DEFAULT NULL,
+  `JR_REJECTED_ON` datetime(6) DEFAULT NULL,
+  `JR_REJECTION_REASON` varchar(500) DEFAULT NULL,
+  `JR_PRIORITY` enum('LOW','NORMAL','HIGH','URGENT') NOT NULL DEFAULT 'NORMAL',
+  `JR_ASSIGNED_ENGINEER` varchar(7) DEFAULT NULL,
+  `JR_JOB_CATEGORY` enum('TME','FPE') DEFAULT NULL COMMENT 'Phase 6: TME (Test&Measurement) vs FPE (Fabrication&Production)',
+  `JR_JOB_TYPE` enum('CALIBRATION','REPAIR','REGISTRATION') DEFAULT NULL COMMENT 'Phase 6: kind of work requested',
+  `JR_TNC_ACCEPTED_AT` datetime(6) DEFAULT NULL COMMENT 'Phase 6: when the requester accepted all 6 T&C checkboxes',
+  `JR_TNC_VERSION` varchar(10) DEFAULT 'v1' COMMENT 'Phase 6: version string of the T&C set that was accepted',
+  `JR_CREATED_AT` datetime(6) NOT NULL DEFAULT current_timestamp(6) COMMENT 'Phase 6: deterministic creation timestamp; index-friendly',
+  `JR_UPDATED_AT` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6) COMMENT 'Phase 6: auto-touched on every row update'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+ALTER TABLE `cmms_jobrequest_mst`
+  ADD PRIMARY KEY (`JR_JOBREQUESTNO`),
+  ADD KEY `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST` (`JR_DIVISION`),
+  ADD KEY `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST` (`JR_EQM_TYPE`,`JR_EQM_ID`),
+  ADD KEY `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST` (`JR_SECTIONJOB_NO`),
+  ADD KEY `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST` (`JR_INST_TYPE`),
+  ADD KEY `idx_jr_status` (`JR_MVP_STATUS`),
+  ADD KEY `idx_jr_priority` (`JR_PRIORITY`,`JR_MVP_STATUS`),
+  ADD KEY `idx_jr_assigned_eng` (`JR_ASSIGNED_ENGINEER`),
+  ADD KEY `idx_jr_list_default` (`JR_MVP_STATUS`,`JR_CREATED_AT`,`JR_JOBREQUESTNO`),
+  ADD KEY `idx_jr_owner_created` (`JR_SUBMITTEDBYID`,`JR_CREATED_AT`),
+  ADD KEY `idx_jr_division_created` (`JR_DIVISION`,`JR_CREATED_AT`),
+  ADD KEY `idx_jr_priority_status_created` (`JR_PRIORITY`,`JR_MVP_STATUS`,`JR_CREATED_AT`),
+  ADD KEY `idx_jr_jobtype_created` (`JR_JOB_TYPE`,`JR_CREATED_AT`);
+ALTER TABLE `cmms_jobrequest_mst`
+  ADD CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_EQIP_MST` FOREIGN KEY (`JR_EQM_TYPE`,`JR_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`),
+  ADD CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_JOBCARD_MST` FOREIGN KEY (`JR_SECTIONJOB_NO`) REFERENCES `cmms_jobcard_mst` (`JM_SectionJobNo`),
+  ADD CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_PRODUCT_MST` FOREIGN KEY (`JR_INST_TYPE`) REFERENCES `cmms_product_mst` (`PROD_ID`),
+  ADD CONSTRAINT `FK_CMMS_JOBREQUEST_MST_CMMS_SECTION_MST` FOREIGN KEY (`JR_DIVISION`) REFERENCES `cmms_section_mst` (`SM_ID`);

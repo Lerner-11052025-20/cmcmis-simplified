@@ -1,0 +1,22 @@
+CMCMIS dump90tables LOCK MANIFEST
+Generated: 2026-05-18 15:10:22
+Source SHA256: dd57e353524636a960f04c0fcd658fb8428ecd6e88e653e52a399b81381ffc6a
+Tables: 90
+Columns: 966
+Indexes: 172
+Foreign Keys: 84
+Rows in dump inserts: 398,329
+
+Delivered folders:
+- csv/: tabular reports
+- sql/: schema-only and review SQL reports
+- ddl_per_table/: per-table DDL files
+- json/: machine-readable schema catalog
+- markdown/: readable engineering reports and relationship maps
+
+Senior lock notes:
+1. This is parsed evidence from dump90tables.sql, not a live DB introspection run.
+2. Row counts are counted from INSERT tuple groups in the dump.
+3. Use generated review SQL after import for physical DB verification.
+4. Keep all _legacy_* tables preserved/read-only until explicit bridge migration.
+5. Phase 6 Slice 2 should target Job Requests + Job Cards + Audit + Equipment references only.

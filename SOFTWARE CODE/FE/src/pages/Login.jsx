@@ -21,10 +21,19 @@
 //     │                                              │
 //     └──────────────────────────────────────────────┘
 //
-// VALIDATION
-//   loginSchema (Zod, same regex as BE) attached via @hookform/resolvers.
-//   Both fields are auto-uppercased on input — v1 password equals the
-//   employee_id, both must be `^[A-Z]{2}[0-9]{5}$`.
+// VALIDATION  (post Phase-7 patch, 2026-05-19)
+//   loginSchema (Zod, same shape as BE) attached via @hookform/resolvers.
+//   The schema only enforces non-empty + sanity length caps now — any
+//   character / length combination is accepted. The DB row is the
+//   single source of truth: BE looks up the user, bcrypt.compare's the
+//   submitted password against the stored hash, and a mismatch surfaces
+//   as a generic "Invalid credentials".
+//
+//   Removed in this revision:
+//     • auto-uppercase onChange handlers (no canonical format anymore)
+//     • maxLength={7} attribute (sanity cap is now in schema, ≤ 50 / 256)
+//     • "SA79900" placeholder + "Two uppercase letters + five digits" helper
+//     • autoCapitalize='characters' (legacy carry-over from regex era)
 //
 // AFTER SUCCESS
 //   Navigate to location.state.from?.pathname (set by ProtectedRoute
@@ -80,6 +89,10 @@ export function Login() {
   async function onSubmit(values) {
     setServerError('');
     try {
+      // Pass the raw values straight through — no client-side normalisation.
+      // The BE compares the bcrypt hash of the stored password against
+      // exactly what the user typed; any massaging here would diverge
+      // from what they remember entering at setup time.
       await login(values.employee_id, values.password);
       const target = location.state?.from?.pathname || '/dashboard';
       navigate(target, { replace: true });
@@ -123,44 +136,30 @@ export function Login() {
           <h2 className="text-xl font-semibold text-ink mb-5">Sign In</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            {/* Employee ID — auto-uppercased as the user types so the
-                user sees the canonical form. autoComplete='username'
-                lets the browser/password manager fill correctly. */}
+            {/* Employee ID — NO transform, NO format restrictions.
+                autoComplete='username' lets the browser/password manager
+                fill correctly. autoFocus drops the cursor in the right
+                place on first paint. */}
             <FormField
               label="Employee ID"
               error={errors.employee_id?.message}
-              helper="Two uppercase letters + five digits (e.g. SA79900)"
             >
               <Input
-                placeholder="SA79900"
                 autoComplete="username"
-                maxLength={7}
                 spellCheck={false}
-                autoCapitalize="characters"
                 autoFocus
-                {...register('employee_id', {
-                  onChange: (e) => {
-                    // Coerce to uppercase in place — RHF reads value AFTER this fires.
-                    e.target.value = (e.target.value || '').toUpperCase();
-                  },
-                })}
+                {...register('employee_id')}
               />
             </FormField>
 
-            {/* Password — auto-uppercased too because v1 password == employee_id
-                (regex-checked). Render as password type so screen onlookers
-                don't see the characters, even though the value is the same. */}
+            {/* Password — NO transform, NO format restrictions.
+                Rendered as password type so onlookers can't read it. */}
             <FormField label="Password" error={errors.password?.message}>
               <Input
                 type="password"
                 autoComplete="current-password"
-                maxLength={7}
                 spellCheck={false}
-                {...register('password', {
-                  onChange: (e) => {
-                    e.target.value = (e.target.value || '').toUpperCase();
-                  },
-                })}
+                {...register('password')}
               />
             </FormField>
 
