@@ -13,7 +13,8 @@
       "Bash(node -e ' *)",
       "Bash(node runner/run-migrations.js --status)",
       "Bash(node runner/run-migrations.js --dry-run)",
-      "Bash(node runner/run-migrations.js)"
+      "Bash(node runner/run-migrations.js)",
+      "Bash(node -e \"require\\('./src/modules/jobRequests/jobRequests.routes'\\); require\\('./src/modules/jobCards/jobCards.routes'\\); require\\('./src/modules/lookups/lookups.routes'\\); console.log\\('OK — all three route files load cleanly'\\)\")"
     ]
   }
 }

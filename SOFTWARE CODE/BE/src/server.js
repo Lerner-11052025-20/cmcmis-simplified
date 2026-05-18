@@ -191,6 +191,24 @@ app.use(`${env.API_BASE_PATH}`, usersRoutes);
 const equipmentRoutes = require('./modules/equipment/equipment.routes');
 app.use(`${env.API_BASE_PATH}/equipment`, equipmentRoutes);
 
+// ── Job Requests module (Phase 6 Slice 1) ───────────────────────────────
+// Mounted at /api/v1/job-requests. List + create + submit implemented;
+// detail / approve / reject stubbed with 404 until Phase 6 Slice 2.
+const jobRequestsRoutes = require('./modules/jobRequests/jobRequests.routes');
+app.use(`${env.API_BASE_PATH}/job-requests`, jobRequestsRoutes);
+
+// ── Job Cards module (Phase 6 Slice 1) ──────────────────────────────────
+// Mounted at /api/v1/job-cards. List implemented; lifecycle transitions
+// (start/complete/verify/reopen) + detail + PDF stubbed with 404.
+const jobCardsRoutes = require('./modules/jobCards/jobCards.routes');
+app.use(`${env.API_BASE_PATH}/job-cards`, jobCardsRoutes);
+
+// ── Lookups module (Phase 6 Slice 1) ────────────────────────────────────
+// Mounted at /api/v1/lookups. Powers the JR form's Division dropdown
+// and Equipment ID typeahead.
+const lookupsRoutes = require('./modules/lookups/lookups.routes');
+app.use(`${env.API_BASE_PATH}/lookups`, lookupsRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.
