@@ -23,6 +23,9 @@ const usersRepo = require('../users/users.repo');
 const { transition } = require('./jobRequests.stateMachine');
 const { errors } = require('../../middleware/errorHandler');
 const { formatJrCode } = require('../../utils/jrCodeGenerator');
+// Phase 8: bust the dashboard KPI cache after JR mutations.
+const kpiCache = require('../../utils/kpiCache');
+const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 
 // ────────────────────────────────────────────────────────────────────
 //  LIST
@@ -176,6 +179,12 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
 
     await conn.commit();
 
+    // Phase 8: KPI cache invalidation (P8-D15). The org snapshot and
+    // this submitter's personal snapshot are both affected by a new JR.
+    // TTL is the safety net; this is the fast-path.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidate(KPI_KEYS.personal(actor.employeeId));
+
     return {
       id:           jrNo,
       request_code: formatJrCode(jrNo, new Date()),
@@ -236,6 +245,12 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
     });
 
     await conn.commit();
+
+    // Phase 8: KPI cache invalidation — submit moves DRAFT→SUBMITTED, so
+    // "Pending Jobs" + "Active Requests" + "Pending Approval" all shift.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id || actor.employeeId));
+
     return { id: jrNo, request_code: formatJrCode(jrNo, jr.created_at), status: newState };
   } catch (err) {
     try { await conn.rollback(); } catch { /* ignore */ }

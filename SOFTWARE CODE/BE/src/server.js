@@ -223,6 +223,20 @@ app.use(`${env.API_BASE_PATH}/admin/users`, adminUsersRoutes);
 const employeesRoutes = require('./modules/employees/employees.routes');
 app.use(`${env.API_BASE_PATH}/admin/employees`, employeesRoutes);
 
+// ── Dashboard module (Phase 8 Slice 1) ──────────────────────────────────
+// Mounted at /api/v1/dashboard. Role-aware KPI payload behind a 10-s LRU
+// memo (kpiCache). See modules/dashboard/dashboard.service.js for variant
+// resolution (org vs my) and SCHEMA_PHASE8.md for the locked decisions.
+const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
+app.use(`${env.API_BASE_PATH}/dashboard`, dashboardRoutes);
+
+// ── Inquiry module (Phase 8 Slice 1) ────────────────────────────────────
+// Mounted at /api/v1/inquiry. Four read-only search tabs (vendors,
+// products, job-cards, instruments) backed by FULLTEXT indexes (mig 121).
+// The job-cards endpoint is gated to NOT-Normal users per §6.6.
+const inquiryRoutes = require('./modules/inquiry/inquiry.routes');
+app.use(`${env.API_BASE_PATH}/inquiry`, inquiryRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.

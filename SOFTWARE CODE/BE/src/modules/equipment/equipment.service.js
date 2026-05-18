@@ -26,6 +26,9 @@ const pool = require('../../config/db');
 const repo = require('./equipment.repo');
 const { errors } = require('../../middleware/errorHandler');
 const { JOB_CATEGORY_TO_EQM_TYPE } = require('./equipment.validators');
+// Phase 8: bust the dashboard KPI cache after equipment mutations.
+const kpiCache = require('../../utils/kpiCache');
+const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 
 // ────────────────────────────────────────────────────────────────────────
 //  LIST
@@ -203,6 +206,16 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
     });
 
     await conn.commit();
+
+    // Phase 8: KPI cache invalidation. New equipment changes:
+    //   • ORG "Calibration Due" (denominator + numerator if cal date is set)
+    //   • ORG "Equipment Utilization" (denominator: ACTIVE count — though
+    //     the row starts PENDING_VERIFICATION so the utilization KPI is
+    //     unaffected until verification; bust anyway — TTL is 10 s and
+    //     idempotent invalidate is free).
+    //   • Personal "Due for Calibration" for the registrar.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidate(KPI_KEYS.personal(actor.employeeId));
 
     return {
       equipment_id: `${eqmType}-${eqmId}`,

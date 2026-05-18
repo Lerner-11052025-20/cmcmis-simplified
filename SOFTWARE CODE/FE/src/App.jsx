@@ -33,8 +33,9 @@ import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { Layout } from './components/Layout.jsx';
 
 import { Login } from './pages/Login.jsx';
-import { Dashboard } from './pages/Dashboard.jsx';
-import { InquiryPlaceholder } from './pages/InquiryPlaceholder.jsx';
+// Phase 8 Slice 1 — real Dashboard + Inquiry pages replace the Phase 4 shells.
+import { Dashboard } from './pages/dashboard/Dashboard.jsx';
+import { Inquiry } from './pages/inquiry/Inquiry.jsx';
 import { EquipmentList } from './pages/equipment/EquipmentList.jsx';
 import { EquipmentForm } from './pages/equipment/EquipmentForm.jsx';
 import { EquipmentDetailPlaceholder } from './pages/equipment/EquipmentDetailPlaceholder.jsx';
@@ -55,11 +56,11 @@ export function App() {
           {/* ── Public ─────────────────────────────────────────── */}
           <Route path="/login" element={<Login />} />
 
-          {/* ── Dashboard ──────────────────────────────────────── */}
+          {/* ── Dashboard (Phase 8 Slice 1) ─────────────────────── */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredPermission="dashboard:view">
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -136,11 +137,16 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* ── Inquiry (Phase 8 Slice 1) ───────────────────────── */}
+          {/* Gate: any of the 4 inquiry permissions opens the page; the
+              tab strip inside is permission-aware per-tab. We gate on
+              `inquiry:search-vendors` (all 5 roles hold it, including
+              View-Only) so the page itself is always reachable. */}
           <Route
             path="/inquiry"
             element={
-              <ProtectedRoute requiredPermission="inquiry:search-instruments">
-                <Layout><InquiryPlaceholder /></Layout>
+              <ProtectedRoute requiredPermission="inquiry:search-vendors">
+                <Inquiry />
               </ProtectedRoute>
             }
           />

@@ -1,0 +1,94 @@
+// ============================================================================
+// src/pages/inquiry/InstrumentTab.jsx  —  Inquiry · Instrument Lookup
+// ----------------------------------------------------------------------------
+// Columns: Equipment ID, Name, Division, Location, Status (pill), Last Cal.
+// BE-supplied `status_label` + `status_accent` drive the pill colour.
+// ============================================================================
+
+import { useMemo } from 'react';
+import clsx from 'clsx';
+import { useInquirySearch } from '../../lib/hooks/useInquirySearch.js';
+import { fetchInquiryInstruments } from '../../lib/api/inquiry.js';
+import { DataTable } from '../../components/DataTable.jsx';
+import { Pagination } from '../../components/Pagination.jsx';
+import { InquirySearchBox } from './InquirySearchBox.jsx';
+import { STATUS_ACCENT_CLASSES } from '../../lib/schemas/inquirySchemas.js';
+
+function StatusBadge({ label, accent }) {
+  const cls = STATUS_ACCENT_CLASSES[accent] || STATUS_ACCENT_CLASSES.slate;
+  return (
+    <span className={clsx(
+      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
+      cls,
+    )}>
+      {label}
+    </span>
+  );
+}
+
+const COLUMNS = [
+  { header: 'Equipment ID',     accessor: 'equipment_code',
+    className: 'font-mono text-xs text-accent' },
+  { header: 'Name',             accessor: 'name',
+    className: 'font-medium text-ink' },
+  { header: 'Division',         accessor: 'division_code',
+    className: 'text-ink-soft' },
+  { header: 'Location',         accessor: 'location_name',
+    className: 'text-ink-soft' },
+  { header: 'Status',           accessor: 'status_label',
+    format: (_, r) => <StatusBadge label={r.status_label} accent={r.status_accent} /> },
+  { header: 'Last Calibration', accessor: 'last_cal_date',
+    className: 'text-ink-soft tabular-nums' },
+];
+
+export function InstrumentTab({ q, onQChange, page, onPageChange, pageSize }) {
+  const params = { q, page, page_size: pageSize };
+  const { data, error, loading } = useInquirySearch(fetchInquiryInstruments, params);
+
+  const items = data?.items ?? [];
+  const total = data?.pagination?.total_items ?? 0;
+  const totalPages = data?.pagination?.total_pages ?? 1;
+
+  const emptyMessage = useMemo(() => {
+    if (loading) return 'Searching…';
+    if (q) return `No instruments match "${q}".`;
+    return 'No instruments to show.';
+  }, [loading, q]);
+
+  return (
+    <div className="space-y-4">
+      <InquirySearchBox
+        q={q}
+        onQChange={onQChange}
+        placeholder="Search by equipment ID or name..."
+      />
+
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Could not load instruments: {error.response?.data?.error?.message || error.message}
+        </div>
+      ) : null}
+
+      <DataTable
+        columns={COLUMNS}
+        rows={items}
+        keyField="id"
+        loading={loading}
+        emptyMessage={emptyMessage}
+      />
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-ink-soft">
+          {total > 0
+            ? `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total} instruments`
+            : null}
+        </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      </div>
+    </div>
+  );
+}

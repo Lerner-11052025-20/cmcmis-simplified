@@ -925,3 +925,170 @@ history rows=2
 === Cleanup: re-activate the test user ===
 reactivate HTTP 200
 demote-back HTTP 200
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== cmms_eqip_mst (rows~5690) ===
+ 1. EQM_TYPE | varchar(15) | NO | PRI | def=NULL | 
+ 2. EQM_ID | int(11) | NO | PRI | def=NULL | 
+ 3. EQM_NAME | varchar(100) | NO |  | def=NULL | 
+ 4. EQM_DIVID | int(11) | NO | MUL | def=NULL | 
+ 5. EQM_PM_FREQ | varchar(2) | YES |  | def=NULL | 
+ 6. EQM_PMCHKLSTNO | int(11) | YES | MUL | def=NULL | 
+ 7. EQM_CAL_FREQ | varchar(2) | YES |  | def=NULL | 
+ 8. EQM_CALCHKLSTNO | int(11) | YES | MUL | def=NULL | 
+ 9. EQM_CALSOURCE | varchar(50) | YES |  | def=NULL | 
+10. EQM_INST_TYPE | int(11) | YES | MUL | def=NULL | 
+11. EQM_TMPLTID | varchar(50) | YES |  | def=NULL | 
+12. EQM_MFRID | int(11) | NO | MUL | def=NULL | 
+13. EQM_MFG_MODEL_NAME | varchar(100) | YES |  | def=NULL | 
+14. EQM_VENID | varchar(50) | YES |  | def=NULL | 
+15. EQM_SRNO | varchar(50) | YES |  | def=NULL | 
+16. EQM_MODELNO | varchar(50) | YES |  | def=NULL | 
+17. EQM_OPTIONNDESC | varchar(250) | YES |  | def=NULL | 
+18. EQM_ASSETNO | varchar(50) | YES |  | def=NULL | 
+19. EQM_SRVNO | varchar(50) | YES |  | def=NULL | 
+20. EQM_SRVDATE | datetime(6) | YES |  | def=NULL | 
+21. EQM_PONO | varchar(50) | YES |  | def=NULL | 
+22. EQM_PODATE | datetime(6) | YES |  | def=NULL | 
+23. EQM_BUDGETCODE | varchar(50) | YES |  | def=NULL | 
+24. EQM_EQIPCOST | decimal(18,2) | YES |  | def=NULL | 
+25. EQM_COSTCURRENCY | varchar(50) | YES |  | def=NULL | 
+26. EQM_WRNTY_EXPIRY_DATE | datetime(6) | YES |  | def=NULL | 
+27. EQM_INSTALL_DATE | datetime(6) | YES |  | def=NULL | 
+28. EQM_DIV_ABBR | varchar(50) | YES |  | def=NULL | 
+29. EQM_DIV_UPD_DATE | datetime(6) | YES |  | def=NULL | 
+30. EQM_DIV_STATUS | varchar(50) | YES |  | def=NULL | 
+31. EQM_STATUS_UPD_DATE | datetime(6) | YES |  | def=NULL | 
+32. EQM_EndOfSupportDate | datetime(6) | YES |  | def=NULL | 
+33. EQM_REMARKS | varchar(500) | YES |  | def=NULL | 
+34. EQM_CREATED_BY | varchar(7) | YES |  | def=NULL | 
+35. EQM_REGISTRATION_FLAG | tinyint(1) | YES |  | def=NULL | 
+36. EQM_STANDARD | tinyint(1) | YES |  | def=NULL | 
+37. EQM_CAL_DUE_DATE | datetime(6) | YES | MUL | def=NULL | 
+38. EQM_PM_DUE_DATE | datetime(6) | YES |  | def=NULL | 
+39. EQM_CREATED_ON | datetime(6) | YES |  | def=NULL | 
+40. EQM_UPDATED_BY | varchar(7) | YES |  | def=NULL | 
+41. EQM_UPDATED_ON | datetime(6) | YES |  | def=NULL | 
+42. EQM_BUDGETAMT | decimal(19,4) | YES |  | def=NULL | 
+43. EQM_CAL_NABL_TYPE | tinyint(1) | YES |  | def=NULL | 
+44. EQM_CAL_NORMAL_TYPE | tinyint(1) | YES |  | def=NULL | 
+45. EQM_CAL_AT | varchar(50) | YES |  | def=NULL | 
+46. EQM_DIV_UPD_REASON | longtext | YES |  | def=NULL | 
+47. EQM_IICHKLSTNO | int(11) | YES |  | def=NULL | 
+48. EQM_VERIFIED_BY | varchar(7) | YES |  | def=NULL | 
+49. EQM_VERIFIED_ON | datetime(6) | YES |  | def=NULL | 
+50. EQM_MVP_STATUS | enum('PENDING_VERIFICATION','ACTIVE','UNDER_CALIBRATION','UNDER_REPAIR','OUT_OF_TOLERANCE','QUARANTINED','CONDEMNED','RETIRED') | NO | MUL | def='PENDING_VERIFICATION' | 
+51. EQM_MVP_STATUS_AT | datetime(6) | YES |  | def=NULL | 
+52. EQM_SECTION_ID | int(10) unsigned | YES | MUL | def=NULL | 
+  INDEXES:
+   FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST (BTREE) -> EQM_PMCHKLSTNO
+   FK_CMMS_EQIP_MST_CMMS_CHECKLIST_MST1 (BTREE) -> EQM_CALCHKLSTNO
+   FK_CMMS_EQIP_MST_CMMS_CONT_MST (BTREE) -> EQM_MFRID
+   FK_CMMS_EQIP_MST_CMMS_PRODUCT_MST (BTREE) -> EQM_INST_TYPE
+   FK_CMMS_EQIP_MST_CMMS_SECTION_MST (BTREE) -> EQM_DIVID
+   idx_eqip_cal_due (BTREE) -> EQM_CAL_DUE_DATE
+   idx_eqip_mfr (BTREE) -> EQM_MFRID
+   idx_eqip_mvp_status (BTREE) -> EQM_MVP_STATUS
+   idx_eqip_section_new (BTREE) -> EQM_SECTION_ID
+   PRIMARY (BTREE) -> EQM_TYPE,EQM_ID
+
+=== sections (rows~2) ===
+ 1. section_id | int(10) unsigned | NO | PRI | def=NULL | auto_increment
+ 2. department_id | smallint(5) unsigned | NO | MUL | def=NULL | 
+ 3. section_code | varchar(20) | NO | UNI | def=NULL | 
+ 4. section_name | varchar(150) | NO |  | def=NULL | 
+ 5. section_description | varchar(500) | YES |  | def=NULL | 
+ 6. equipment_category | enum('TME','FPE') | NO | MUL | def=NULL | 
+ 7. head_employee_id | varchar(7) | YES | MUL | def=NULL | 
+ 8. is_active | tinyint(1) | NO | MUL | def=1 | 
+ 9. created_at | datetime(6) | NO |  | def=current_timestamp(6) | 
+10. created_by | varchar(20) | YES |  | def=NULL | 
+11. updated_at | datetime(6) | NO |  | def=current_timestamp(6) | on update current_timestamp(6)
+12. updated_by | varchar(20) | YES |  | def=NULL | 
+  INDEXES:
+   fk_sections_head_emp (BTREE) -> head_employee_id
+   idx_sect_active (BTREE) -> is_active
+   idx_sect_category (BTREE) -> equipment_category
+   idx_sect_dept (BTREE) -> department_id
+   PRIMARY (BTREE) -> section_id
+   uk_sect_code (BTREE) -> section_code
+
+### SANITY ###
+* eqip total : [{"n":5705}]
+* eqip with cal_due : [{"n":5380}]
+* eqip status enum used : [{"EQM_MVP_STATUS":"PENDING_VERIFICATION","n":1},{"EQM_MVP_STATUS":"ACTIVE","n":5704}]
+* jr status used : [{"JR_MVP_STATUS":"DRAFT","n":2},{"JR_MVP_STATUS":"SUBMITTED","n":2056},{"JR_MVP_STATUS":"ASSIGNED","n":19432}]
+* jc status used : [{"JM_MVP_STATUS":"VERIFIED_CLOSED","n":19432}]
