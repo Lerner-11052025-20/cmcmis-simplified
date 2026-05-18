@@ -10,12 +10,21 @@
 //   4. Submitted By  (★ auto-fill from /me — BR-JR-06)
 //   5. Terms and Conditions (6 checkboxes + X/6 counter)
 //
-// SUBMIT GATE
-//   The "Submit Request" button is disabled unless ALL of:
-//     • All 6 T&C boxes ticked
-//     • Form is zod-valid
-//   If the user bypasses the FE via curl, the BE re-checks tnc_accepted=true
-//   and rejects with 400 (defence in depth — R10).
+// TWO-TIER VALIDATION (2026-05-18 — fixes greyed-button-with-no-feedback bug)
+//   • Save as Draft uses jobRequestDraftSchema (LOOSE):
+//        only job_category, job_type, equipment_name (≥2), division_id
+//        are required. Drafts intentionally accept partial work.
+//   • Submit Request uses jobRequestSubmitSchema (STRICT):
+//        adds complaint_description ≥ 10 chars + tnc_accepted === true.
+//   The BE jobRequests.validators enforces the same two-tier rule based
+//   on submit_now=true|false (defence in depth — R10).
+//
+// CLICK-ANYWAY UX
+//   The buttons VISUALLY look disabled when prerequisites aren't met, but
+//   the click handler still fires. On click of an "ineligible" button, the
+//   handler runs zod safeParse and surfaces every failing field as an
+//   inline error + a top-of-form summary banner. This replaces the old
+//   "greyed button with no explanation" failure mode.
 //
 // AUTO-FILL (BR-JR-06)
 //   Section 4's Name, SAC Employee ID, Designation, Email come from /me
@@ -36,7 +45,10 @@ import { useAuth } from '../../lib/auth-context.jsx';
 import { createJobRequest } from '../../lib/api/jobRequests.js';
 import { fetchDivisions, searchEquipment } from '../../lib/api/lookups.js';
 import { invalidateJobRequestCache } from '../../lib/hooks/useJobRequestList.js';
-import { jobRequestCreateSchema } from '../../lib/schemas/jobRequestSchemas.js';
+import {
+  jobRequestDraftSchema,
+  jobRequestSubmitSchema,
+} from '../../lib/schemas/jobRequestSchemas.js';
 import { TERMS, TNC_VERSION } from './form/tncContent.js';
 
 // ── Static select options (locked to BE enums) ──────────────────────
@@ -208,19 +220,112 @@ export function JobRequestNew() {
     tnc_version: TNC_VERSION,
   }), [form]);
 
-  // Cheap "is the form structurally valid?" check, used to enable/disable
-  // the Submit button. We don't surface per-field errors here — those
-  // only appear after the user clicks Save/Submit and the server pushes
-  // back. (Per-field on-type would be noisy.)
-  const isStructurallyValid = useMemo(() => {
-    const parsed = jobRequestCreateSchema.safeParse({ ...payload, submit_now: false });
-    return parsed.success;
-  }, [payload]);
+  // ── Validity checks (two-tier — see top-of-file comment) ──────────
+  // Each useMemo runs zod safeParse against the relevant schema; we don't
+  // surface the errors yet — that only happens when the user clicks a
+  // button. The validity booleans drive the button STYLING (greyed when
+  // ineligible), but the buttons themselves are clickable regardless.
+  const draftParse = useMemo(
+    () => jobRequestDraftSchema.safeParse({ ...payload, submit_now: false }),
+    [payload],
+  );
+  const submitParse = useMemo(
+    () => jobRequestSubmitSchema.safeParse({
+      ...payload,
+      submit_now: true,
+      tnc_accepted: allTncAccepted,
+    }),
+    [payload, allTncAccepted],
+  );
+  const canSaveDraft = draftParse.success && !submitting;
+  const canSubmit    = submitParse.success && !submitting;
+
+  // Friendly field labels for the inline-error summary banner. Falls back
+  // to the raw path when a label isn't listed (extra-key zod errors, etc).
+  const FIELD_LABELS = {
+    job_category:           'Job Category',
+    job_type:               'Job Type',
+    equipment_name:         'Equipment Name',
+    division_id:            'Division',
+    complaint_description:  'Complaint Description',
+    tnc_accepted:           'Terms & Conditions',
+    accessories:            'Accessories',
+    priority:               'Priority',
+  };
+
+  // Convert a zod ZodError into a { fieldName -> message } map for the
+  // inline error renderers under each FormField.
+  function zodErrorsToFieldMap(zodError) {
+    const f = {};
+    if (!zodError) return f;
+    for (const issue of zodError.errors) {
+      const key = (issue.path && issue.path.length) ? String(issue.path[0]) : '_';
+      if (!f[key]) f[key] = issue.message;
+    }
+    return f;
+  }
+
+  // Build the top-of-form error summary banner — listed in form order so
+  // the user can scan from top to bottom of the page.
+  function buildErrorSummary(fieldMap) {
+    const ORDER = [
+      'job_category', 'job_type', 'equipment_name', 'division_id',
+      'complaint_description', 'tnc_accepted', 'accessories', 'priority',
+    ];
+    const seen = new Set();
+    const out = [];
+    for (const key of ORDER) {
+      if (fieldMap[key] && !seen.has(key)) {
+        out.push({ key, label: FIELD_LABELS[key] || key, msg: fieldMap[key] });
+        seen.add(key);
+      }
+    }
+    // Any unknown keys (defensive — shouldn't happen)
+    for (const key of Object.keys(fieldMap)) {
+      if (!seen.has(key)) {
+        out.push({ key, label: FIELD_LABELS[key] || key, msg: fieldMap[key] });
+      }
+    }
+    return out;
+  }
 
   // ── Submit handlers ──────────────────────────────────────────────
+  // Each handler is the same shape:
+  //   1. Run the right zod schema. If invalid → surface field errors,
+  //      banner, scroll to first field. STOP. (No network call.)
+  //   2. If valid, POST. On success: invalidate cache + navigate.
+  //      On failure: pull BE field errors into the same renderer.
   async function handleSave(submitNow) {
     setFormError(null);
     setFieldErrors({});
+
+    // 1. FE validation gate — strict for submit, loose for draft.
+    const parse = submitNow ? submitParse : draftParse;
+    if (!parse.success) {
+      const f = zodErrorsToFieldMap(parse.error);
+      setFieldErrors(f);
+      // Show a top-of-form summary; user can click each item to focus the field.
+      const summary = buildErrorSummary(f);
+      const lines = summary.map((s) => `· ${s.label}: ${s.msg}`).join('\n');
+      setFormError(
+        (submitNow
+          ? 'Cannot submit yet — please fix the following:'
+          : 'Cannot save draft yet — please fix the following:') + '\n' + lines,
+      );
+      // Scroll the top-of-form error banner into view so the user actually
+      // sees the explanation (the form is multi-screen tall — the user is
+      // usually scrolled to the footer when they click Submit).
+      // requestAnimationFrame waits for React to render the banner first.
+      window.requestAnimationFrame(() => {
+        const banner = document.querySelector('[role="alert"]');
+        if (banner && typeof banner.scrollIntoView === 'function') {
+          banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      return;
+    }
+
+    // 2. Network round-trip.
     setSubmitting(true);
     try {
       const result = await createJobRequest({
@@ -244,14 +349,16 @@ export function JobRequestNew() {
         const f = {};
         apiErr.details.forEach((d) => { if (d.path) f[d.path] = d.message; });
         setFieldErrors(f);
+        const summary = buildErrorSummary(f);
+        const lines = summary.map((s) => `· ${s.label}: ${s.msg}`).join('\n');
+        setFormError((apiErr.message || 'Validation failed.') + '\n' + lines);
+      } else {
+        setFormError(apiErr?.message || err.message || 'Could not save the request.');
       }
-      setFormError(apiErr?.message || err.message || 'Could not save the request.');
     } finally {
       setSubmitting(false);
     }
   }
-
-  const canSubmit = !submitting && isStructurallyValid && allTncAccepted;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -271,9 +378,12 @@ export function JobRequestNew() {
         </p>
       </div>
 
-      {/* ── Top-level error banner ──────────────────────────── */}
+      {/* ── Top-level error banner (multi-line via whitespace-pre-line) ── */}
       {formError ? (
-        <div role="alert" className="rounded-md bg-danger/10 text-danger text-xs px-3 py-2">
+        <div
+          role="alert"
+          className="rounded-md bg-danger/10 text-danger text-xs px-3 py-2 whitespace-pre-line border border-danger/30"
+        >
           {formError}
         </div>
       ) : null}
@@ -614,6 +724,13 @@ export function JobRequestNew() {
       </section>
 
       {/* ──────────────────────── FOOTER ──────────────────────── */}
+      {/*
+        Buttons are CLICKABLE EVEN WHEN ineligible — the click handler runs
+        the relevant zod schema and surfaces inline + summary errors so the
+        user can see WHICH field is blocking them. Visual styling reflects
+        eligibility, but never `disabled` (which suppresses the click).
+        Only `submitting` truly disables the buttons during the network call.
+      */}
       <div className="flex items-center justify-between sticky bottom-0 bg-base/80 backdrop-blur py-3">
         <Button variant="secondary" onClick={() => navigate('/job-requests')} disabled={submitting}>
           Cancel
@@ -622,7 +739,13 @@ export function JobRequestNew() {
           <Button
             variant="secondary"
             onClick={() => handleSave(false)}
-            disabled={submitting || !isStructurallyValid}
+            disabled={submitting}
+            className={!canSaveDraft ? 'opacity-60' : undefined}
+            title={
+              !canSaveDraft
+                ? 'Click to see which fields still need values before saving as draft'
+                : 'Save what you have so far without submitting'
+            }
           >
             <Save size={14} strokeWidth={1.75} aria-hidden="true" />
             Save as Draft
@@ -630,8 +753,13 @@ export function JobRequestNew() {
           <Button
             variant="primary"
             onClick={() => handleSave(true)}
-            disabled={!canSubmit}
-            title={!allTncAccepted ? 'Accept all 6 T&Cs to enable' : undefined}
+            disabled={submitting}
+            className={!canSubmit ? 'opacity-60' : undefined}
+            title={
+              !canSubmit
+                ? 'Click to see which fields still need values before submitting'
+                : 'Submit the request for approval'
+            }
           >
             <Send size={14} strokeWidth={1.75} aria-hidden="true" />
             Submit Request

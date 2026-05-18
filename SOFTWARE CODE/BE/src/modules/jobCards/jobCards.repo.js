@@ -88,10 +88,16 @@ async function listJobCards(params) {
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?`;
 
+  // IMPORTANT: countSql must mirror dataSql's JOIN tree exactly. The WHERE
+  // clause can reference e.EQM_NAME (equipment search) and emp.EMM_NAME
+  // (engineer search), so both LEFT JOINs are required here too — otherwise
+  // a search hits "Unknown column 'e.EQM_NAME' in 'where clause'".
   const countSql = `
     SELECT COUNT(*) AS n
     FROM cmms_jobcard_mst jc
-    LEFT JOIN cmms_jobrequest_mst jr ON jr.JR_SECTIONJOB_NO = jc.JM_SectionJobNo
+    LEFT JOIN cmms_eqip_mst       e   ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
+    LEFT JOIN cmms_jobrequest_mst jr  ON jr.JR_SECTIONJOB_NO = jc.JM_SectionJobNo
+    LEFT JOIN cmms_emp_mst        emp ON emp.EMM_ID = jr.JR_ASSIGNED_ENGINEER
     ${whereSql}`;
 
   const [[rows], [countRows]] = await Promise.all([

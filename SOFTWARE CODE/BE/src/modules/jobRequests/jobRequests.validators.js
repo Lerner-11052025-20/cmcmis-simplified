@@ -62,44 +62,71 @@ const listQuerySchema = z.object({
 }).strict();
 
 // ── createSchema  ───────────────────────────────────────────────────
-// Anything submitted_by_* on the body is REJECTED — BR-JR-06.
-// Note: optional fields default to undefined / null in the service so
-// the repo writes a NULL rather than '' for genuinely-absent inputs.
+// Anything submitted_by_* on the body is REJECTED — BR-JR-06. The .strict()
+// catches a malicious payload that tries to spoof submitter identity.
+//
+// TWO-TIER VALIDATION (added 2026-05-18 after browser feedback):
+//   • DRAFT  (submit_now=false)  ·  LOOSE — only job_category, job_type,
+//                                          equipment_name and division_id
+//                                          are required. Drafts are
+//                                          intentionally permissive so
+//                                          a user can save partial work.
+//   • SUBMIT (submit_now=true)   ·  STRICT — complaint_description must be
+//                                          ≥ 10 chars; tnc_accepted must be
+//                                          true; all field-length caps apply.
+//
+// The base shape declares the LOOSE contract; .superRefine() upgrades it to
+// STRICT when submit_now=true. Either way, the upper bounds (max-length,
+// enum membership) ALWAYS apply — they exist to defeat malformed input
+// regardless of intent.
 const createSchema = z.object({
   job_category:           jobCategoryEnum,
   job_type:               jobTypeEnum,
   equipment_id:           z.number().int().positive().nullable().optional(),
+  // Min(2) required even for drafts — a draft with a 1-char equipment name
+  // is functionally indistinguishable from garbage. Drafts can omit
+  // make/model/serial entirely though.
   equipment_name:         z.string().min(2).max(200),
-  make:                   z.string().max(120).optional(),
-  model_no:               z.string().max(120).optional(),
-  serial_no:              z.string().max(120).optional(),
-  equipment_type:         z.string().max(60).optional(),
-  options_description:    z.string().max(2000).optional(),
+  make:                   z.string().max(120).optional().or(z.literal('')),
+  model_no:               z.string().max(120).optional().or(z.literal('')),
+  serial_no:              z.string().max(120).optional().or(z.literal('')),
+  equipment_type:         z.string().max(60).optional().or(z.literal('')),
+  options_description:    z.string().max(2000).optional().or(z.literal('')),
   accessories:            z.array(accessorySchema).max(20).optional().default([]),
-  lab_phone:              z.string().max(40).optional(),
-  room_phone:             z.string().max(40).optional(),
+  lab_phone:              z.string().max(40).optional().or(z.literal('')),
+  room_phone:             z.string().max(40).optional().or(z.literal('')),
   division_id:            z.number().int().positive(),
-  subsystem:              z.string().max(120).optional(),
-  project_name:           z.string().max(160).optional(),
-  complaint_description:  z.string().min(10).max(4000),
-  remarks:                z.string().max(2000).optional(),
+  subsystem:              z.string().max(120).optional().or(z.literal('')),
+  project_name:           z.string().max(160).optional().or(z.literal('')),
+  // LOOSE for drafts: complaint may be empty/short. STRICT (≥10) enforced
+  // in the superRefine below when submit_now=true.
+  complaint_description:  z.string().max(4000).optional().or(z.literal('')),
+  remarks:                z.string().max(2000).optional().or(z.literal('')),
   equipment_sent_after_repair: z.boolean().optional().default(false),
   priority:               priorityEnum.optional().default('MEDIUM'),
-  // If true, the create endpoint treats this as Submit-now rather than
-  // Save-as-Draft. Defaults to false (Save-as-Draft).
   submit_now:             z.boolean().optional().default(false),
-  // T&C — REQUIRED when submit_now=true. Server re-checks regardless of
-  // FE state (defence in depth).
   tnc_accepted:           z.boolean().optional().default(false),
   tnc_version:            z.string().max(10).optional().default('v1'),
 }).strict()
-  // Cross-field rule: if submit_now=true, tnc_accepted MUST be true.
-  // Returning a path lets the FE highlight the right field.
-  .refine(
-    (v) => !v.submit_now || v.tnc_accepted === true,
-    { message: 'All terms and conditions must be accepted before submitting',
-      path: ['tnc_accepted'] },
-  );
+  .superRefine((v, ctx) => {
+    // SUBMIT-only rules. Drafts skip every check in this block.
+    if (!v.submit_now) return;
+
+    if (!v.complaint_description || v.complaint_description.trim().length < 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['complaint_description'],
+        message: 'Complaint description must be at least 10 characters before submitting',
+      });
+    }
+    if (v.tnc_accepted !== true) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tnc_accepted'],
+        message: 'All terms and conditions must be accepted before submitting',
+      });
+    }
+  });
 
 // ── submitSchema (POST /:id/submit) ────────────────────────────────
 const submitSchema = z.object({
