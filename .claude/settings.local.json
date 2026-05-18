@@ -22,7 +22,9 @@
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"FE %{http_code} \\(port 5173\\)\\\\n\" http://127.0.0.1:5173/)",
       "Bash(pip show *)",
-      "Bash(node -e \"try{require\\('docx'\\);console.log\\('docx node present'\\)}catch\\(e\\){console.log\\('docx node missing'\\)}\")"
+      "Bash(node -e \"try{require\\('docx'\\);console.log\\('docx node present'\\)}catch\\(e\\){console.log\\('docx node missing'\\)}\")",
+      "Bash(python build_phase6_doc.py)",
+      "Bash(python -c \"from docx import Document; d=Document\\(r'e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/TECH_DOCX/phase6BYaslikePHASEas4and5.docx'\\); print\\('Paragraphs:', len\\(d.paragraphs\\)\\); print\\('Tables:', len\\(d.tables\\)\\)\")"
     ]
   }
 }
