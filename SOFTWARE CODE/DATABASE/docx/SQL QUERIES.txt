@@ -129,3 +129,88 @@ please think as SENIOR SOFTWARE DEVELOPER ENGINEER and put higher and complex as
 
 
 put your all the energy to FOR THE WRITING AI AGENT PROMPT as in depth.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+************Phase 6 — Job Requests + Job Cards Module.
+
+
+
+no mock data we are fetching all the data from the OUR DATABASE
+
+in this module we write logic related to the this Job Requests + Job Cards Module. module for only above mentioned attached screens only.
+
+
+
+ for the rest we will do after this.
+
+
+
+please refer all the attached images in which------------>we have to give permissions like attached image please refer for that image for the purpose of permissions for the EQUIPMENT MODULE.
+
+
+
+
+
+module explanation===============> 
+
+please refer permission image for the below task and user. design same UI attached above as Job Requests + Job Cards Module. 
+
+
+
+ + New Job Request Manage and track all Job Requests + Job Cards Module. inventory with in below of that FULLY FUNCTIONAL search bar AND all the filters sorting and only static export button only for the as of now. please design data table UI as same as and for the data I PROVIDE YOU PERMISSION FOR THE DECISION TAKING BY YOUR SELF as data column display by your self in which display Status COLUMN. in below of that please use the concept of the PAGINATION with button AND also pages like 1 2 .... 99 100 block wise design UI for it. 
+
+
+
+
+
+==========================> IMPORTANT IS WE HAVE TO FETCH DATA VERY FAST SO THAT KEEP IN MIND WE HAVE TO GIVE HIGH PERFORMANCE AND HIGH DATA RETRIEVAL RATE OVER HERE please fetch data fast from final database.
+
+
+
++ New Job Request    explanation===============> 
+
+please refer permission image for the below task and user. design same UI attached above as for the  New Job Request  . as same as form attached over here. please auto fetch 4. Submitted By this section from the database as logged in with their employee_id or login id. after check mark all the box as T&C than allow submit button. after submission of the form please store data in the final database. fully logic applied over here. please use your brain and phase 0----->5 things when it required.
+
+
+
+please keep in mind, we have entire database ready with us with all the schemas of tables, please note this in prompt.
+
+please locked in with phase 5 ready locked as from phase 0----->5 done. stay with me.
+
+please take care of this you are senior software developer with this context PLEASE WRITE END TO END STEP BY STEP PROMPT FOR THE AI AGENTs in block so that i copied it from here and given to the AI agent for the Equipment module generation with frontend as well as while writing prompt please keep in mind that please put your all extra and highest efforts.
+
+please think as SENIOR SOFTWARE DEVELOPER ENGINEER and put higher and complex as extra as efforts.
+
+put your all the energy to FOR THE WRITING AI AGENT PROMPT as in depth.
