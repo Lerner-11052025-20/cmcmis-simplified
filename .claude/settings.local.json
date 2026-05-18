@@ -20,7 +20,9 @@
       "Bash(curl -s -c /tmp/jar.txt -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"employee_id\":\"SA79900\",\"password\":\"SA79900\"}')",
       "Bash(node -e \"let c=[]; process.stdin.on\\('data',d=>c.push\\(d\\)\\); process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(c\\).toString\\(\\)\\); const u=r.data; console.log\\('employeeId:',u.employeeId,'role:',u.role,'display_name:',u.display_name,'designation:',u.designation,'lab_phone:',u.lab_phone,'division_id:',u.division_id,'division_code:',u.division_code\\)}\\)\")",
       "Bash(npm run *)",
-      "Bash(curl -s -o /dev/null -w \"FE %{http_code} \\(port 5173\\)\\\\n\" http://127.0.0.1:5173/)"
+      "Bash(curl -s -o /dev/null -w \"FE %{http_code} \\(port 5173\\)\\\\n\" http://127.0.0.1:5173/)",
+      "Bash(pip show *)",
+      "Bash(node -e \"try{require\\('docx'\\);console.log\\('docx node present'\\)}catch\\(e\\){console.log\\('docx node missing'\\)}\")"
     ]
   }
 }
