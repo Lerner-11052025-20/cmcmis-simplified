@@ -23,15 +23,32 @@ const pool = require('../../config/db');
  */
 async function findEmployeeProfile(employeeId) {
   const [rows] = await pool.query(
-    `SELECT EMM_NAME AS display_name,
+    `SELECT EMM_NAME       AS display_name,
             EMM_DESIGNATION AS designation,
-            EMM_EMAIL AS email
+            EMM_EMAIL      AS email,
+            EMM_PH1        AS lab_phone,
+            EMM_PH2        AS room_phone,
+            EMM_DEPT       AS division_id
        FROM cmms_emp_mst
       WHERE EMM_ID = ?
       LIMIT 1`,
     [employeeId],
   );
-  return rows[0] || null;
+  if (!rows[0]) return null;
+  // Resolve the division SHORTNAME so the FE doesn't need a second hop.
+  const profile = rows[0];
+  if (profile.division_id) {
+    const [divRows] = await pool.query(
+      `SELECT SM_SHORTNAME AS division_code, SM_NAME AS division_name
+         FROM cmms_section_mst WHERE SM_ID = ? LIMIT 1`,
+      [profile.division_id],
+    );
+    if (divRows[0]) {
+      profile.division_code = divRows[0].division_code;
+      profile.division_name = divRows[0].division_name;
+    }
+  }
+  return profile;
 }
 
 module.exports = { findEmployeeProfile };

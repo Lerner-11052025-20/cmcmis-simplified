@@ -26,10 +26,17 @@ async function getMe(req, res, next) {
     userId: req.user.userId,
     role: req.user.role,
     permissions: req.user.permissions,
-    // Default the profile fields so the FE never reads undefined.
+    // Default the profile fields so the FE never reads undefined. Phase 6
+    // adds lab_phone / room_phone / division_id|code|name for the JR form
+    // Section 4 auto-fill (BR-JR-06).
     display_name: '',
     designation: '',
     email: '',
+    lab_phone: '',
+    room_phone: '',
+    division_id: null,
+    division_code: '',
+    division_name: '',
   };
 
   // Enrich from cmms_emp_mst (best effort). If the row is missing or the
@@ -40,6 +47,11 @@ async function getMe(req, res, next) {
       payload.display_name = profile.display_name || '';
       payload.designation = profile.designation || '';
       payload.email = profile.email || '';
+      payload.lab_phone = profile.lab_phone || '';
+      payload.room_phone = profile.room_phone || '';
+      payload.division_id = profile.division_id || null;
+      payload.division_code = profile.division_code || '';
+      payload.division_name = profile.division_name || '';
     }
   } catch (err) {
     req.log?.warn?.({ err: { message: err.message } },
