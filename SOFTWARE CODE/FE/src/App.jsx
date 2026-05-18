@@ -38,6 +38,10 @@ import { InquiryPlaceholder } from './pages/InquiryPlaceholder.jsx';
 import { EquipmentList } from './pages/equipment/EquipmentList.jsx';
 import { EquipmentForm } from './pages/equipment/EquipmentForm.jsx';
 import { EquipmentDetailPlaceholder } from './pages/equipment/EquipmentDetailPlaceholder.jsx';
+// Phase 6 Slice 1 — Job Requests + Job Cards module
+import { JobRequestList } from './pages/jobRequests/JobRequestList.jsx';
+import { JobRequestNew } from './pages/jobRequests/JobRequestNew.jsx';
+import { JobCardList } from './pages/jobCards/JobCardList.jsx';
 
 export function App() {
   return (
@@ -83,23 +87,35 @@ export function App() {
             }
           />
 
-          {/* ── Other placeholders (gated routes lock URL surface) ─ */}
+          {/* ── Job Requests module (Phase 6 Slice 1) ──────────── */}
           <Route
             path="/job-requests"
             element={
               <ProtectedRoute requiredPermission="job_request:read-own">
-                <Layout><ModulePlaceholder title="Job Requests" phase={6} /></Layout>
+                <Layout><JobRequestList /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/job-cards"
+            path="/job-requests/new"
             element={
-              <ProtectedRoute requiredPermission="job_card:read-list">
-                <Layout><ModulePlaceholder title="Job Cards" phase={6} /></Layout>
+              <ProtectedRoute requiredPermission="job_request:create">
+                <Layout><JobRequestNew /></Layout>
               </ProtectedRoute>
             }
           />
+
+          {/* ── Job Cards module (Phase 6 Slice 1) ─────────────── */}
+          <Route
+            path="/job-cards"
+            element={
+              <ProtectedRoute requiredPermission="job_card:read-list">
+                <Layout><JobCardList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── Other placeholders (gated routes lock URL surface) ─ */}
           <Route
             path="/schedule"
             element={
