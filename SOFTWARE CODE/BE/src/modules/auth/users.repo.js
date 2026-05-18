@@ -53,13 +53,32 @@ const pool = require('../../config/db');
 async function findByEmployeeId(employeeId) {
   const [rows] = await pool.query(
     `SELECT user_id, employee_id, password_hash, section_id,
-            is_active, is_locked, failed_login_count, last_login_at
+            is_active, is_locked, failed_login_count, last_login_at,
+            token_version
        FROM users
       WHERE employee_id = ?
       LIMIT 1`,
     [employeeId],
   );
   return rows[0] || null;
+}
+
+/**
+ * Phase 7: fetch ONLY the current token_version for a user_id.
+ * Used by authenticate middleware on a token-version cache miss to
+ * decide whether the presented JWT is still valid.
+ *
+ * Narrow projection on a PK lookup — sub-millisecond, no JOIN.
+ *
+ * @param {number} userId
+ * @returns {Promise<number | null>}  null if user not found
+ */
+async function findTokenVersionByUserId(userId) {
+  const [rows] = await pool.query(
+    `SELECT token_version FROM users WHERE user_id = ? LIMIT 1`,
+    [userId],
+  );
+  return rows[0] ? rows[0].token_version : null;
 }
 
 /**
@@ -141,6 +160,7 @@ async function recordSuccessfulLogin(userId, ipAddress) {
 
 module.exports = {
   findByEmployeeId,
+  findTokenVersionByUserId,
   loadRoleAndPermissions,
   incrementFailedLogin,
   recordSuccessfulLogin,

@@ -43,6 +43,12 @@ const auditRepo = require('./loginAudit.repo');
 /**
  * Build the access-token payload shape we put inside the JWT.
  * Centralised so login() and refresh() can't drift.
+ *
+ * PHASE 7 ADDITION: `tv` (token_version) is included as a JWT claim. The
+ * authenticate middleware compares this to the CURRENT users.token_version
+ * (via tokenVersionCache); mismatch → 401 SESSION_REVOKED. Lets us revoke
+ * live JWTs the moment a Super Admin changes a user's role / status /
+ * force-logs them out.
  */
 function buildAccessPayload(user, role_code, permissions) {
   return {
@@ -50,6 +56,7 @@ function buildAccessPayload(user, role_code, permissions) {
     uid: user.user_id,
     role: role_code,
     permissions,
+    tv:  user.token_version,
   };
 }
 

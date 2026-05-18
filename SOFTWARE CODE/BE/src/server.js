@@ -209,6 +209,20 @@ app.use(`${env.API_BASE_PATH}/job-cards`, jobCardsRoutes);
 const lookupsRoutes = require('./modules/lookups/lookups.routes');
 app.use(`${env.API_BASE_PATH}/lookups`, lookupsRoutes);
 
+// ── Admin · Users module (Phase 7 Slice 1) ──────────────────────────────
+// Mounted at /api/v1/admin/users. Super-Admin-only surface that lists,
+// inspects, role-changes, activates, deactivates, force-logs-out users
+// and exposes their per-user transition history.
+const adminUsersRoutes = require('./modules/adminUsers/adminUsers.routes');
+app.use(`${env.API_BASE_PATH}/admin/users`, adminUsersRoutes);
+
+// ── Admin · Employees master (Phase 7 Slice 1) ──────────────────────────
+// Mounted at /api/v1/admin/employees. Super-Admin-only CRUD on the
+// employees master + a /create-account endpoint that promotes an
+// employee into a loginable user with a one-time-shown random password.
+const employeesRoutes = require('./modules/employees/employees.routes');
+app.use(`${env.API_BASE_PATH}/admin/employees`, employeesRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.

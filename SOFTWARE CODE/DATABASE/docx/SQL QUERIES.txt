@@ -346,3 +346,582 @@ Completes calibration/repair lifecycle.
 6 PDF generation + export audit Creates operational document outputs. 
 7 Dashboard widgets Summarizes live operational queues. 
 8 Inquiry integration Makes records searchable across modules. 
+
+
+
+
+
+
+
+
+
+
+
+
+cd "e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/DATABASE/phase3" && node -e "
+const m=require('mysql2/promise');
+(async()=>{
+  const c=await m.createConnection({host:'localhost',port:3306,user:'root',password:'',database:'final'});
+  const tables=['users','cmms_emp_mst','cmms_section_mst','audit_log','user_roles','roles','permissions','role_permissions'];
+  for(const t of tables){
+    try{
+      const [r]=await c.query('SHOW CREATE TABLE \`'+t+'\`');
+      console.log('========================================');
+      console.log('TABLE: '+t);
+      console.log('========================================');
+      console.log(r[0]['Create Table']);
+      console.log();
+    }catch(e){ console.log('MISSING: '+t+' ('+e.code+')'); }
+  }
+  await c.end();
+})().catch(e=>{console.error(e); process.exit(1)});" 2>&1 | head -300
+
+
+
+
+
+
+========================================
+TABLE: users
+========================================
+CREATE TABLE `users` (
+  `user_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `employee_id` varchar(7) NOT NULL COMMENT 'Matches cmms_emp_mst.EMM_ID',
+  `password_hash` varchar(60) NOT NULL COMMENT 'bcrypt(employee_id) at seed; bcrypt(new_pwd) if Super Admin resets',
+  `section_id` int(10) unsigned DEFAULT NULL COMMENT 'FK → sections.section_id; NULL allowed for unassigned',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `is_locked` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Auto-set TRUE after N failed logins; only Super Admin unlocks',
+  `failed_login_count` smallint(5) unsigned NOT NULL DEFAULT 0,
+  `last_login_at` datetime(6) DEFAULT NULL,
+  `last_login_ip` varchar(45) DEFAULT NULL COMMENT 'IPv6-ready',
+  `password_hash_set_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `created_by` varchar(20) DEFAULT NULL,
+  `updated_at` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  `updated_by` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `uk_users_employee_id` (`employee_id`),
+  KEY `idx_users_active` (`is_active`,`is_locked`),
+  KEY `idx_users_section` (`section_id`),
+  KEY `idx_users_created_at` (`created_at`),
+  CONSTRAINT `fk_users_employee` FOREIGN KEY (`employee_id`) REFERENCES `cmms_emp_mst` (`EMM_ID`),
+  CONSTRAINT `fk_users_section` FOREIGN KEY (`section_id`) REFERENCES `sections` (`section_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 1: auth identity (one row per loginable user)'
+
+========================================
+TABLE: cmms_emp_mst
+========================================
+CREATE TABLE `cmms_emp_mst` (
+  `EMM_ID` varchar(7) NOT NULL,
+  `EMM_NAME` varchar(100) NOT NULL,
+  `EMM_DESIGNATION` varchar(200) NOT NULL,
+  `EMM_DESIGDATE` datetime(6) DEFAULT NULL,
+  `EMM_DEPT` int(11) NOT NULL,
+  `EMM_DEPTDATE` datetime(6) DEFAULT NULL,
+  `EMM_DOB` datetime(6) DEFAULT NULL,
+  `EMM_DOJ` datetime(6) DEFAULT NULL,
+  `EMM_BLOODGRP` varchar(50) DEFAULT NULL,
+  `EMM_ADD` varchar(200) DEFAULT NULL,
+  `EMM_CITY` varchar(100) DEFAULT NULL,
+  `EMM_STATE` varchar(100) DEFAULT NULL,
+  `EMM_ZIP` varchar(100) DEFAULT NULL,
+  `EMM_PH1` varchar(100) DEFAULT NULL,
+  `EMM_PH2` varchar(100) DEFAULT NULL,
+  `EMM_FAX` varchar(100) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_EMAIL` varchar(100) DEFAULT NULL,
+  `EMM_MOBILE` varchar(100) DEFAULT NULL,
+  `EMM_PAGER` varchar(100) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_STARTDT` datetime(6) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_APP_LVL` bigint(20) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_MAX_PURCHASE` decimal(10,2) DEFAULT NULL,
+  `EMM_REMARKS` varchar(500) DEFAULT NULL,
+  `EMM_CREATED_BY` varchar(7) NOT NULL,
+  `EMM_CREATED_ON` datetime(6) NOT NULL,
+  `EMM_UPDATED_BY` varchar(7) NOT NULL,
+  `EMM_UPDATED_ON` datetime(6) NOT NULL,
+  `EMM_RESIPH` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `EMM_ROLE` int(11) DEFAULT NULL,
+  `EMM_INACTIVE` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`EMM_ID`),
+  KEY `FK_CMMS_EMP_MST_CMMS_SECTION_MST` (`EMM_DEPT`),
+  KEY `FK_CMMS_EMP_MST_CMMS_ROLE_MST` (`EMM_ROLE`),
+  KEY `idx_emm_active` (`EMM_INACTIVE`),
+  CONSTRAINT `FK_CMMS_EMP_MST_CMMS_ROLE_MST` FOREIGN KEY (`EMM_ROLE`) REFERENCES `_legacy_role_mst` (`ROLE_ID`),
+  CONSTRAINT `FK_CMMS_EMP_MST_CMMS_SECTION_MST` FOREIGN KEY (`EMM_DEPT`) REFERENCES `cmms_section_mst` (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
+
+========================================
+TABLE: cmms_section_mst
+========================================
+CREATE TABLE `cmms_section_mst` (
+  `SM_ID` int(11) NOT NULL,
+  `SM_SHORTNAME` varchar(50) NOT NULL,
+  `SM_NAME` varchar(80) DEFAULT NULL,
+  `SM_HEAD_NAME` varchar(50) DEFAULT NULL,
+  `SM_HEAD_PH_NO` varchar(50) DEFAULT NULL,
+  `SM_HEAD_USER_ID` varchar(7) DEFAULT NULL,
+  `SM_STATE` tinyint(1) NOT NULL,
+  `SM_CREATED_BY` varchar(7) NOT NULL,
+  `SM_CREATED_ON` datetime(6) NOT NULL,
+  `SM_UPDATED_BY` varchar(7) NOT NULL,
+  `SM_UPDATED_ON` datetime(6) NOT NULL,
+  `SM_HEAD_DESIGNATION` varchar(200) DEFAULT NULL,
+  `SM_ISGROUP` tinyint(1) NOT NULL DEFAULT 0,
+  `SM_Email` varchar(150) DEFAULT NULL,
+  PRIMARY KEY (`SM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
+
+========================================
+TABLE: audit_log
+========================================
+CREATE TABLE `audit_log` (
+  `audit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `actor_employee_id` varchar(20) NOT NULL,
+  `actor_role_code` varchar(30) DEFAULT NULL,
+  `action` varchar(60) NOT NULL,
+  `entity_type` varchar(40) NOT NULL,
+  `entity_id` varchar(50) NOT NULL,
+  `occurred_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` varchar(500) DEFAULT NULL,
+  `request_id` varchar(40) DEFAULT NULL,
+  `notes` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`audit_id`),
+  KEY `idx_al_entity` (`entity_type`,`entity_id`,`occurred_at`),
+  KEY `idx_al_actor` (`actor_employee_id`,`occurred_at`),
+  KEY `idx_al_action` (`action`,`occurred_at`),
+  KEY `idx_al_time` (`occurred_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 10: generic write-audit log'
+
+========================================
+TABLE: user_roles
+========================================
+CREATE TABLE `user_roles` (
+  `user_id` bigint(20) unsigned NOT NULL,
+  `role_id` tinyint(3) unsigned NOT NULL,
+  `assigned_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `assigned_by` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  KEY `idx_ur_role` (`role_id`),
+  CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`),
+  CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 1: exactly one role per user (BR-RBAC-02)'
+
+========================================
+TABLE: roles
+========================================
+CREATE TABLE `roles` (
+  `role_id` tinyint(3) unsigned NOT NULL COMMENT 'Hard-coded 1..5 for deterministic seeds',
+  `role_code` varchar(30) NOT NULL COMMENT 'SUPER_ADMIN | LAB_IN_CHARGE | LAB_ENGINEER | NORMAL_USER | VIEW_ONLY',
+  `role_name` varchar(60) NOT NULL,
+  `role_description` varchar(255) DEFAULT NULL,
+  `is_system` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  PRIMARY KEY (`role_id`),
+  UNIQUE KEY `uk_roles_code` (`role_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 1: 5 system roles'
+
+========================================
+TABLE: permissions
+========================================
+CREATE TABLE `permissions` (
+  `permission_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
+  `permission_code` varchar(80) NOT NULL COMMENT 'e.g., equipment:create, job_card:verify-close',
+  `resource` varchar(40) NOT NULL,
+  `action` varchar(60) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `is_system` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  PRIMARY KEY (`permission_id`),
+  UNIQUE KEY `uk_perm_code` (`permission_code`),
+  KEY `idx_perm_resource` (`resource`)
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 1: atomic resource:action permissions'
+
+========================================
+TABLE: role_permissions
+========================================
+CREATE TABLE `role_permissions` (
+  `role_id` tinyint(3) unsigned NOT NULL,
+  `permission_id` smallint(5) unsigned NOT NULL,
+  `granted_at` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  `granted_by` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`role_id`,`permission_id`),
+  KEY `idx_rp_perm` (`permission_id`),
+  CONSTRAINT `fk_rp_permission` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`permission_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_rp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Cluster 1: which role gets which permission'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[90m  [SKIP]  102__phase6_indexes.sql  (already applied, checksum matches)[0m
+[1m▶ 110__phase7_users_columns.sql[0m
+[32m✓ 110__phase7_users_columns.sql  (215ms)[0m
+[1m▶ 111__phase7_indexes.sql[0m
+[32m✓ 111__phase7_indexes.sql  (69ms)[0m
+[1m▶ 112__phase7_user_role_history.sql[0m
+[32m✓ 112__phase7_user_role_history.sql  (44ms)[0m
+[1m▶ 113__phase7_permissions.sql[0m
+[32m✓ 113__phase7_permissions.sql  (12ms)[0m
+
+[32m✓ All migrations processed.[0m
+
+[36m[1mPOST-BOOTSTRAP VERIFICATION CHECKLIST (v2.0 §17)[0m
+
+[32m✓ roles count == 5 → 5[0m
+[31m✗ permissions count == 40 → 43 (want 40)[0m
+[32m✓ role_permissions count > 100 → 125[0m
+[31m✗ users count == 2 → 60 (want 2)[0m
+[31m✗ user_roles count == 2 → 60 (want 2)[0m
+[32m✓ departments count == 1 → 1[0m
+[32m✓ sections count == 2 → 2[0m
+[32m✓ cmms_emp_mst includes SA79900 → 1[0m
+[32m✓ cmms_emp_mst includes AC77777 → 1[0m
+[32m✓ cmms_section_mst includes ADMIN (9999) → 1[0m
+[32m✓ lookup values seeded → 30[0m
+[32m✓ audit_log has bootstrap rows → 12[0m
+[32m✓ bcrypt: SA79900 password verifies as 'SA79900'[0m
+[32m✓ bcrypt: AC77777 password verifies as 'AC77777'[0m
+
+[31m✗ 3 of 14 checks FAILED. Investigate before declaring done.[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[22:21:17.171] [32mINFO[39m: [36mServer ready[39m
+    port: 3000
+[22:21:17.192] [32mINFO[39m: [36mDB pool ready[39m
+    host: "localhost"
+    port: 3306
+    db: "final"
+    poolLimit: 15
+TOKEN LEN: 1495
+
+=== GET /admin/users (SA, default) ===
+[22:21:21.241] [32mINFO[39m: [36mPOST /login → 200[39m
+    req: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "ip": "::1"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 172
+[22:21:21.349] [32mINFO[39m: [36mGET /?page=1&page_size=10 → 200[39m
+    req: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/v1/admin/users?page=1&page_size=10",
+      "ip": "::1"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 16
+{"data":{"items":[{"id":60,"employee_id":"TE00225","full_name":"RAVINDRA K VASAVE","designation":"Traniee","email":"rvindravasave64@gmail.com","division_id":61,"division_code":"TIMCD-EFMG-ESSA","division_name":"TEST INSTRUMENTS MAINTENANCE AND CALIBRATION DIVISION","role":"NORMAL_USER","is_active":false,"is_locked":false,"last_login_at":null,"created_at":"2026-05-18","deactivated_at":null,"token_version":1},{"id":59,"employee_id":"TE00197","full_name":"MUKESH KUMAR","designation":"Traniee","email":"mukeshkumarsain2014@gmail.com","division_id":61,"division_code":"TIMCD-EFMG-ESSA","division_name":"TEST INSTRUMENTS MAINTENANCE AND CALIBRATION DIVISION","role":"NORMAL_USER","is_active":false,"is_locked":false,"last_login_at":null,"created_at":"2026-05-18","deactivated_at":null,"token_version":
+
+=== GET /admin/employees (SA, default) ===
+{"data":{"items":[{"employee_id":"AC03032","full_name":"A M SUCHDAY","designation":"Engineer SD","email":"","mobile":"","lab_phone":"","room_phone":"","division_id":61,"division_code":"TIMCD-EFMG-ESSA","division_name":"TEST INSTRUMENTS MAINTENANCE AND CALIBRATION DIVISION","is_active":false,"has_account":true,"user_id":8,"user_is_active":false,"created_at":"2007-05-25","deactivated_at":null},{"employee_id":"AC06448","full_name":"A N BHAVSAR","designation":"ADMINISTRATION","email":"anb@sac.isro.gov.in","mobile":"9427109566","lab_phone":"07926914828","room_phone":"07929701808","division_id":61,"division_code":"TIMCD-EFMG-ESSA","division_name":"TEST INSTRUMENTS MAINTENANCE AND CALIBRATION DIVISION","is_active":false,"has_account":true,"user_id":17,"user_is_active":false,"created_at":"2003-08-
+
+=== JWT payload (verify tv claim present) ===
+[22:21:21.468] [32mINFO[39m: [36mGET /?page=1&page_size=10 → 200[39m
+    req: {
+      "id": 3,
+      "method": "GET",
+      "url": "/api/v1/admin/employees?page=1&page_size=10",
+      "ip": "::1"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 10
+{
+  "sub": "SA79900",
+  "uid": 1,
+  "role": "SUPER_ADMIN",
+  "tv": 1,
+  "perm_count": 43
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cd "e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/BE" && pkill -f "node src/server.js" 2>/dev/null; sleep 1; node src/server.js &
+sleep 4
+
+# Login as SA
+SA_TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{"employee_id":"SA79900","password":"SA79900"}' | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{console.log(JSON.parse(Buffer.concat(c).toString()).data.accessToken)})")
+SA_UID=1
+
+# Pick a non-SA target (user_id=2 should be AC77777, the second SA — let's use a normal-user target instead. Find one.)
+TARGET=$(curl -s -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users?role=NORMAL_USER&is_active=1&page_size=10" | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(c).toString()); const t=r.data.items.find(x => x.role==='NORMAL_USER'); if(!t){console.log('NONE'); process.exit(0)} console.log(t.id+'|'+t.employee_id+'|'+t.role)})")
+echo "Target user picked: $TARGET"
+TID=$(echo $TARGET | cut -d'|' -f1)
+
+echo
+echo "=== A1: GET /admin/users without SA token — should 401 ==="
+curl -s -o /dev/null -w "HTTP %{http_code}\n" "http://localhost:3000/api/v1/admin/users"
+
+echo
+echo "=== A2: GET /admin/users as SA — total_items + role variety ==="
+curl -s -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users?page_size=10" | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(c).toString()); const roles=[...new Set(r.data.items.map(x=>x.role))]; console.log('total='+r.data.pagination.total_items+' roles='+roles.join(','))})"
+
+echo
+echo "=== A3: PATCH /admin/users/$SA_UID/role with target.id === actor.id → 409 SELF_MODIFICATION ==="
+curl -s -w "\nHTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$SA_UID/role" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"role":"NORMAL_USER"}'
+
+echo
+echo "=== A4: Demote last active SA (user_id=2) → 409 LAST_SUPER_ADMIN ==="
+# user_id=2 is the second seeded SA. Demote it to leave 1 SA, that's fine.
+# Then try to demote SA at user_id=1 → should hit LAST_SA. But careful — A3 already blocks self-modification.
+# We need a NON-SELF SA to attempt to demote. So let's first ensure user 2 is also SA and try to demote them as user 1.
+echo "(Checking active SA count first)"
+curl -s -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users?role=SUPER_ADMIN&is_active=1" | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(c).toString()); console.log('active SAs='+r.data.pagination.total_items+' ids='+r.data.items.map(x=>x.id).join(','))})"
+
+echo
+echo "=== A5: PATCH /admin/users/$TID/role NORMAL_USER → LAB_ENGINEER ==="
+curl -s -w "\nHTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$TID/role" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"role":"LAB_ENGINEER","reason":"Smoke test A5"}'
+
+echo
+echo "=== A7: PATCH /admin/users/$SA_UID/deactivate self → 409 SELF_DEACTIVATE ==="
+curl -s -w "\nHTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$SA_UID/deactivate" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"reason":"trying to deactivate self"}'
+
+echo
+echo "=== A9: PATCH /admin/users/$TID/deactivate with reason ==="
+curl -s -w "\nHTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$TID/deactivate" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"reason":"Smoke test A9 deactivation"}'
+
+echo
+echo "=== A9-verify: token_version bumped? deactivated_at populated? ==="
+curl -s -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users/$TID" | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(c).toString()); const u=r.data; console.log('is_active='+u.is_active+' tv='+u.token_version+' deactivated_at='+u.deactivated_at+' reason='+u.deactivation_reason)})"
+
+echo
+echo "=== A11: POST /admin/employees with duplicate emp_id (SA79900) → 409 ==="
+curl -s -w "\nHTTP %{http_code}\n" -X POST "http://localhost:3000/api/v1/admin/employees" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"employee_id":"SA79900","full_name":"Duplicate Test","designation":"Tester","division_id":9999}'
+
+echo
+echo "=== A12: POST /admin/employees/SA79900/create-account on already-has-account → 409 ==="
+curl -s -w "\nHTTP %{http_code}\n" -X POST "http://localhost:3000/api/v1/admin/employees/SA79900/create-account" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"role":"NORMAL_USER"}'
+
+echo
+echo "=== A14: Token-version cache hit rate after a few requests (warm) ==="
+for i in 1 2 3 4 5; do curl -s -o /dev/null -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users?page_size=10"; done
+# We can't read the cache stats over HTTP yet — just confirm requests succeeded.
+echo "5 warm reads completed (cache should be 100% hit after 1st)"
+
+echo
+echo "=== History endpoint — verify rows landed for $TID ==="
+curl -s -H "Authorization: Bearer $SA_TOKEN" "http://localhost:3000/api/v1/admin/users/$TID/history" | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{const r=JSON.parse(Buffer.concat(c).toString()); console.log('history rows='+r.data.items.length); r.data.items.slice(0,5).forEach(h=>console.log('  '+h.action+': '+(h.from_role||'-')+'→'+h.to_role+' active='+h.from_active+'→'+h.to_active+(h.reason?' reason='+h.reason.slice(0,50):'')))})"
+
+echo
+echo "=== Cleanup: re-activate the test user ==="
+curl -s -o /dev/null -w "reactivate HTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$TID/activate" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{}'
+curl -s -o /dev/null -w "demote-back HTTP %{http_code}\n" -X PATCH "http://localhost:3000/api/v1/admin/users/$TID/role" -H "Authorization: Bearer $SA_TOKEN" -H "Content-Type: application/json" -d '{"role":"NORMAL_USER","reason":"smoke cleanup"}'
+
+pkill -f "node src/server.js" 2>/dev/null
+true
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[22:31:38.690] [41mFATAL[49m: [36mUncaught exception — exiting[39m
+    err: {
+      "type": "Object",
+      "message": "listen EADDRINUSE: address already in use :::3000",
+      "stack":
+          Error: listen EADDRINUSE: address already in use :::3000
+              at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+              at listenInCluster (node:net:1996:12)
+              at Server.listen (node:net:2101:7)
+              at Function.listen (E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\BE\node_modules\express\lib\application.js:635:24)
+              at Object.<anonymous> (E:\SOFTWAREs By DS\cmcmis-simplified\SOFTWARE CODE\BE\src\server.js:237:20)
+              at Module._compile (node:internal/modules/cjs/loader:1730:14)
+              at Object..js (node:internal/modules/cjs/loader:1895:10)
+              at Module.load (node:internal/modules/cjs/loader:1465:32)
+              at Function._load (node:internal/modules/cjs/loader:1282:12)
+              at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    }
+[22:31:38.853] [32mINFO[39m: [36mDB pool ready[39m
+    host: "localhost"
+    port: 3306
+    db: "final"
+    poolLimit: 15
+Target user picked: 57|NR02094|NORMAL_USER
+
+=== A1: GET /admin/users without SA token — should 401 ===
+HTTP 401
+
+=== A2: GET /admin/users as SA — total_items + role variety ===
+total=60 roles=NORMAL_USER
+
+=== A3: PATCH /admin/users/1/role with target.id === actor.id → 409 SELF_MODIFICATION ===
+{"error":{"code":"SELF_MODIFICATION_FORBIDDEN","message":"You cannot change your own role. Ask another Super Admin.","details":{"code":"SELF_MODIFICATION_FORBIDDEN"}}}
+HTTP 409
+
+=== A4: Demote last active SA (user_id=2) → 409 LAST_SUPER_ADMIN ===
+(Checking active SA count first)
+active SAs=2 ids=2,1
+
+=== A5: PATCH /admin/users/57/role NORMAL_USER → LAB_ENGINEER ===
+{"data":{"id":57,"role":"LAB_ENGINEER"}}
+HTTP 200
+
+=== A7: PATCH /admin/users/1/deactivate self → 409 SELF_DEACTIVATE ===
+{"error":{"code":"SELF_DEACTIVATE_FORBIDDEN","message":"You cannot deactivate your own account. Ask another Super Admin.","details":{"code":"SELF_DEACTIVATE_FORBIDDEN"}}}
+HTTP 409
+
+=== A9: PATCH /admin/users/57/deactivate with reason ===
+{"data":{"id":57,"is_active":false}}
+HTTP 200
+
+=== A9-verify: token_version bumped? deactivated_at populated? ===
+is_active=false tv=3 deactivated_at=2026-05-19 04:01:43 reason=Smoke test A9 deactivation
+
+=== A11: POST /admin/employees with duplicate emp_id (SA79900) → 409 ===
+{"error":{"code":"CONFLICT","message":"Employee with that ID already exists","details":{"field":"employee_id"}}}
+HTTP 409
+
+=== A12: POST /admin/employees/SA79900/create-account on already-has-account → 409 ===
+{"error":{"code":"CONFLICT","message":"Employee already has a user account","details":{"code":"HAS_ACCOUNT"}}}
+HTTP 409
+
+=== A14: Token-version cache hit rate after a few requests (warm) ===
+5 warm reads completed (cache should be 100% hit after 1st)
+
+=== History endpoint — verify rows landed for 57 ===
+history rows=2
+  DEACTIVATE: LAB_ENGINEER→LAB_ENGINEER active=true→false reason=Smoke test A9 deactivation
+  CHANGE_ROLE: NORMAL_USER→LAB_ENGINEER active=true→true reason=Smoke test A5
+
+=== Cleanup: re-activate the test user ===
+reactivate HTTP 200
+demote-back HTTP 200

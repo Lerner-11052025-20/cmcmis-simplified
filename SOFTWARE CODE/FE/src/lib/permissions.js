@@ -30,6 +30,8 @@ import {
   Search,
   BarChart3,
   Settings,
+  Users,
+  IdCard,
 } from 'lucide-react';
 
 /**
@@ -50,7 +52,11 @@ export const ALL_NAV_ITEMS = [
   { label: 'Procurement',  to: '/procurement',  icon: Package,        requires: 'equipment:read-list' },
   { label: 'Inquiry',      to: '/inquiry',      icon: Search,         requires: 'inquiry:search-instruments' },
   { label: 'Reports',      to: '/reports',      icon: BarChart3,      requires: 'dashboard:view' },
-  { label: 'Admin',        to: '/admin/users',  icon: Settings,       requires: 'user:read-list' },
+  // Phase 7 — Admin module (Super Admin only). Old "Admin" placeholder
+  // is replaced by these two flat items. Q-7 locked: flat now; future
+  // Slice 2 may collapse into a collapsible group with Audit Log etc.
+  { label: 'Admin · Users',     to: '/admin/users',     icon: Users,    requires: 'user:read-list' },
+  { label: 'Admin · Employees', to: '/admin/employees', icon: IdCard,   requires: 'master:employees:manage' },
 ];
 
 /**

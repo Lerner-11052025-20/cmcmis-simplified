@@ -42,6 +42,10 @@ import { EquipmentDetailPlaceholder } from './pages/equipment/EquipmentDetailPla
 import { JobRequestList } from './pages/jobRequests/JobRequestList.jsx';
 import { JobRequestNew } from './pages/jobRequests/JobRequestNew.jsx';
 import { JobCardList } from './pages/jobCards/JobCardList.jsx';
+// Phase 7 Slice 1 — Admin · Users + Admin · Employees
+import { UserList } from './pages/admin/users/UserList.jsx';
+import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
+import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
 
 export function App() {
   return (
@@ -148,11 +152,36 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* Phase 7 Slice 1 — real Admin module routes */}
           <Route
             path="/admin/users"
             element={
               <ProtectedRoute requiredPermission="user:read-list">
-                <Layout><ModulePlaceholder title="Manage Users" phase={8} /></Layout>
+                <Layout><UserList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/employees"
+            element={
+              <ProtectedRoute requiredPermission="master:employees:manage">
+                <Layout><EmployeeList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/employees/new"
+            element={
+              <ProtectedRoute requiredPermission="master:employees:manage">
+                <Layout><EmployeeForm mode="new" /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/employees/:id/edit"
+            element={
+              <ProtectedRoute requiredPermission="master:employees:manage">
+                <Layout><EmployeeForm mode="edit" /></Layout>
               </ProtectedRoute>
             }
           />

@@ -135,6 +135,36 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // PHASE 7 — SESSION_REVOKED branch (D-7.2).
+    // The BE's authenticate middleware tags 401s with details.reason:
+    //   'SESSION_REVOKED'  → Super Admin acted on this account
+    //                         (role change / deactivate / force-logout).
+    //                         No amount of /auth/refresh will help —
+    //                         the user's old refresh token is also
+    //                         invalidated, and even if it weren't,
+    //                         the new access token would carry the
+    //                         old token_version. Force re-login.
+    //   'TOKEN_EXPIRED'    → normal 15-min access-token lifecycle —
+    //                         falls through to the refresh path below.
+    //   undefined          → malformed / signature error — treat as
+    //                         refresh-fixable for back-compat.
+    const reason = error.response?.data?.error?.details?.reason;
+    if (reason === 'SESSION_REVOKED') {
+      // Wipe local tokens + UI state, then bounce to /login. We can't
+      // call AuthContext from here (cyclic), so we just blow the tokens
+      // out of module state and reload the page — AuthProvider sees no
+      // valid refresh and renders the login form.
+      try {
+        clearAuthTokens();
+      } catch { /* ignore */ }
+      if (typeof window !== 'undefined') {
+        // Use a query param so the Login page can surface a toast.
+        const target = `/login?reason=session_revoked`;
+        window.location.replace(target);
+      }
+      return Promise.reject(error);
+    }
+
     // The refresh / login / logout endpoints themselves must never
     // trigger a retry — that would loop forever ("/refresh returned 401
     // → call /refresh → 401 → call /refresh …"). Treat them as terminal.
