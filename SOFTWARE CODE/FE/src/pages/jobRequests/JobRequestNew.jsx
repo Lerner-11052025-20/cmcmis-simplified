@@ -558,15 +558,12 @@ export function JobRequestNew() {
               />
             </FormField>
           </div>
-          <div className="md:col-span-2 flex items-center gap-2">
+          <div className="md:col-span-2">
             <Checkbox
               checked={form.equipment_sent_after_repair}
               onChange={(e) => update('equipment_sent_after_repair', e.target.checked)}
-              id="esar"
+              label="Equipment sent after repair"
             />
-            <label htmlFor="esar" className="text-sm text-ink select-none cursor-pointer">
-              Equipment sent after repair
-            </label>
           </div>
         </div>
       </section>
@@ -585,23 +582,21 @@ export function JobRequestNew() {
           {TERMS.map((t, i) => (
             <li
               key={t.index}
-              className="flex items-start gap-3 px-3 py-3 rounded-md border border-border bg-base-elev/30"
+              className="px-3 py-3 rounded-md border border-border bg-base-elev/30"
             >
               <Checkbox
-                id={`tnc-${t.index}`}
                 checked={tnc[i]}
                 onChange={(e) => {
                   const next = [...tnc];
                   next[i] = e.target.checked;
                   setTnc(next);
                 }}
+                label={
+                  <>
+                    <span className="font-semibold">T&amp;C {t.index}:</span> {t.text}
+                  </>
+                }
               />
-              <label
-                htmlFor={`tnc-${t.index}`}
-                className="text-sm text-ink select-none cursor-pointer"
-              >
-                <span className="font-semibold">T&amp;C {t.index}:</span> {t.text}
-              </label>
             </li>
           ))}
         </ul>
