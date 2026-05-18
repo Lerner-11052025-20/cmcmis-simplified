@@ -214,3 +214,135 @@ please take care of this you are senior software developer with this context PLE
 please think as SENIOR SOFTWARE DEVELOPER ENGINEER and put higher and complex as extra as efforts.
 
 put your all the energy to FOR THE WRITING AI AGENT PROMPT as in depth.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+put your all the energy to remember all the things as all the above attached all the documents that are backbone of the our entire project please try to remember all the things and generate final WORD DOCX document for the above all the INSIGHTS.
+
+Document length must be as =================>
+please locked in with your deep sorathiya as DS.
+
+please keep in mind, we have entire attached documents as in depth and step by step with us. 
+
+please locked in with phase 6 ready locked as from phase 0----->6 done. stay with me. 
+
+please take care of this you are senior software developer with this context PLEASE remember END TO END STEP BY STEP DOCUMENTs AND PDFs.
+please keep in mind that please put your all extra and highest efforts WE GONNA CREATE HISTORY AT ISRO. 
+
+please think as SENIOR SOFTWARE DEVELOPER ENGINEER and SENIOR DOCUMENTATIONAL ENGINEER and put higher and complex as extra as efforts. 
+
+put your all the energy to FOR THE same as attached above all,---------------->AS IN DEPTH, AS STEP BY STEP, AS INSIGHTS BASED, AS HIGHEST EFFORTS, AS SENIOR ENGINEER, AS L O C K E D.
+
+
+
+
+please take your time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12.2 Recommended sequence  
+Sequence Build Item Why Now 
+1 Job Request detail page Users need a full record view before approval actions. 
+2 Approve/reject service + UI Moves submitted requests into operational state. 
+3 Assignment + auto Job Card creation Connects request intake to execution. 
+4 Job Card detail + checklist/readings Enables engineer execution. 
+5 Verify-close + controlled equipment 
+back-write 
+Completes calibration/repair lifecycle. 
+6 PDF generation + export audit Creates operational document outputs. 
+7 Dashboard widgets Summarizes live operational queues. 
+8 Inquiry integration Makes records searchable across modules. 
