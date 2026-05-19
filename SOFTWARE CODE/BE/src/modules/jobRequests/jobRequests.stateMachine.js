@@ -48,6 +48,16 @@ const ALLOWED = {
     // Phase 6 Slice 1 — owner-only self-submit. Same row stays put; only
     // the status flag flips, plus T&C metadata is captured.
     submit:  { to: 'SUBMITTED', perm: 'job_request:create',          actorMustBeOwner: true  },
+    // Phase 9 — owner-only edit of a DRAFT body. NOT a state change (the
+    // row stays DRAFT) but we model it here so the permission + ownership
+    // checks pass through the same choke-point as transitions. The service
+    // ignores the returned newState (it's identical to currentState).
+    edit:    { to: 'DRAFT',     perm: 'job_request:create',          actorMustBeOwner: true  },
+    // Phase 9 — owner-only cancel of a DRAFT. CANCELLED is a LOGICAL state
+    // (decision D-9.11) — the row stays DRAFT but JR_CANCELLED_AT is set.
+    // The list endpoint hides cancelled rows by default. History row gets
+    // to_status='CANCELLED' (varchar column accepts the string).
+    cancel:  { to: 'CANCELLED', perm: 'job_request:create',          actorMustBeOwner: true  },
   },
   SUBMITTED: {
     // Phase 7 Slice 2 — Lab In-Charge / Super Admin approves.

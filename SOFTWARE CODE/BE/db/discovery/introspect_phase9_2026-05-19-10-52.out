@@ -1,0 +1,174 @@
+# ============================================================
+# Phase 9 — DB introspection
+# Run at:  2026-05-19T10:52:39.835Z
+# DB:      root@localhost:3306/final
+# ============================================================
+
+-- ────────────────────────────────────────────────────────────
+-- SHOW CREATE TABLE cmms_jobcard_mst (full current shape)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE `cmms_jobcard_mst` (
+  `JM_JobCardNO` int(11) NOT NULL,
+  `JM_EQM_TYPE` varchar(15) NOT NULL,
+  `JM_EQM_ID` int(11) NOT NULL,
+  `JM_FNPETYPE` char(1) DEFAULT NULL,
+  `JM_SectionJobNo` varchar(9) NOT NULL,
+  `JM_JCRecdDate` datetime(6) NOT NULL,
+  `JM_InstRecdDate` datetime(6) NOT NULL,
+  `JM_JobStatus` char(2) NOT NULL,
+  `JM_Job` varchar(50) DEFAULT NULL COMMENT 'NA as per new design. (Accepted / Rejected)',
+  `JM_PlannedStartDate` datetime(6) NOT NULL,
+  `JM_PlannedComletedDate` datetime(6) NOT NULL,
+  `JM_JobStartDate` datetime(6) DEFAULT NULL,
+  `JM_JobEndDate` datetime(6) DEFAULT NULL,
+  `JM_WarrantyRepairs` tinyint(1) NOT NULL,
+  `JM_ContractRepairs` tinyint(1) NOT NULL,
+  `JM_ServiceEngr` tinyint(1) DEFAULT NULL,
+  `JM_Operator` tinyint(1) DEFAULT NULL,
+  `JM_Apprentice` tinyint(1) DEFAULT NULL,
+  `JM_AttendedBy` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing. For this there is new table',
+  `JM_EQGivenTo` varchar(50) DEFAULT NULL,
+  `JM_EQGivenOn` datetime(6) DEFAULT NULL,
+  `JM_Remarks` varchar(550) DEFAULT NULL,
+  `JM_CalPMDueDate` datetime(6) DEFAULT NULL,
+  `JM_DESC` longtext DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_PLANID` int(11) DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_DUEIN` varchar(50) DEFAULT NULL COMMENT 'NA as per new desing',
+  `JM_JOBTYPE` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `JM_REPAIRTYPE` tinyint(3) unsigned DEFAULT NULL,
+  `JM_CREATED_BY` varchar(7) NOT NULL,
+  `JM_CREATED_ON` datetime(6) NOT NULL,
+  `JM_UPDATED_BY` varchar(50) NOT NULL,
+  `JM_UPDATED_ON` datetime(6) NOT NULL,
+  `JM_COMPLAINTANDSYMPTOMS` varchar(400) DEFAULT NULL,
+  `JM_CALTYPE` tinyint(3) unsigned DEFAULT NULL,
+  `JM_MVP_STATUS` enum('ASSIGNED','IN_PROGRESS','COMPLETED','VERIFIED_CLOSED','REOPENED') NOT NULL DEFAULT 'ASSIGNED',
+  `JM_VERIFIED_BY` varchar(7) DEFAULT NULL,
+  `JM_VERIFIED_ON` datetime(6) DEFAULT NULL,
+  `JM_REOPENED_REASON` varchar(500) DEFAULT NULL,
+  `JM_ASSIGNED_ENGINEER` varchar(7) DEFAULT NULL COMMENT 'Phase 7 Slice 2: engineer assigned at Convert time (employee_id, FK shape matches JR_ASSIGNED_ENGINEER)',
+  `JM_WORKFLOW_TYPE` varchar(50) DEFAULT NULL COMMENT 'Phase 7 Slice 2: workflow flavour (CALIBRATION_STANDARD/_PRECISION, INSPECTION_ROUTINE/_DETAILED, MASTER_DATA_FIELD_UPDATE/_REVISION)',
+  `JM_REQUIRED_RESOURCES` varchar(2000) DEFAULT NULL COMMENT 'Phase 7 Slice 2: resources/tools the engineer should prep in advance',
+  `JM_SPECIAL_INSTRUCTIONS` varchar(2000) DEFAULT NULL COMMENT 'Phase 7 Slice 2: safety/procedure notes pre-filled by LIC for the engineer',
+  `JM_PARENT_JR_NO` int(11) DEFAULT NULL COMMENT 'Phase 7 Slice 2: parent JR_JOBREQUESTNO (the JR that was converted to create this JC); inverse of the legacy JR_SECTIONJOB_NO FK direction',
+  PRIMARY KEY (`JM_SectionJobNo`),
+  KEY `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST` (`JM_EQM_TYPE`,`JM_EQM_ID`),
+  KEY `idx_jc_status` (`JM_MVP_STATUS`),
+  KEY `idx_jc_recd_date` (`JM_JCRecdDate`),
+  KEY `idx_jc_list_default` (`JM_MVP_STATUS`,`JM_CREATED_ON`,`JM_JobCardNO`),
+  KEY `idx_jc_due_date` (`JM_PlannedComletedDate`,`JM_MVP_STATUS`),
+  KEY `idx_jc_status_verified` (`JM_MVP_STATUS`,`JM_VERIFIED_ON`),
+  KEY `idx_jc_status_ended` (`JM_MVP_STATUS`,`JM_JobEndDate`),
+  KEY `idx_jc_engineer_status` (`JM_ASSIGNED_ENGINEER`,`JM_MVP_STATUS`),
+  KEY `idx_jc_parent_jr` (`JM_PARENT_JR_NO`),
+  CONSTRAINT `FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST` FOREIGN KEY (`JM_EQM_TYPE`, `JM_EQM_ID`) REFERENCES `cmms_eqip_mst` (`EQM_TYPE`, `EQM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- ────────────────────────────────────────────────────────────
+-- PHASE 9 COLUMN DELTA  (which proposed cols already exist?)
+-- ────────────────────────────────────────────────────────────
+  ADD       plug_in_accessories
+  ADD       equipment_submitted_date
+  ADD       submitted_by
+  ADD       equipment_received_date_actual
+  ADD       received_by
+  ADD       instrument_received_date
+  ADD       job_complete_planned_date
+  ADD       job_type
+  ADD       repair_type
+  ADD       job_request_remarks
+  ADD       equipments_used
+  ADD       awaiting_for
+  ADD       awaiting_status
+  ADD       supplier_name
+  ADD       awaiting_from_date
+  ADD       awaiting_clear_date
+  ADD       attended_by
+  ADD       indent_no
+  ADD       indent_date
+  ADD       mirv_no
+  ADD       mirv_date
+  ADD       po_no
+  ADD       po_date
+  ADD       procurement_cost
+  ADD       vendor_supplier_name
+  ADD       intimation_sent_on
+  ADD       sent_to_vendor_date
+  ADD       received_from_vendor_date
+  ADD       gate_pass_no
+  ADD       gate_pass_issued_date
+  ADD       cost_of_component
+  ADD       labour_charges
+  ADD       invoice_no
+  ADD       invoice_recd_on
+  ADD       observations_text
+  ADD       job_status_display
+  ADD       completion_summary
+  ADD       actual_completion_date
+  ADD       total_hours_spent
+  ADD       marked_complete_by_user_id
+  ADD       marked_complete_at
+  ADD       reviewed_by
+  ADD       review_date
+  ADD       review_comments
+  ADD       equipment_received_by_customer
+  ADD       customer_received_date
+  ADD       customer_acknowledged
+  ADD       final_closure_notes
+  ADD       verified_closed_by_user_id
+  ADD       verified_closed_at
+  ADD       last_reopened_at
+  ADD       last_reopened_by_user_id
+  ADD       reopen_count
+  ─── 0 already exist · 53 need ADD COLUMN
+
+-- ────────────────────────────────────────────────────────────
+-- PHASE 9 CHILD TABLE EXISTENCE
+-- ────────────────────────────────────────────────────────────
+  CREATE    jc_maintenance_details
+  CREATE    jc_spares_used
+  CREATE    jc_task_checklist
+  CREATE    jc_documents
+  CREATE    jc_observations_readings
+  CREATE    task_library
+
+-- ────────────────────────────────────────────────────────────
+-- PERMISSION GRANTS for the 6 Phase 9 perms
+-- ────────────────────────────────────────────────────────────
+  job_card:read-detail         → LAB_ENGINEER, LAB_IN_CHARGE, SUPER_ADMIN, VIEW_ONLY
+  job_card:start-work          → LAB_ENGINEER, LAB_IN_CHARGE, SUPER_ADMIN
+  job_card:update-tasks        → LAB_ENGINEER, LAB_IN_CHARGE, SUPER_ADMIN
+  job_card:complete            → LAB_ENGINEER, LAB_IN_CHARGE, SUPER_ADMIN
+  job_card:verify-close        → LAB_IN_CHARGE, SUPER_ADMIN
+  job_card:reopen              → LAB_IN_CHARGE, SUPER_ADMIN
+
+-- ────────────────────────────────────────────────────────────
+-- JC status distribution (current row counts)
+-- ────────────────────────────────────────────────────────────
+  ASSIGNED           4
+  VERIFIED_CLOSED    19432
+
+-- ────────────────────────────────────────────────────────────
+-- Indexes on cmms_jobcard_mst
+-- ────────────────────────────────────────────────────────────
+  FK_CMMS_JOBCARD_MST_CMMS_EQIP_MST [JM_EQM_TYPE,JM_EQM_ID]  BTREE
+  idx_jc_due_date                  [JM_PlannedComletedDate,JM_MVP_STATUS]  BTREE
+  idx_jc_engineer_status           [JM_ASSIGNED_ENGINEER,JM_MVP_STATUS]  BTREE
+  idx_jc_list_default              [JM_MVP_STATUS,JM_CREATED_ON,JM_JobCardNO]  BTREE
+  idx_jc_parent_jr                 [JM_PARENT_JR_NO]  BTREE
+  idx_jc_recd_date                 [JM_JCRecdDate]  BTREE
+  idx_jc_status                    [JM_MVP_STATUS]  BTREE
+  idx_jc_status_ended              [JM_MVP_STATUS,JM_JobEndDate]  BTREE
+  idx_jc_status_verified           [JM_MVP_STATUS,JM_VERIFIED_ON]  BTREE
+  PRIMARY                          [JM_SectionJobNo]  BTREE
+
+-- ────────────────────────────────────────────────────────────
+-- ASSIGNED JCs with assigned_engineer set (Phase 9 work queue source)
+-- ────────────────────────────────────────────────────────────
+  ASSIGNED + JM_ASSIGNED_ENGINEER set: 4
+
+-- ────────────────────────────────────────────────────────────
+-- JR_MVP_STATUS enum (for Phase 9 PART D: JR cancel)
+-- ────────────────────────────────────────────────────────────
+  enum('DRAFT','SUBMITTED','ASSIGNED','IN_PROGRESS','COMPLETED','VERIFIED_CLOSED','REJECTED','REOPENED')
+  CANCELLED in enum? NO (will need a logical-only state à la APPROVED, OR an enum modify)

@@ -44,6 +44,8 @@ import { JobRequestList } from './pages/jobRequests/JobRequestList.jsx';
 import { JobRequestNew } from './pages/jobRequests/JobRequestNew.jsx';
 import { JobRequestDetail } from './pages/jobRequests/JobRequestDetail.jsx';
 import { JobCardList } from './pages/jobCards/JobCardList.jsx';
+// Phase 9 — Job Card Detail (the big one: 13 tabs, transitions, sub-features)
+import { JobCardDetail } from './pages/jobCards/JobCardDetail.jsx';
 // Phase 7 Slice 2 — Conversion (Approve + Assign + create JC) workspace
 import { Conversion } from './pages/conversion/Conversion.jsx';
 // Phase 7 Slice 1 — Admin · Users + Admin · Employees
@@ -134,12 +136,24 @@ export function App() {
             }
           />
 
-          {/* ── Job Cards module (Phase 6 Slice 1) ─────────────── */}
+          {/* ── Job Cards module (Phase 6 Slice 1 + Phase 9) ────── */}
           <Route
             path="/job-cards"
             element={
               <ProtectedRoute requiredPermission="job_card:read-list">
                 <Layout><JobCardList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Phase 9 — JC Detail (13 tabs). Section_job_no is the route param,
+              e.g. /job-cards/J00024215. Permission gate: read-detail (kept
+              away from Normal users; everyone else can read with role/status
+              determining write access on the page). */}
+          <Route
+            path="/job-cards/:id"
+            element={
+              <ProtectedRoute requiredPermission="job_card:read-detail">
+                <Layout><JobCardDetail /></Layout>
               </ProtectedRoute>
             }
           />

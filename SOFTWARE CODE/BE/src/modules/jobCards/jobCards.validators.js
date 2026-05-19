@@ -1,13 +1,18 @@
 // ============================================================================
 // src/modules/jobCards/jobCards.validators.js  —  zod schemas
 // ----------------------------------------------------------------------------
-// Slice 1 = list only. Single schema for GET /job-cards query params.
+// Phase 6 Slice 1 had one schema (list query). Phase 9 expands to ~12.
+// All schemas use .strict() so unknown keys are rejected — guards against
+// FE/BE drift and catches injection of fields like assigned_engineer_id.
+//
+// Keep this file in lock-step with FE/src/lib/schemas/jobCardSchemas.js.
 // ============================================================================
 
 'use strict';
 
 const { z } = require('zod');
 
+// ── Shared atoms ─────────────────────────────────────────────────────
 const statusEnum = z.enum([
   'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED_CLOSED', 'REOPENED',
 ]);
@@ -23,6 +28,14 @@ const pageSizeEnum = z.coerce.number().int().refine(
   { message: 'page_size must be 10, 25, 50, or 100' },
 );
 
+// Allow YYYY-MM-DD OR empty string (FE clears a date input to '').
+const isoDateOrEmpty = z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/).optional();
+// Allow YYYY-MM-DD HH:mm or full ISO. We'll accept both.
+const isoDateTimeOrEmpty = z.string()
+  .regex(/^$|^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?(\.\d{1,6})?([+-]\d{2}:?\d{2}|Z)?)?$/)
+  .optional();
+
+// ── listQuerySchema (Phase 6 — unchanged) ────────────────────────────
 const listQuerySchema = z.object({
   q:                    z.string().max(120).optional(),
   status:               statusEnum.optional(),
@@ -34,4 +47,184 @@ const listQuerySchema = z.object({
   page_size:            pageSizeEnum.default(25),
 }).strict();
 
-module.exports = { listQuerySchema };
+// ============================================================================
+//                          PHASE 9  ·  TAB PATCH SCHEMA
+// ============================================================================
+//   ONE schema covers all 9 data tabs (the body is partial — fields
+//   not in the body are not updated). The repo's PHASE9_TAB_COLUMNS
+//   list is the source of truth for which columns the body MAY carry.
+//   Every field is OPTIONAL to support the auto-save partial PATCH.
+// ============================================================================
+
+const jobTypeEnum    = z.enum(['IN_HOUSE', 'VENDOR']);
+const repairTypeEnum = z.enum(['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED']);
+const awaitingStatusEnum = z.enum([
+  'AWAITING_FOR_SPARES','AWAITING_FOR_VENDOR','AWAITING_FOR_CUSTOMER','AWAITING_FOR_INFO','NONE',
+]);
+const jobStatusDisplayEnum = z.enum([
+  'AWAITING_FOR_VENDOR','AWAITING_FOR_SPARES','IN_PROGRESS_NORMAL','HOLD','RESUMED',
+]);
+
+const moneyOrEmpty = z.union([
+  z.number().nonnegative(),
+  z.coerce.number().nonnegative(),
+  z.literal(''),
+  z.null(),
+]).optional();
+
+const patchTabSchema = z.object({
+  // Plug-In / Accessories
+  plug_in_accessories:           z.string().max(8000).optional().or(z.literal('')),
+  // Submitted & Received
+  equipment_submitted_date:      isoDateTimeOrEmpty,
+  submitted_by:                  z.string().max(255).optional().or(z.literal('')),
+  equipment_received_date_actual: isoDateTimeOrEmpty,
+  received_by:                   z.string().max(255).optional().or(z.literal('')),
+  // Job Card Details
+  instrument_received_date:      isoDateOrEmpty,
+  job_complete_planned_date:     isoDateOrEmpty,
+  job_type:                      jobTypeEnum.optional(),
+  repair_type:                   repairTypeEnum.optional(),
+  job_request_remarks:           z.string().max(8000).optional().or(z.literal('')),
+  // Equipments Used
+  equipments_used:               z.string().max(8000).optional().or(z.literal('')),
+  // Awaiting Information
+  awaiting_for:                  z.string().max(255).optional().or(z.literal('')),
+  awaiting_status:               awaitingStatusEnum.optional(),
+  supplier_name:                 z.string().max(255).optional().or(z.literal('')),
+  awaiting_from_date:            isoDateOrEmpty,
+  awaiting_clear_date:           isoDateOrEmpty,
+  attended_by:                   z.string().max(255).optional().or(z.literal('')),
+  // Procurement
+  indent_no:                     z.string().max(100).optional().or(z.literal('')),
+  indent_date:                   isoDateOrEmpty,
+  mirv_no:                       z.string().max(100).optional().or(z.literal('')),
+  mirv_date:                     isoDateOrEmpty,
+  po_no:                         z.string().max(100).optional().or(z.literal('')),
+  po_date:                       isoDateOrEmpty,
+  procurement_cost:              moneyOrEmpty,
+  // Contract / Warranty
+  vendor_supplier_name:          z.string().max(255).optional().or(z.literal('')),
+  intimation_sent_on:            isoDateOrEmpty,
+  sent_to_vendor_date:           isoDateOrEmpty,
+  received_from_vendor_date:     isoDateOrEmpty,
+  gate_pass_no:                  z.string().max(100).optional().or(z.literal('')),
+  gate_pass_issued_date:         isoDateOrEmpty,
+  cost_of_component:             moneyOrEmpty,
+  labour_charges:                moneyOrEmpty,
+  invoice_no:                    z.string().max(100).optional().or(z.literal('')),
+  invoice_recd_on:               isoDateOrEmpty,
+  // Observations
+  observations_text:             z.string().max(8000).optional().or(z.literal('')),
+  job_status_display:            jobStatusDisplayEnum.optional(),
+}).strict();
+
+// ============================================================================
+//                          PHASE 9  ·  TRANSITION SCHEMAS
+// ============================================================================
+
+// Start-work — no body content required, just an empty object.
+const startWorkSchema = z.object({}).strict();
+
+// Mark-complete — completion form fields are required.
+const markCompleteSchema = z.object({
+  completion_summary:     z.string().min(20, { message: 'Completion summary must be at least 20 characters' }).max(8000),
+  actual_completion_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Use YYYY-MM-DD' }),
+  total_hours_spent:      z.coerce.number().nonnegative().max(99999),
+}).strict();
+
+// Verify-close — full closure form.
+const verifyCloseSchema = z.object({
+  reviewed_by:                    z.string().min(3).max(255),
+  review_date:                    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  review_comments:                z.string().min(20).max(8000),
+  equipment_received_by_customer: z.string().min(3).max(255),
+  customer_received_date:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  customer_acknowledged:          z.literal(true, { errorMap: () => ({ message: 'Customer must acknowledge satisfactory receipt (Q-9 hard rule)' }) }),
+  final_closure_notes:            z.string().max(2000).optional().or(z.literal('')),
+}).strict();
+
+// Reopen — mandatory reason, 20..1000 chars.
+const reopenSchema = z.object({
+  reason: z.string().min(20, { message: 'Reopen reason must be at least 20 characters' }).max(1000),
+}).strict();
+
+// ============================================================================
+//                          PHASE 9  ·  TASK CHECKLIST SCHEMAS
+// ============================================================================
+
+const addTaskSchema = z.object({
+  task_id:    z.coerce.number().int().positive().optional(),
+  task_text:  z.string().max(500).optional(),
+  is_custom:  z.boolean().optional().default(false),
+}).strict().superRefine((v, ctx) => {
+  // Exactly one of task_id (library task) OR task_text (custom) must be provided.
+  if (v.task_id && (v.task_text && !v.is_custom)) {
+    // Both library + non-custom text → invalid (only library should supply id+is_custom=false)
+  }
+  if (!v.task_id && !v.task_text) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Either task_id (library) or task_text (custom) is required',
+      path: ['task_id'],
+    });
+  }
+  if (v.is_custom === true && !v.task_text) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'task_text is required when is_custom=true',
+      path: ['task_text'],
+    });
+  }
+});
+
+const toggleTaskSchema = z.object({
+  is_completed: z.boolean(),
+}).strict();
+
+// ============================================================================
+//                          PHASE 9  ·  CHILD-TABLE ROW SCHEMAS
+// ============================================================================
+
+const maintenanceRowSchema = z.object({
+  defect_description: z.string().min(3).max(8000),
+  observation:        z.string().max(8000).optional().or(z.literal('')),
+  action_taken:       z.string().max(8000).optional().or(z.literal('')),
+  remarks:            z.string().max(8000).optional().or(z.literal('')),
+}).strict();
+
+const spareRowSchema = z.object({
+  spare_type:       z.string().max(120).optional().or(z.literal('')),
+  source:           z.enum(['CASH_PURCHASE','VENDOR','STOCK','WARRANTY','OTHER']).optional(),
+  part_no:          z.string().max(120).optional().or(z.literal('')),
+  part_description: z.string().max(8000).optional().or(z.literal('')),
+  quantity:         moneyOrEmpty,
+  cost:             moneyOrEmpty,
+}).strict();
+
+const observationRowSchema = z.object({
+  parameter:    z.string().min(1).max(255),
+  value:        z.string().min(1).max(255),
+  unit:         z.string().max(30).optional().or(z.literal('')),
+  reading_type: z.enum(['PRE_CAL','POST_CAL','INSPECTION','OTHER']).optional(),
+  notes:        z.string().max(8000).optional().or(z.literal('')),
+}).strict();
+
+module.exports = {
+  // Phase 6 Slice 1:
+  listQuerySchema,
+  // Phase 9 — tab patch:
+  patchTabSchema,
+  // Phase 9 — transitions:
+  startWorkSchema,
+  markCompleteSchema,
+  verifyCloseSchema,
+  reopenSchema,
+  // Phase 9 — task checklist:
+  addTaskSchema,
+  toggleTaskSchema,
+  // Phase 9 — child-table row shapes (used by tab PATCH alongside main fields):
+  maintenanceRowSchema,
+  spareRowSchema,
+  observationRowSchema,
+};

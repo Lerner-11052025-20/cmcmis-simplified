@@ -38,4 +38,23 @@ async function getEngineers(_req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { getDivisions, getEquipmentSearch, getEngineers };
+/**
+ * GET /api/v1/lookups/task-library?category=CALIBRATION
+ * Returns active library tasks for the Task Checklist dropdown (Tab 10).
+ * Category is optional — Phase 9 D-9.7 says we pre-filter by JC's workflow
+ * category but allow "show all" via no category param.
+ */
+async function getTaskLibrary(req, res, next) {
+  try {
+    const cat = req.query.category ? String(req.query.category).toUpperCase() : null;
+    if (cat && !['CALIBRATION', 'INSPECTION', 'MAINTENANCE'].includes(cat)) {
+      return res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Invalid category', details: null },
+      });
+    }
+    const items = await repo.listTaskLibrary(cat);
+    return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
+module.exports = { getDivisions, getEquipmentSearch, getEngineers, getTaskLibrary };

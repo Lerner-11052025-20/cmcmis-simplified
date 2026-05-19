@@ -24,6 +24,7 @@
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, Filter, Search as SearchIcon } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
@@ -79,10 +80,16 @@ export function JobCardList() {
       {
         header: 'Job Card ID',
         accessor: 'card_code',
+        // Phase 9 — the Job Card Detail page lives at /job-cards/:id where
+        // :id is the section_job_no (PK, varchar 9 — e.g. "J00024215").
+        // Clicking the JC code navigates to the full 13-tab detail page.
         format: (val, row) => (
-          // Slice-2 detail page; for now the link is a placeholder that
-          // routes back to the list via the catch-all to avoid 404s in dev.
-          <span className="text-accent font-medium cursor-default">{val}</span>
+          <Link
+            to={`/job-cards/${encodeURIComponent(row.section_job_no || row.id)}`}
+            className="text-accent hover:underline font-medium"
+          >
+            {val}
+          </Link>
         ),
       },
       {

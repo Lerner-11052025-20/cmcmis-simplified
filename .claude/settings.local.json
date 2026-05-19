@@ -33,7 +33,8 @@
       "Bash(node db/discovery/smoke_phase7_slice2.js)",
       "Bash(awk 'NR==1 {print $5}')",
       "Bash(taskkill //PID 27172 //F)",
-      "Bash(taskkill //PID 13240 //F)"
+      "Bash(taskkill //PID 13240 //F)",
+      "Bash(node db/discovery/introspect_phase9.js)"
     ]
   }
 }

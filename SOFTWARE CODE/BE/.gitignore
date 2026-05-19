@@ -34,3 +34,7 @@ Thumbs.db
 coverage/
 dist/
 build/
+
+# Phase 9 file uploads (job card documents). Metadata lives in jc_documents;
+# bytes live on disk. Storage root is created on first BE boot if missing.
+storage/

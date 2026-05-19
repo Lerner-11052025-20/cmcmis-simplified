@@ -185,6 +185,68 @@ async function postReject(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+// ============================================================================
+//                          PHASE 9  ·  EDIT DRAFT + CANCEL DRAFT
+// ============================================================================
+
+/**
+ * PATCH /api/v1/job-requests/:id
+ * Auth: authenticate → authorize('job_request:create')
+ * Body: editDraftSchema. Owner-only enforced in the service layer.
+ */
+async function patchEditDraft(req, res, next) {
+  try {
+    const jrNo = parseInt(req.params.id, 10);
+    if (!Number.isFinite(jrNo) || jrNo <= 0) {
+      return res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Invalid job request id', details: null },
+      });
+    }
+    const result = await service.editDraftJobRequest({
+      jrNo,
+      body:      req.body,
+      actor: {
+        employeeId:  req.user.employeeId,
+        role:        req.user.role,
+        userId:      req.user.userId,
+        permissions: req.user.permissions,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
+/**
+ * POST /api/v1/job-requests/:id/cancel
+ * Auth: authenticate → authorize('job_request:create')
+ * Body: cancelDraftSchema. Owner-only enforced in the service layer.
+ */
+async function postCancelDraft(req, res, next) {
+  try {
+    const jrNo = parseInt(req.params.id, 10);
+    if (!Number.isFinite(jrNo) || jrNo <= 0) {
+      return res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Invalid job request id', details: null },
+      });
+    }
+    const result = await service.cancelDraftJobRequest({
+      jrNo,
+      body:      req.body,
+      actor: {
+        employeeId:  req.user.employeeId,
+        role:        req.user.role,
+        userId:      req.user.userId,
+        permissions: req.user.permissions,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
 module.exports = {
   list,
   create,
@@ -194,4 +256,7 @@ module.exports = {
   getHistory,
   postConvert,
   postReject,
+  // Phase 9 additions:
+  patchEditDraft,
+  postCancelDraft,
 };

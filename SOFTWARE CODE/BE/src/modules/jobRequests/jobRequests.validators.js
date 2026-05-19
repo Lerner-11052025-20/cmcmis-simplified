@@ -59,6 +59,9 @@ const listQuerySchema = z.object({
   sort:        sortEnum.optional().default('-created_at'),
   page:        z.coerce.number().int().min(1).max(10000).default(1),
   page_size:   pageSizeEnum.default(25),
+  // Phase 9: opt-in to seeing logically-cancelled DRAFTs in the list.
+  // Default is to hide them (decision D-9.11). Used by admin/reports.
+  include_cancelled: z.coerce.boolean().optional().default(false),
 }).strict();
 
 // ── createSchema  ───────────────────────────────────────────────────
@@ -223,6 +226,52 @@ const rejectSchema = z.object({
                     .max(500, { message: 'Reason cannot exceed 500 characters' }),
 }).strict();
 
+// ============================================================================
+//                          PHASE 9  ·  EDIT DRAFT + CANCEL DRAFT
+// ============================================================================
+
+/**
+ * Edit-DRAFT body schema. Same shape as createSchema's loose tier,
+ * minus submit_now / tnc_* (DRAFT cannot become SUBMITTED via PATCH —
+ * use the dedicated /submit endpoint for that).
+ *
+ * Every field is OPTIONAL — partial PATCH is the norm.
+ * BR-JR-06: submitted_by_* NEVER accepted on this endpoint either.
+ */
+const editDraftSchema = z.object({
+  job_category:           jobCategoryEnum.optional(),
+  job_type:               jobTypeEnum.optional(),
+  equipment_id:           z.number().int().positive().nullable().optional(),
+  equipment_name:         z.string().min(2).max(200).optional(),
+  make:                   z.string().max(120).optional().or(z.literal('')),
+  model_no:               z.string().max(120).optional().or(z.literal('')),
+  serial_no:              z.string().max(120).optional().or(z.literal('')),
+  equipment_type:         z.string().max(60).optional().or(z.literal('')),
+  options_description:    z.string().max(2000).optional().or(z.literal('')),
+  lab_phone:              z.string().max(40).optional().or(z.literal('')),
+  room_phone:             z.string().max(40).optional().or(z.literal('')),
+  division_id:            z.number().int().positive().optional(),
+  subsystem:              z.string().max(120).optional().or(z.literal('')),
+  project_name:           z.string().max(160).optional().or(z.literal('')),
+  complaint_description:  z.string().max(4000).optional().or(z.literal('')),
+  remarks:                z.string().max(2000).optional().or(z.literal('')),
+  equipment_sent_after_repair: z.boolean().optional(),
+  priority:               priorityEnum.optional(),
+}).strict();
+
+/**
+ * Cancel-DRAFT body schema. Reason is optional — a user may cancel
+ * silently. If provided, must be 10..500 chars (same shape as reject
+ * reason in Phase 7 Slice 2).
+ */
+const cancelDraftSchema = z.object({
+  reason: z.string()
+    .min(10, { message: 'If provided, reason must be at least 10 characters' })
+    .max(500, { message: 'Reason cannot exceed 500 characters' })
+    .optional()
+    .or(z.literal('')),                  // accept empty string as "no reason"
+}).strict();
+
 module.exports = {
   listQuerySchema,
   createSchema,
@@ -231,4 +280,7 @@ module.exports = {
   convertSchema,
   rejectSchema,
   WORKFLOW_BUCKET,
+  // Phase 9:
+  editDraftSchema,
+  cancelDraftSchema,
 };

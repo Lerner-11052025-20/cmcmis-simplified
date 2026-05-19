@@ -161,10 +161,42 @@ async function findEngineerByEmployeeId(employeeId) {
   return row;
 }
 
+// ============================================================================
+//                          PHASE 9  ·  TASK LIBRARY LOOKUP
+// ============================================================================
+
+/**
+ * List active library tasks, optionally filtered by category.
+ * Drives the dropdown in the Task Checklist tab (image 15).
+ *
+ * @param {'CALIBRATION'|'INSPECTION'|'MAINTENANCE'|null} category
+ */
+async function listTaskLibrary(category) {
+  if (category) {
+    const [rows] = await pool.query(
+      `SELECT id, category, task_text, display_order
+         FROM task_library
+        WHERE is_active = 1 AND category = ?
+        ORDER BY display_order ASC, id ASC`,
+      [category],
+    );
+    return rows;
+  }
+  const [rows] = await pool.query(
+    `SELECT id, category, task_text, display_order
+       FROM task_library
+      WHERE is_active = 1
+      ORDER BY category ASC, display_order ASC, id ASC`,
+  );
+  return rows;
+}
+
 module.exports = {
   listDivisions,
   searchEquipment,
   // Phase 7 Slice 2 additions:
   listEngineersWithWorkload,
   findEngineerByEmployeeId,
+  // Phase 9 additions:
+  listTaskLibrary,
 };

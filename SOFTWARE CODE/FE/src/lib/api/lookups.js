@@ -45,3 +45,21 @@ export async function fetchEngineers(signal) {
   const r = await api.get('/lookups/engineers', { signal });
   return r.data.data.items;
 }
+
+// ============================================================================
+//                          PHASE 9  ·  TASK LIBRARY LOOKUP
+// ============================================================================
+
+/**
+ * Fetch active library tasks for the Task Checklist dropdown (Tab 10).
+ * Pass a category to pre-filter (per D-9.7 default behaviour) or null
+ * for "show all" (the toggle option).
+ *
+ * @param {'CALIBRATION'|'INSPECTION'|'MAINTENANCE'|null} category
+ * @returns {Promise<Array<{ id, category, task_text, display_order }>>}
+ */
+export async function fetchTaskLibrary(category = null, signal) {
+  const params = category ? { category } : undefined;
+  const r = await api.get('/lookups/task-library', { params, signal });
+  return r.data.data.items;
+}

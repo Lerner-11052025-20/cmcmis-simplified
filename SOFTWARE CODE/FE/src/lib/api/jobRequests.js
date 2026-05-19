@@ -107,3 +107,25 @@ export async function rejectJobRequest(id, body) {
   const r = await api.post(`/job-requests/${encodeURIComponent(id)}/reject`, body);
   return r.data.data;
 }
+
+// ============================================================================
+//                          PHASE 9  ·  JR EDIT DRAFT + CANCEL DRAFT
+// ============================================================================
+
+/**
+ * PATCH /api/v1/job-requests/:id — owner-only edit of a DRAFT body.
+ * Service will 409 ILLEGAL_TRANSITION if the JR is not DRAFT.
+ */
+export async function patchEditJobRequestDraft(id, body) {
+  const r = await api.patch(`/job-requests/${encodeURIComponent(id)}`, body);
+  return r.data.data;
+}
+
+/**
+ * POST /api/v1/job-requests/:id/cancel — owner-only cancel of a DRAFT.
+ * Body may include an optional reason (10..500 chars if provided).
+ */
+export async function cancelJobRequestDraft(id, body = {}) {
+  const r = await api.post(`/job-requests/${encodeURIComponent(id)}/cancel`, body);
+  return r.data.data;
+}

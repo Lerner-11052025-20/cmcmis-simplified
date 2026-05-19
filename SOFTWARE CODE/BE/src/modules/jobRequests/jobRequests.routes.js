@@ -96,6 +96,25 @@ router.post('/:id/reject',
   ctrl.postReject,
 );
 
-// ── (intentionally no more SLICE_2 stubs — all wired this slice) ─────
+// ── PHASE 9 ──────────────────────────────────────────────────────────
+
+// PATCH /:id — owner-only edit of a DRAFT body. Permission gate is the
+// same as create (`job_request:create`) because the action is "modify
+// my own draft". Ownership is enforced in the service. State machine
+// will throw 409 ILLEGAL_TRANSITION if the JR is not DRAFT.
+router.patch('/:id',
+  authenticate,
+  authorize('job_request:create'),
+  validate(v.editDraftSchema, 'body'),
+  ctrl.patchEditDraft,
+);
+
+// POST /:id/cancel — owner-only cancel of a DRAFT (logical CANCELLED).
+router.post('/:id/cancel',
+  authenticate,
+  authorize('job_request:create'),
+  validate(v.cancelDraftSchema, 'body'),
+  ctrl.postCancelDraft,
+);
 
 module.exports = router;

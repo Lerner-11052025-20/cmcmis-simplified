@@ -46,4 +46,12 @@ router.get('/engineers',
   ctrl.getEngineers,
 );
 
+// ── Phase 9 — Task library lookup (Task Checklist dropdown) ────────────
+// Anyone who can read a JC detail page needs to see the library options.
+router.get('/task-library',
+  authenticate,
+  authorize('job_card:read-detail'),
+  ctrl.getTaskLibrary,
+);
+
 module.exports = router;

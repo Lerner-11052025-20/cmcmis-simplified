@@ -272,6 +272,161 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
 }
 
 // ============================================================================
+//                          PHASE 9  ·  EDIT DRAFT + CANCEL DRAFT
+// ============================================================================
+//  Closes the two Job Request loose ends listed in the Phase 9 prompt §0
+//  audit. Both flows are owner-only (the submitter who created the DRAFT
+//  can edit/cancel it). Once a JR is SUBMITTED it becomes immutable —
+//  edits after that are forbidden, matching FINAL-DESC §8.1.
+// ============================================================================
+
+/**
+ * PATCH /api/v1/job-requests/:id
+ *
+ * Owner-only edit of a DRAFT row. The body has the same shape as the
+ * draft branch of createSchema (loose validation — partial saves OK).
+ *
+ * State-machine: invokes 'edit' which keeps the row in DRAFT. This is
+ * the choke-point for the permission + ownership checks; the actual
+ * column updates happen in repo.updateDraftFields.
+ *
+ * On commit:
+ *   - audit_log row (action=JR_EDIT_DRAFT)
+ *   - NO state-history row (no state change)
+ *   - kpiCache untouched (counts unchanged)
+ *
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {Object} args.body
+ * @param {Object} args.actor
+ */
+async function editDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
+  const jr = await repo.findJrById(jrNo);
+  if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+
+  // Ownership: only the original submitter can edit their own DRAFT.
+  // LIC/SA cannot edit someone else's DRAFT (they have approve/reject paths instead).
+  const isOwner = jr.submitted_by_employee_id === actor.employeeId;
+
+  // State-machine choke-point. For 'edit' we use actorMustBeOwner=true
+  // so only the submitter passes. If the JR is not in DRAFT, the
+  // transition table has no entry → 409 ILLEGAL_TRANSITION.
+  transition(jr.status, 'edit', actor, { isOwner });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Forward the body to the repo updater which honours only the
+    // editable fields (BR-JR-06: submitted_by_* never accepted via body).
+    await repo.updateDraftFields(conn, jrNo, body);
+
+    await repo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JR_EDIT_DRAFT',
+      jrNo,
+      ipAddress,
+      userAgent,
+      details: {
+        // Don't echo back the whole body — could be 4 KB. Just keep the
+        // most-changed fields visible in audit notes.
+        equipment_name:        body.equipment_name,
+        job_type:              body.job_type,
+        priority:              body.priority,
+        complaint_description: body.complaint_description,
+      },
+    });
+
+    await conn.commit();
+    return { id: jrNo, request_code: formatJrCode(jrNo, jr.created_at), status: 'DRAFT' };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * POST /api/v1/job-requests/:id/cancel
+ *
+ * Owner-only cancel of a DRAFT (decision D-9.11 logical-CANCELLED).
+ * Writes JR_CANCELLED_AT + JR_CANCELLED_BY + JR_CANCEL_REASON. The
+ * JR_MVP_STATUS column stays 'DRAFT' on the wire (no enum modify), but
+ * the list endpoint hides cancelled rows unless ?include_cancelled=true.
+ *
+ * Audit + status_history (with to_status='CANCELLED' as a varchar).
+ *
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {{ reason?: string }} args.body
+ * @param {Object} args.actor
+ */
+async function cancelDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
+  const jr = await repo.findJrById(jrNo);
+  if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+
+  const isOwner = jr.submitted_by_employee_id === actor.employeeId;
+
+  // State-machine — accepts only DRAFT → CANCELLED. If the JR is already
+  // SUBMITTED, the cancel transition is missing from the table → 409.
+  // If a Normal user tries to cancel someone else's DRAFT, isOwner=false
+  // → 403.
+  transition(jr.status, 'cancel', actor, { isOwner });
+
+  const reason = (body && typeof body.reason === 'string') ? body.reason.trim() : null;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await repo.applyDraftCancel(conn, jrNo, {
+      cancelledByEmployeeId: actor.employeeId,
+      reason: reason && reason.length > 0 ? reason : null,
+    });
+
+    // Use 'CANCELLED' as the to_status string in the history row even
+    // though the JR_MVP_STATUS column doesn't contain that value — the
+    // varchar(30) column accepts it. This is how we preserve the full
+    // logical lifecycle in the audit trail.
+    await repo.appendStatusHistory(conn, jrNo, jr.status, 'CANCELLED', actor.employeeId, reason);
+
+    await repo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JR_CANCEL',
+      jrNo,
+      ipAddress,
+      userAgent,
+      details: {
+        from:   jr.status,
+        to:     'CANCELLED',
+        reason: reason ? reason.slice(0, 200) : null,
+      },
+    });
+
+    await conn.commit();
+
+    // KPI cache: cancelling removes the JR from "Pending Jobs" etc. counts.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id || actor.employeeId));
+
+    return {
+      id:           jrNo,
+      request_code: formatJrCode(jrNo, jr.created_at),
+      status:       'CANCELLED',          // logical — the wire shape says CANCELLED even though DB enum is DRAFT
+      cancelled_at: new Date().toISOString(),
+    };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// ============================================================================
 //                          PHASE 7 SLICE 2  ·  DETAIL + HISTORY
 // ============================================================================
 
@@ -752,4 +907,7 @@ module.exports = {
   getJobRequestHistory,
   convertJobRequest,
   rejectJobRequest,
+  // Phase 9 additions (JR loose ends):
+  editDraftJobRequest,
+  cancelDraftJobRequest,
 };

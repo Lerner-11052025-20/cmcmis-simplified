@@ -113,6 +113,13 @@ async function listJobRequests(params, scope) {
     args.push(params.date_to + ' 23:59:59');
   }
 
+  // Phase 9: cancelled DRAFTs are LOGICALLY removed from the list view
+  // (decision D-9.11). Caller passes `include_cancelled=true` to opt in
+  // — used by Admin / reports later. Default = exclude cancelled.
+  if (!params.include_cancelled) {
+    where.push('jr.JR_CANCELLED_AT IS NULL');
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const orderBy = SORT_MAP[params.sort] || SORT_MAP['-created_at'];
   const offset = (params.page - 1) * params.page_size;
@@ -647,6 +654,95 @@ async function updateOnReject(conn, { jrNo, rejecterEmployeeId, reason }) {
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 9  ·  EDIT DRAFT  (owner-only mutation of editable fields)
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * UPDATE a DRAFT JR's editable fields. Only call this from
+ * jobRequests.service.editDraftJobRequest — the state machine has
+ * already validated permission + ownership + status=DRAFT.
+ *
+ * BR-JR-06 enforcement: this function does NOT accept submitted_by_*
+ * fields. The submitter snapshot is locked at creation time.
+ *
+ * Field-list logic: build a dynamic SET clause from the keys actually
+ * present in the body so the FE can do partial PATCHes ("just update
+ * the equipment_name") without nulling other fields.
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {number} jrNo
+ * @param {Object} body  Validated by editDraftSchema upstream.
+ */
+async function updateDraftFields(conn, jrNo, body) {
+  const tr = (s, n) => (s == null ? null : String(s).slice(0, n));
+  // Canonical → DB column map for editable fields. Any key NOT in this
+  // map is silently ignored — that's the safety net.
+  const FIELD_MAP = {
+    job_category:           ['JR_JOB_CATEGORY', null],
+    job_type:               ['JR_JOB_TYPE',     25],
+    equipment_id:           ['JR_EQM_ID',       null],
+    equipment_type:         ['JR_EQM_TYPE',     15],
+    equipment_name:         ['JR_EQM_NAME',     200],
+    make:                   ['JR_EQM_MFR_NAME', 100],
+    model_no:               ['JR_EQM_MODELNO',  100],
+    serial_no:              ['JR_EQM_SRNO',     100],
+    options_description:    ['JR_EQM_OPTNDESC', 200],
+    lab_phone:              ['JR_PHOENLAB',     100],
+    room_phone:             ['JR_PHONEROOM',    100],
+    division_id:            ['JR_DIVISION',     null],
+    subsystem:              ['JR_SUBSYSTEM',    100],
+    project_name:           ['JR_PROJECTID',    100],
+    complaint_description:  ['JR_COMPLAINTANDSYMPTOMS', 400],
+    remarks:                ['JR_REMARKS',      500],
+    equipment_sent_after_repair: ['JR_AFTERREPAIRS', null],
+    priority:               ['JR_PRIORITY',     null],
+  };
+  const sets = [];
+  const vals = [];
+  for (const [canKey, [col, maxLen]] of Object.entries(FIELD_MAP)) {
+    if (Object.prototype.hasOwnProperty.call(body, canKey)) {
+      let v = body[canKey];
+      if (canKey === 'priority' && v != null) v = toDbPriority(v);
+      if (canKey === 'equipment_sent_after_repair' && v != null) v = v ? 1 : 0;
+      if (maxLen != null) v = tr(v, maxLen);
+      sets.push(`\`${col}\` = ?`);
+      vals.push(v == null ? null : v);
+    }
+  }
+  // Always bump JR_UPDATED_AT so the "last touched" timestamp tracks edits.
+  sets.push('`JR_UPDATED_AT` = NOW(6)');
+  if (sets.length === 1) return;          // only the auto-touched timestamp — nothing to actually persist
+  vals.push(jrNo);
+  await conn.query(
+    `UPDATE cmms_jobrequest_mst SET ${sets.join(', ')} WHERE JR_JOBREQUESTNO = ?`,
+    vals,
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 9  ·  CANCEL DRAFT  (logical CANCELLED — D-9.11)
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Stamp the cancel metadata onto a DRAFT row. The status column stays
+ * 'DRAFT' on the wire; list endpoint excludes rows where
+ * JR_CANCELLED_AT IS NOT NULL by default.
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {number} jrNo
+ * @param {{ cancelledByEmployeeId: string, reason: string | null }} args
+ */
+async function applyDraftCancel(conn, jrNo, { cancelledByEmployeeId, reason }) {
+  await conn.query(
+    `UPDATE cmms_jobrequest_mst
+        SET JR_CANCELLED_AT = NOW(6),
+            JR_CANCELLED_BY = ?,
+            JR_CANCEL_REASON = ?,
+            JR_UPDATED_AT = NOW(6)
+      WHERE JR_JOBREQUESTNO = ?`,
+    [cancelledByEmployeeId, reason, jrNo],
+  );
+}
+
 module.exports = {
   listJobRequests,
   nextJrNo,
@@ -662,6 +758,9 @@ module.exports = {
   findForMutation,
   updateOnConvert,
   updateOnReject,
+  // Phase 9 additions:
+  updateDraftFields,
+  applyDraftCancel,
   // exports used by tests and dropdown population
   PRIORITY_CANONICAL_TO_DB,
   PRIORITY_DB_TO_CANONICAL,
