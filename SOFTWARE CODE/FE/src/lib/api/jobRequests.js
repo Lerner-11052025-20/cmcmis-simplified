@@ -51,3 +51,59 @@ export async function submitJobRequest(id, body) {
   const r = await api.post(`/job-requests/${encodeURIComponent(id)}/submit`, body);
   return r.data.data;
 }
+
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  DETAIL / CONVERT / REJECT
+// ============================================================================
+
+/**
+ * Fetch one JR with all joined columns the Detail page needs.
+ *
+ * @param {number} id   JR_JOBREQUESTNO
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<Object>}  Full detail payload
+ */
+export async function fetchJobRequestDetail(id, signal) {
+  const r = await api.get(`/job-requests/${encodeURIComponent(id)}`, { signal });
+  return r.data.data;
+}
+
+/**
+ * Fetch chronological status_history rows for the Timeline component.
+ *
+ * @param {number} id
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<Array>}   Items array
+ */
+export async function fetchJobRequestHistory(id, signal) {
+  const r = await api.get(`/job-requests/${encodeURIComponent(id)}/history`, { signal });
+  return r.data.data.items;
+}
+
+/**
+ * Convert (approve + assign + create JC) atomically.
+ *
+ * Body shape (validated by jobRequestConvertSchema):
+ *   { engineer_employee_id, workflow_type,
+ *     equipment_received_date, planned_start_date, target_end_date,
+ *     required_resources?, special_instructions? }
+ *
+ * @param {number} id
+ * @param {Object} body
+ * @returns {Promise<{ job_request: Object, job_card: Object }>}
+ */
+export async function convertJobRequest(id, body) {
+  const r = await api.post(`/job-requests/${encodeURIComponent(id)}/convert`, body);
+  return r.data.data;
+}
+
+/**
+ * Reject with a mandatory reason (10..500 chars). Terminal for Slice 2.
+ *
+ * @param {number} id
+ * @param {{ reason: string }} body
+ */
+export async function rejectJobRequest(id, body) {
+  const r = await api.post(`/job-requests/${encodeURIComponent(id)}/reject`, body);
+  return r.data.data;
+}

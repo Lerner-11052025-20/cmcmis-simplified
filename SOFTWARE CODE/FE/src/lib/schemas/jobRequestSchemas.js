@@ -93,3 +93,78 @@ export const jobRequestSubmitSchema = baseObject.superRefine((v, ctx) => {
  * two-tier split fixes that bug.
  */
 export const jobRequestCreateSchema = jobRequestDraftSchema;
+
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  CONVERT / REJECT
+// ============================================================================
+//  These two schemas mirror BE/src/modules/jobRequests/jobRequests.validators.js
+//  Keep them in lock-step. Adding a field on one side without the other
+//  is the most common subtle bug — symptom is a 422 VALIDATION_ERROR
+//  from the BE that the FE doesn't surface as a field-level message.
+// ============================================================================
+
+/** Six workflow-type values, scoped at the modal level by JR.job_type. */
+export const WORKFLOW_TYPES = [
+  'CALIBRATION_STANDARD',
+  'CALIBRATION_PRECISION',
+  'INSPECTION_ROUTINE',
+  'INSPECTION_DETAILED',
+  'MASTER_DATA_FIELD_UPDATE',
+  'MASTER_DATA_REVISION',
+];
+
+/** Maps JR.job_type → allowed workflow types. Mirrors WORKFLOW_BUCKET on BE. */
+export const WORKFLOW_BUCKET = Object.freeze({
+  CALIBRATION:  ['CALIBRATION_STANDARD', 'CALIBRATION_PRECISION'],
+  REPAIR:       ['INSPECTION_ROUTINE',   'INSPECTION_DETAILED'],
+  REGISTRATION: ['MASTER_DATA_FIELD_UPDATE', 'MASTER_DATA_REVISION'],
+});
+
+/** Human labels for the Workflow Type dropdown. */
+export const WORKFLOW_LABELS = Object.freeze({
+  CALIBRATION_STANDARD:       'Calibration · Standard',
+  CALIBRATION_PRECISION:      'Calibration · Precision',
+  INSPECTION_ROUTINE:         'Inspection · Routine',
+  INSPECTION_DETAILED:        'Inspection · Detailed',
+  MASTER_DATA_FIELD_UPDATE:   'Master Data · Field Update',
+  MASTER_DATA_REVISION:       'Master Data · Revision',
+});
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+  message: 'Use YYYY-MM-DD',
+});
+
+/** Convert modal body — used by react-hook-form's resolver. */
+export const jobRequestConvertSchema = z.object({
+  engineer_employee_id:    z.string().regex(/^[A-Z]{2}[0-9]{5}$/, {
+    message: 'Pick an engineer from the list',
+  }),
+  workflow_type:           z.enum(WORKFLOW_TYPES, { message: 'Pick a workflow type' }),
+  equipment_received_date: isoDate,
+  planned_start_date:      isoDate,
+  target_end_date:         isoDate,
+  required_resources:      z.string().max(2000).optional().or(z.literal('')),
+  special_instructions:    z.string().max(2000).optional().or(z.literal('')),
+}).superRefine((v, ctx) => {
+  if (v.planned_start_date < v.equipment_received_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['planned_start_date'],
+      message: 'Planned start cannot be before equipment received',
+    });
+  }
+  if (v.target_end_date < v.planned_start_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['target_end_date'],
+      message: 'Target end cannot be before planned start',
+    });
+  }
+});
+
+/** Reject modal body. */
+export const jobRequestRejectSchema = z.object({
+  reason: z.string()
+    .min(10, { message: 'Reason must be at least 10 characters' })
+    .max(500, { message: 'Reason cannot exceed 500 characters' }),
+});

@@ -69,4 +69,102 @@ async function searchEquipment(q, limit = 20) {
   }));
 }
 
-module.exports = { listDivisions, searchEquipment };
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  ENGINEERS LOOKUP
+// ============================================================================
+//  Feeds the "Assign to Engineer" dropdown on the Convert modal. Each row
+//  carries an `active_card_count` so the LIC can load-balance — least
+//  loaded engineer surfaces at the top.
+// ============================================================================
+
+/**
+ * List every ACTIVE Lab Engineer (system-wide, per D-7.2.8), with a
+ * scalar `active_card_count` derived from cmms_jobcard_mst.
+ *
+ * The workload predicate uses the new (idx_jc_engineer_status) index added
+ * by migration 201 — `JM_ASSIGNED_ENGINEER` is the leading column, so the
+ * COUNT(*) per row is an index-range scan, not a table scan.
+ *
+ * The result is sorted by active_card_count ASC, then by name — so the
+ * dropdown defaults to the least-loaded engineer.
+ *
+ * @returns {Promise<Array<{
+ *   id: number, employee_id: string, full_name: string,
+ *   division_id: number | null, division_code: string | null,
+ *   active_card_count: number
+ * }>>}
+ */
+async function listEngineersWithWorkload() {
+  // Why a correlated subquery instead of LEFT JOIN + GROUP BY?
+  // GROUP BY would force the planner to widen the user_roles + roles join
+  // and aggregate over all (user, JC) pairs even for engineers with no
+  // active cards. The correlated subquery short-circuits per row and uses
+  // the engineer-status index directly. With only a few hundred engineers
+  // this is the cheaper plan.
+  const [rows] = await pool.query(
+    `SELECT
+       u.user_id                                          AS id,
+       u.employee_id                                      AS employee_id,
+       COALESCE(e.EMM_NAME, u.employee_id)                AS full_name,
+       e.EMM_DEPT                                         AS division_id,
+       sm.SM_SHORTNAME                                    AS division_code,
+       (
+         SELECT COUNT(*)
+           FROM cmms_jobcard_mst jc
+          WHERE jc.JM_ASSIGNED_ENGINEER = u.employee_id
+            AND jc.JM_MVP_STATUS IN ('ASSIGNED', 'IN_PROGRESS')
+       )                                                   AS active_card_count
+     FROM users u
+     JOIN user_roles ur ON ur.user_id = u.user_id
+     JOIN roles      r  ON r.role_id  = ur.role_id
+     LEFT JOIN cmms_emp_mst    e   ON e.EMM_ID  = u.employee_id
+     LEFT JOIN cmms_section_mst sm ON sm.SM_ID = e.EMM_DEPT
+     WHERE r.role_code = 'LAB_ENGINEER'
+       AND u.is_active = 1
+       AND u.is_locked = 0
+     ORDER BY active_card_count ASC, full_name ASC
+     LIMIT 500`,
+  );
+  return rows;
+}
+
+/**
+ * Look up a single engineer by employee_id with the canonical fields the
+ * Convert service needs to validate "is this a real, active, LAB_ENGINEER?".
+ * Returns null if not found OR if the candidate is inactive / locked /
+ * holding a different role. The service throws 400 on null.
+ *
+ * @param {string} employeeId
+ * @returns {Promise<Object | null>}
+ */
+async function findEngineerByEmployeeId(employeeId) {
+  const [rows] = await pool.query(
+    `SELECT
+       u.user_id                                AS id,
+       u.employee_id                            AS employee_id,
+       u.is_active                              AS is_active,
+       u.is_locked                              AS is_locked,
+       r.role_code                              AS role,
+       COALESCE(e.EMM_NAME, u.employee_id)      AS full_name
+     FROM users u
+     JOIN user_roles ur ON ur.user_id = u.user_id
+     JOIN roles      r  ON r.role_id  = ur.role_id
+     LEFT JOIN cmms_emp_mst e ON e.EMM_ID = u.employee_id
+     WHERE u.employee_id = ?
+     LIMIT 1`,
+    [employeeId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  if (row.role !== 'LAB_ENGINEER') return null;
+  if (!row.is_active || row.is_locked) return null;
+  return row;
+}
+
+module.exports = {
+  listDivisions,
+  searchEquipment,
+  // Phase 7 Slice 2 additions:
+  listEngineersWithWorkload,
+  findEngineerByEmployeeId,
+};

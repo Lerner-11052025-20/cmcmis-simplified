@@ -3,26 +3,18 @@
 // ----------------------------------------------------------------------------
 // Mounted at `${env.API_BASE_PATH}/job-requests` (= '/api/v1/job-requests').
 //
-// ROUTE TABLE (Phase 6 Slice 1)
+// ROUTE TABLE
 //
-//   GET    /              → authenticate
-//                          → authorizeAny('job_request:read-all','job_request:read-own')
-//                          → rowLevelScope('job_request')
-//                          → validate(listQuerySchema, 'query')
-//                          → ctrl.list
+//   GET    /              → list (Phase 6 Slice 1)
+//   POST   /              → create (Phase 6 Slice 1)
+//   POST   /:id/submit    → DRAFT → SUBMITTED (Phase 6 Slice 1)
 //
-//   POST   /              → authenticate → authorize('job_request:create')
-//                          → validate(createSchema, 'body')
-//                          → ctrl.create
-//
-//   POST   /:id/submit    → authenticate → authorize('job_request:create')
-//                          → validate(submitSchema, 'body')
-//                          → ctrl.submit  (ownership re-checked in service)
-//
-// SHIPS-IN-FUTURE STUBS (lock the URL surface + permission gate now)
-//   GET    /:id           → 404 "Ships in Phase 6 Slice 2"
-//   POST   /:id/approve   → 404 "Ships in Phase 6 Slice 2"
-//   POST   /:id/reject    → 404 "Ships in Phase 6 Slice 2"
+//   PHASE 7 SLICE 2 ─────────────────────────────────────────────────
+//   GET    /:id           → detail (RBAC-scoped)
+//   GET    /:id/history   → status_history rows (RBAC-scoped)
+//   POST   /:id/convert   → atomic approve + assign + create JC
+//                              auth: approve AND assign-engineer (BOTH)
+//   POST   /:id/reject    → SUBMITTED → REJECTED with reason
 // ============================================================================
 
 'use strict';
@@ -34,14 +26,13 @@ const authorize = require('../../middleware/authorize');
 const { authorizeAny } = authorize;
 const rowLevelScope = require('../../middleware/rowLevelScope');
 const validate = require('../../middleware/validate');
-const { errors } = require('../../middleware/errorHandler');
 
 const v = require('./jobRequests.validators');
 const ctrl = require('./jobRequests.controller');
 
 const router = express.Router();
 
-// ── List + Create + Submit ───────────────────────────────────────────
+// ── List + Create + Submit (Phase 6) ─────────────────────────────────
 router.get('/',
   authenticate,
   authorizeAny('job_request:read-all', 'job_request:read-own'),
@@ -64,14 +55,47 @@ router.post('/:id/submit',
   ctrl.submit,
 );
 
-// ── Stubs — slice 2+ ─────────────────────────────────────────────────
-const SLICE_2 = (_req, _res, next) => next(errors.notFound('Ships in Phase 6 Slice 2'));
+// ── PHASE 7 SLICE 2 ──────────────────────────────────────────────────
 
+// GET /:id → Detail page. Same auth shape as the list endpoint:
+// authorizeAny covers the "either-or" perm split, rowLevelScope writes
+// req.scope, and the controller passes scope into the service for the
+// defence-in-depth ownership check.
 router.get('/:id',
-  authenticate, authorizeAny('job_request:read-all', 'job_request:read-own'), SLICE_2);
-router.post('/:id/approve',
-  authenticate, authorize('job_request:approve'), SLICE_2);
+  authenticate,
+  authorizeAny('job_request:read-all', 'job_request:read-own'),
+  rowLevelScope('job_request'),
+  ctrl.getDetail,
+);
+
+// GET /:id/history → status_history rows for the Timeline component.
+router.get('/:id/history',
+  authenticate,
+  authorizeAny('job_request:read-all', 'job_request:read-own'),
+  rowLevelScope('job_request'),
+  ctrl.getHistory,
+);
+
+// POST /:id/convert — Convert action requires BOTH approve AND assign
+// permissions. Chaining `authorize()` twice means a 403 is raised at the
+// route layer if either permission is missing; the state machine inside
+// the service re-checks the same two as defence in depth (Doctrine 5).
+router.post('/:id/convert',
+  authenticate,
+  authorize('job_request:approve'),
+  authorize('job_request:assign-engineer'),
+  validate(v.convertSchema, 'body'),
+  ctrl.postConvert,
+);
+
+// POST /:id/reject — single perm.
 router.post('/:id/reject',
-  authenticate, authorize('job_request:reject'), SLICE_2);
+  authenticate,
+  authorize('job_request:reject'),
+  validate(v.rejectSchema, 'body'),
+  ctrl.postReject,
+);
+
+// ── (intentionally no more SLICE_2 stubs — all wired this slice) ─────
 
 module.exports = router;

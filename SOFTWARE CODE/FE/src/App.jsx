@@ -42,7 +42,10 @@ import { EquipmentDetailPlaceholder } from './pages/equipment/EquipmentDetailPla
 // Phase 6 Slice 1 — Job Requests + Job Cards module
 import { JobRequestList } from './pages/jobRequests/JobRequestList.jsx';
 import { JobRequestNew } from './pages/jobRequests/JobRequestNew.jsx';
+import { JobRequestDetail } from './pages/jobRequests/JobRequestDetail.jsx';
 import { JobCardList } from './pages/jobCards/JobCardList.jsx';
+// Phase 7 Slice 2 — Conversion (Approve + Assign + create JC) workspace
+import { Conversion } from './pages/conversion/Conversion.jsx';
 // Phase 7 Slice 1 — Admin · Users + Admin · Employees
 import { UserList } from './pages/admin/users/UserList.jsx';
 import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
@@ -106,6 +109,27 @@ export function App() {
             element={
               <ProtectedRoute requiredPermission="job_request:create">
                 <Layout><JobRequestNew /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Phase 7 Slice 2 — JR Detail (RBAC-scoped). Gate uses read-own;
+              if the caller only has read-own they'll see ONLY their own JRs
+              (the BE returns 404 for foreign IDs, see service §getJobRequestDetail). */}
+          <Route
+            path="/job-requests/:id"
+            element={
+              <ProtectedRoute requiredPermission="job_request:read-own">
+                <Layout><JobRequestDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── Phase 7 Slice 2 · Conversion workspace (LIC + SA) ─── */}
+          <Route
+            path="/conversion"
+            element={
+              <ProtectedRoute requiredPermission="job_request:approve">
+                <Layout><Conversion /></Layout>
               </ProtectedRoute>
             }
           />

@@ -36,4 +36,14 @@ router.get('/equipment/search',
   ctrl.getEquipmentSearch,
 );
 
+// ── Phase 7 Slice 2 — Engineers lookup (Conversion modal dropdown) ─────
+// Gate: only callers who can assign engineers should be able to enumerate
+// the engineer roster. This permission is held by LIC + SA only — a
+// Normal user opening DevTools cannot probe for engineer names.
+router.get('/engineers',
+  authenticate,
+  authorize('job_request:assign-engineer'),
+  ctrl.getEngineers,
+);
+
 module.exports = router;

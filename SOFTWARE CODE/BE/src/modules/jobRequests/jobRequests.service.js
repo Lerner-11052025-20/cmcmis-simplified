@@ -27,6 +27,11 @@ const { formatJrCode } = require('../../utils/jrCodeGenerator');
 const kpiCache = require('../../utils/kpiCache');
 const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 
+// Phase 7 Slice 2 — cross-module dependencies for the Convert path.
+const jcRepo = require('../jobCards/jobCards.repo');
+const lookupsRepo = require('../lookups/lookups.repo');
+const { WORKFLOW_BUCKET } = require('./jobRequests.validators');
+
 // ────────────────────────────────────────────────────────────────────
 //  LIST
 // ────────────────────────────────────────────────────────────────────
@@ -36,6 +41,12 @@ async function listJobRequests(params, scope) {
   const items = rows.map((r) => ({
     id:                  r.jr_no,
     request_code:        formatJrCode(r.jr_no, r.submitted_at_legacy || r.created_at),
+    // Phase 7 Slice 2: surface equipment_id so the FE can disable the
+    // Convert action when the JR has no equipment selected (JM_EQM_ID
+    // is NOT NULL on the legacy JC schema, so Convert would otherwise
+    // throw EQUIPMENT_REQUIRED from the service).
+    equipment_id:        r.equipment_id,
+    equipment_type:      r.equipment_type,
     equipment_name:      r.equipment_name,
     job_type:            r.job_type,
     division_id:         r.division_id,
@@ -260,4 +271,485 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
   }
 }
 
-module.exports = { listJobRequests, createJobRequest, submitJobRequest };
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  DETAIL + HISTORY
+// ============================================================================
+
+/**
+ * GET /api/v1/job-requests/:id
+ *
+ * Returns a fully-hydrated JR row + accessories + linked Job Card summary.
+ * Row-level scope is enforced INSIDE the repo (which embeds the
+ * submitter-id predicate into the WHERE clause) — that pattern means a
+ * foreign-id probe by a Normal user returns null → controller maps to
+ * 404 (no leak of "row exists but you cannot see it"). The service layer
+ * adds a defence-in-depth re-check below so the security guarantee
+ * survives even if a future refactor of the repo drops the predicate.
+ *
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {{ canReadAll: boolean, ownerEmployeeId: string }} args.scope
+ * @param {Object} args.actor
+ * @returns formatted JR detail
+ */
+async function getJobRequestDetail({ jrNo, scope, actor }) {
+  if (!Number.isFinite(jrNo) || jrNo <= 0) {
+    throw errors.badRequest('Invalid job request id', { field: 'id' });
+  }
+  const row = await repo.findByIdWithDetails(jrNo);
+  if (!row) throw errors.notFound(`Job request ${jrNo} not found`);
+
+  // PHASE 7 SLICE 2 RBAC scope (§4 of the locked spec):
+  //   A Normal user querying a JR they did NOT submit must get
+  //   **403 FORBIDDEN, not 404**. DS chose auditability over
+  //   existence-hiding — see SCHEMA_PHASE7_SLICE2.md.
+  if (!scope.canReadAll && row.submitted_by_employee_id !== scope.ownerEmployeeId) {
+    throw errors.forbidden('Cannot view another user\'s job request');
+  }
+
+  // Shape the payload for the FE. Keep all canonical names; format dates
+  // as ISO strings so the JSON wire format is timezone-agnostic.
+  return {
+    id:                      row.jr_no,
+    request_code:            formatJrCode(row.jr_no, row.submitted_at_legacy || row.created_at),
+    status:                  row.status,
+    job_category:            row.job_category,
+    job_type:                row.job_type,
+    priority:                row.priority,
+    /* dates */
+    created_at:              row.created_at  ? dayjs(row.created_at).toISOString()  : null,
+    updated_at:              row.updated_at  ? dayjs(row.updated_at).toISOString()  : null,
+    submitted_at:            row.status_at && row.status !== 'DRAFT'
+                              ? dayjs(row.status_at).toISOString() : null,
+    status_at:               row.status_at   ? dayjs(row.status_at).toISOString()   : null,
+    approved_at:             row.approved_at ? dayjs(row.approved_at).toISOString() : null,
+    rejected_at:             row.rejected_at ? dayjs(row.rejected_at).toISOString() : null,
+    /* equipment */
+    equipment: {
+      id:                   row.equipment_id,
+      type:                 row.equipment_type,
+      name:                 row.equipment_name,
+      make:                 row.make,
+      model_no:             row.model_no,
+      serial_no:            row.serial_no,
+      options_description:  row.options_description,
+      sent_after_repair:    row.equipment_sent_after_repair === 1
+                              || row.equipment_sent_after_repair === true,
+    },
+    /* division */
+    division: {
+      id:    row.division_id,
+      code:  row.division_code,
+      name:  row.division_name,
+    },
+    /* submitter */
+    submitter: {
+      employee_id: row.submitted_by_employee_id,
+      name:        row.submitted_by_name,
+      designation: row.submitted_by_designation,
+      email:       row.submitted_by_email,
+      lab_phone:   row.lab_phone,
+      room_phone:  row.room_phone,
+    },
+    /* complaint + remarks */
+    complaint_description: row.complaint_description,
+    remarks:               row.remarks,
+    project_name:          row.project_name,
+    subsystem:             row.subsystem,
+    /* approver */
+    approver: row.approved_by_employee_id ? {
+      employee_id: row.approved_by_employee_id,
+      name:        row.approved_by_name,
+    } : null,
+    /* rejecter */
+    rejecter: row.rejected_by_employee_id ? {
+      employee_id: row.rejected_by_employee_id,
+      name:        row.rejected_by_name,
+    } : null,
+    rejection_reason: row.rejection_reason,
+    /* engineer */
+    assigned_engineer: row.assigned_engineer_employee_id ? {
+      employee_id: row.assigned_engineer_employee_id,
+      name:        row.assigned_engineer_name,
+    } : null,
+    /* linked Job Card */
+    linked_job_card: row.linked_job_card_section_no ? {
+      section_job_no: row.linked_job_card_section_no,
+      card_no:        row.linked_job_card_no,
+      status:         row.linked_job_card_status,
+      workflow_type:  row.linked_job_card_workflow_type,
+      target_end_date: row.linked_job_card_target_end_date
+                        ? dayjs(row.linked_job_card_target_end_date).format('YYYY-MM-DD') : null,
+      created_at:     row.linked_job_card_created_at
+                        ? dayjs(row.linked_job_card_created_at).toISOString() : null,
+    } : null,
+    /* T&C */
+    tnc_accepted_at: row.tnc_accepted_at ? dayjs(row.tnc_accepted_at).toISOString() : null,
+    tnc_version:     row.tnc_version,
+    /* accessories */
+    accessories: row.accessories || [],
+  };
+}
+
+/**
+ * GET /api/v1/job-requests/:id/history
+ * Returns the full status_history chronologically. Used by the Detail
+ * page's Timeline component.
+ *
+ * Caller is gated by the same row-level scope as detail — we re-check
+ * ownership before exposing history (don't leak "Foo's JR moved through
+ * X states" to a Normal user who doesn't own it).
+ */
+async function getJobRequestHistory({ jrNo, scope }) {
+  if (!Number.isFinite(jrNo) || jrNo <= 0) {
+    throw errors.badRequest('Invalid job request id', { field: 'id' });
+  }
+  // Reuse the same scope check by loading the JR row first.
+  const jr = await repo.findJrById(jrNo);
+  if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+  if (!scope.canReadAll && jr.submitted_by_employee_id !== scope.ownerEmployeeId) {
+    throw errors.forbidden('Cannot view another user\'s job request');
+  }
+
+  const rows = await repo.findHistory(jrNo);
+  return rows.map((r) => ({
+    from_status:    r.from_status,
+    to_status:      r.to_status,
+    transitioned_at: r.transitioned_at ? dayjs(r.transitioned_at).toISOString() : null,
+    transitioned_by: {
+      employee_id: r.transitioned_by_employee_id,
+      name:        r.transitioned_by_name,
+    },
+    reason: r.reason,
+  }));
+}
+
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  CONVERT
+// ============================================================================
+
+/**
+ * POST /api/v1/job-requests/:id/convert
+ *
+ * Atomic operation per D-7.2.1:
+ *   1) Lock-load JR (must be SUBMITTED, else 409 ILLEGAL_TRANSITION)
+ *   2) State machine: SUBMITTED → APPROVED   (perm: job_request:approve)
+ *   3) Status history row #1: SUBMITTED → APPROVED
+ *   4) State machine: APPROVED → ASSIGNED    (perm: job_request:assign-engineer)
+ *   5) Verify engineer is active LAB_ENGINEER
+ *   6) Verify workflow_type matches JR.job_type bucket
+ *   7) Generate JM_JobCardNO (locked MAX+1)
+ *   8) Format JM_SectionJobNo = "J########"
+ *   9) INSERT JC with status=ASSIGNED + all snapshot fields
+ *   10) UPDATE JR: status=ASSIGNED + approved metadata + engineer + JC link
+ *   11) Status history row #2: APPROVED → ASSIGNED
+ *   12) Audit row #1: JR_CONVERT
+ *   13) Audit row #2: JC_CREATE
+ *   COMMIT
+ *   ▸ kpiCache invalidations (org + personal of submitter)
+ *
+ * Any throw between BEGIN and COMMIT rolls back EVERY write — A12 is the
+ * highest-value smoke for this orchestration.
+ *
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {Object} args.body          Validated by convertSchema
+ * @param {Object} args.actor         { employeeId, role, permissions[] }
+ * @param {string} args.ipAddress
+ * @param {string} args.userAgent
+ * @returns {{ job_request: {...}, job_card: {...} }}
+ */
+async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
+  // ── Pre-txn validations that don't need a row lock ──────────────────
+  // 1) Engineer must be a real active LAB_ENGINEER. Fail fast BEFORE we
+  //    start a transaction so an obvious 400 doesn't waste a DB conn.
+  const engineer = await lookupsRepo.findEngineerByEmployeeId(body.engineer_employee_id);
+  if (!engineer) {
+    throw errors.badRequest(
+      'Selected engineer is not an active Lab Engineer',
+      { field: 'engineer_employee_id' },
+    );
+  }
+
+  // ── Transaction ─────────────────────────────────────────────────────
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 2) Lock-load the JR. FOR UPDATE serialises concurrent Converts.
+    const jr = await repo.findForMutation(conn, jrNo);
+    if (!jr) {
+      throw errors.notFound(`Job request ${jrNo} not found`);
+    }
+
+    // 2a) PRE-FLIGHT: The legacy cmms_jobcard_mst.JM_EQM_ID is NOT NULL
+    //     and forms half of a composite FK to cmms_eqip_mst. If the source
+    //     JR was created without selecting an equipment from the typeahead
+    //     (only the free-text equipment_name was filled), JR_EQM_ID stays
+    //     NULL and we cannot legally produce a Job Card row.
+    //
+    //     Without this guard, MySQL would throw "Column 'JM_EQM_ID' cannot
+    //     be null" which arrives at the client as a raw 500 — terrible UX
+    //     and leaks DB internals. Throw a clear 422 instead so the FE can
+    //     show "ask the submitter to pick an equipment for this JR".
+    if (jr.equipment_id == null) {
+      const err = errors.badRequest(
+        'Cannot create job card: this Job Request has no equipment selected. '
+        + 'Ask the submitter to update the JR with an equipment entry first.',
+        { field: 'equipment_id' },
+      );
+      err.code = 'EQUIPMENT_REQUIRED';     // stable code FE can branch on
+      err.statusCode = 422;                // not a generic 400; field-specific
+      throw err;
+    }
+
+    // 3) State machine transition #1: SUBMITTED → APPROVED.
+    //    This validates BOTH the source state AND that the actor holds
+    //    `job_request:approve`. Throws 409 or 403 if not.
+    const { newState: afterApprove } = transition(jr.status, 'approve', actor);
+    // afterApprove === 'APPROVED' (logical). We never persist this.
+
+    // 4) Write history row #1 BEFORE the second transition. If the
+    //    second transition fails permission-wise, the whole txn rolls
+    //    back including this row — but we want the row to exist on
+    //    success, and committing it after the JR UPDATE would lose the
+    //    ordering "Submitted → Approved" appears before "Approved →
+    //    Assigned" in the timeline.
+    await repo.appendStatusHistory(conn, jrNo, jr.status, afterApprove, actor.employeeId, null);
+
+    // 5) State machine transition #2: APPROVED → ASSIGNED.
+    //    Different permission (assign-engineer), enforced again.
+    const { newState: afterAssign } = transition(afterApprove, 'assign', actor);
+    // afterAssign === 'ASSIGNED'.
+
+    // 6) Workflow type must match the JR's job_type bucket.
+    const bucket = WORKFLOW_BUCKET[jr.job_type] || [];
+    if (!bucket.includes(body.workflow_type)) {
+      throw errors.badRequest(
+        `Workflow type "${body.workflow_type}" is not valid for job_type "${jr.job_type}"`,
+        { field: 'workflow_type' },
+      );
+    }
+
+    // 7) Generate the new JC sequence (FOR UPDATE-locked).
+    const jcNo = await jcRepo.nextJobCardNo(conn);
+    const sectionJobNo = jcRepo.formatSectionJobNo(jcNo);
+
+    // 8) INSERT the JC row. Status defaults to 'ASSIGNED' inside the repo.
+    await jcRepo.insertFromJobRequest(conn, {
+      job_card_no:             jcNo,
+      section_job_no:          sectionJobNo,
+      equipment_type:          jr.equipment_type,
+      equipment_id:            jr.equipment_id,
+      job_category:            jr.job_category,
+      equipment_received_date: body.equipment_received_date,
+      planned_start_date:      body.planned_start_date,
+      target_end_date:         body.target_end_date,
+      complaint_description:   jr.complaint_description,
+      assigned_engineer_employee_id: engineer.employee_id,
+      workflow_type:           body.workflow_type,
+      required_resources:      body.required_resources || null,
+      special_instructions:    body.special_instructions || null,
+      parent_jr_no:            jr.jr_no,
+      created_by_employee_id:  actor.employeeId,
+    });
+
+    // 9) UPDATE the JR — single statement, all fields together.
+    await repo.updateOnConvert(conn, {
+      jrNo,
+      approverEmployeeId: actor.employeeId,
+      engineerEmployeeId: engineer.employee_id,
+      sectionJobNo,
+    });
+
+    // 10) Write history row #2 (APPROVED → ASSIGNED).
+    await repo.appendStatusHistory(conn, jrNo, afterApprove, afterAssign, actor.employeeId, null);
+
+    // 11) Audit row #1 — JR_CONVERT. Notes JSON includes the engineer's
+    //     employee_id, workflow type, JC ref, and target end date so a
+    //     forensic search later can reconstruct intent without joining
+    //     to half the schema.
+    await repo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JR_CONVERT',
+      jrNo,
+      ipAddress,
+      userAgent,
+      details: {
+        from: jr.status,
+        to: 'ASSIGNED',
+        engineer_employee_id: engineer.employee_id,
+        engineer_name:        engineer.full_name,
+        workflow_type:        body.workflow_type,
+        section_job_no:       sectionJobNo,
+        job_card_no:          jcNo,
+        target_end_date:      body.target_end_date,
+      },
+    });
+
+    // 12) Audit row #2 — JC_CREATE. Logged against the new JC entity.
+    await jcRepo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JC_CREATE',
+      sectionJobNo,
+      ipAddress,
+      userAgent,
+      details: {
+        parent_jr_no: jr.jr_no,
+        engineer_employee_id: engineer.employee_id,
+        workflow_type: body.workflow_type,
+        equipment_received_date: body.equipment_received_date,
+        planned_start_date:      body.planned_start_date,
+        target_end_date:         body.target_end_date,
+      },
+    });
+
+    await conn.commit();
+
+    // 13) After-commit side effects. The kpiCache invalidation MUST run
+    //     after the txn so a racing dashboard request that misses the
+    //     cache reads the now-committed new state.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    if (jr.submitted_by_employee_id) {
+      kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id));
+    }
+
+    // 14) Return the new state to the controller. Both `job_request` and
+    //     `job_card` payloads — the FE can use the JR shape to update
+    //     the /conversion tab list in place without a re-fetch round
+    //     trip (it WILL re-fetch anyway via the React-Query invalidator,
+    //     but the optimistic path is faster).
+    return {
+      job_request: {
+        id:                  jr.jr_no,
+        request_code:        formatJrCode(jr.jr_no, jr.created_at),
+        status:              'ASSIGNED',
+        approved_by_employee_id: actor.employeeId,
+        assigned_engineer: {
+          employee_id: engineer.employee_id,
+          name:        engineer.full_name,
+        },
+        linked_job_card_section_no: sectionJobNo,
+      },
+      job_card: {
+        section_job_no: sectionJobNo,
+        job_card_no:    jcNo,
+        status:         'ASSIGNED',
+        workflow_type:  body.workflow_type,
+        equipment_received_date: body.equipment_received_date,
+        planned_start_date:      body.planned_start_date,
+        target_end_date:         body.target_end_date,
+        assigned_engineer: {
+          employee_id: engineer.employee_id,
+          name:        engineer.full_name,
+        },
+        parent_jr_no: jr.jr_no,
+      },
+    };
+  } catch (err) {
+    // Rollback. Catch errors from rollback itself so the original error
+    // remains the one that surfaces to the caller (mirrors createJobRequest).
+    try { await conn.rollback(); } catch { /* ignore secondary fault */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  REJECT
+// ============================================================================
+
+/**
+ * POST /api/v1/job-requests/:id/reject
+ *
+ * Atomic operation per D-7.2.2:
+ *   1) Lock-load JR (must be SUBMITTED, else 409 ILLEGAL_TRANSITION)
+ *   2) State machine: SUBMITTED → REJECTED  (perm: job_request:reject)
+ *   3) UPDATE JR: status=REJECTED + rejection metadata + reason
+ *   4) Status history: SUBMITTED → REJECTED (reason in row)
+ *   5) Audit row: JR_REJECT
+ *   COMMIT
+ *   ▸ kpiCache invalidations
+ *
+ * REJECTED is terminal for Slice 2. Touches NO JC table.
+ *
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {{ reason: string }} args.body  Already zod-validated
+ * @param {Object} args.actor
+ * @param {string} args.ipAddress
+ * @param {string} args.userAgent
+ */
+async function rejectJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const jr = await repo.findForMutation(conn, jrNo);
+    if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+
+    // State machine: validates source state + permission.
+    const { newState } = transition(jr.status, 'reject', actor);
+    // newState === 'REJECTED'.
+
+    await repo.updateOnReject(conn, {
+      jrNo,
+      rejecterEmployeeId: actor.employeeId,
+      reason: body.reason,
+    });
+
+    await repo.appendStatusHistory(conn, jrNo, jr.status, newState, actor.employeeId, body.reason);
+
+    await repo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JR_REJECT',
+      jrNo,
+      ipAddress,
+      userAgent,
+      details: {
+        from: jr.status,
+        to:   newState,
+        // Truncate the reason inside the audit JSON so a long reason
+        // doesn't crowd out the other fields when notes is truncated
+        // to 500 chars by buildAuditNotes().
+        reason: String(body.reason).slice(0, 200),
+      },
+    });
+
+    await conn.commit();
+
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    if (jr.submitted_by_employee_id) {
+      kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id));
+    }
+
+    return {
+      id:               jr.jr_no,
+      request_code:     formatJrCode(jr.jr_no, jr.created_at),
+      status:           newState,
+      rejected_at:      new Date().toISOString(),
+      rejection_reason: body.reason,
+      rejected_by_employee_id: actor.employeeId,
+    };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+module.exports = {
+  listJobRequests,
+  createJobRequest,
+  submitJobRequest,
+  // Phase 7 Slice 2 additions:
+  getJobRequestDetail,
+  getJobRequestHistory,
+  convertJobRequest,
+  rejectJobRequest,
+};

@@ -27,7 +27,13 @@
       "Bash(python -c \"from docx import Document; d=Document\\(r'e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/TECH_DOCX/phase6BYaslikePHASEas4and5.docx'\\); print\\('Paragraphs:', len\\(d.paragraphs\\)\\); print\\('Tables:', len\\(d.tables\\)\\)\")",
       "Bash(pkill -f \"node src/server.js\")",
       "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"employee_id\":\"SA79900\",\"password\":\"SA79900\"}')",
-      "Bash(node -e \"let c=[]; process.stdin.on\\('data',d=>c.push\\(d\\)\\); process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(c\\).toString\\(\\)\\); console.log\\('total='+r.data.pagination.total_items+' first_card='+r.data.items[0].card_code\\);}\\)\")"
+      "Bash(node -e \"let c=[]; process.stdin.on\\('data',d=>c.push\\(d\\)\\); process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(Buffer.concat\\(c\\).toString\\(\\)\\); console.log\\('total='+r.data.pagination.total_items+' first_card='+r.data.items[0].card_code\\);}\\)\")",
+      "Bash(awk '{print $5}')",
+      "Bash(taskkill //PID 26608 //F)",
+      "Bash(node db/discovery/smoke_phase7_slice2.js)",
+      "Bash(awk 'NR==1 {print $5}')",
+      "Bash(taskkill //PID 27172 //F)",
+      "Bash(taskkill //PID 13240 //F)"
     ]
   }
 }

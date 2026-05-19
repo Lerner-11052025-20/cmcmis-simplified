@@ -126,6 +126,8 @@ async function listJobRequests(params, scope) {
       jr.JR_JOBREQUESTDATE                          AS submitted_at_legacy,
       jr.JR_CREATED_AT                              AS created_at,
       jr.JR_JOB_TYPE                                AS job_type,
+      jr.JR_EQM_ID                                  AS equipment_id,
+      jr.JR_EQM_TYPE                                AS equipment_type,
       jr.JR_EQM_NAME                                AS equipment_name,
       jr.JR_DIVISION                                AS division_id,
       sm.SM_SHORTNAME                               AS division_code,
@@ -407,6 +409,244 @@ async function writeAuditLog(conn, { actorEmployeeId, actorRoleCode, action, jrN
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 7 SLICE 2  ·  DETAIL FETCH (with all the joins the Detail page needs)
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Load a single JR with EVERY joined column the Detail page needs in a
+ * single round-trip. Two-step fetch:
+ *   1) The main JR row joined to section + submitter/approver/rejector/engineer
+ *      employees + (optional) linked Job Card summary.
+ *   2) The accessories list (1..N).
+ *
+ * Per the locked spec (§4 RBAC scoping table), foreign-id probes by a
+ * Normal user must return **403, not 404** — DS wants auditability over
+ * existence-hiding. So this function does NOT filter on the submitter;
+ * the service layer compares row.submitted_by_employee_id to
+ * scope.ownerEmployeeId and throws forbidden() when they don't match.
+ *
+ * Returns NULL only when the row genuinely doesn't exist.
+ *
+ * @param {number} jrNo
+ * @returns {Promise<Object | null>}
+ */
+async function findByIdWithDetails(jrNo) {
+  // ── 1. Main row + joined lookups ──────────────────────────────────
+  // LEFT JOINs everywhere — a JR may have no approver/rejector/engineer/JC
+  // yet, and the row must still come back. Submitter join can also fail
+  // for old legacy rows; we fall back to the JR's snapshot column.
+  const [rows] = await pool.query(
+    `SELECT
+       jr.JR_JOBREQUESTNO            AS jr_no,
+       jr.JR_JOBREQUESTDATE          AS submitted_at_legacy,
+       jr.JR_CREATED_AT              AS created_at,
+       jr.JR_UPDATED_AT              AS updated_at,
+       jr.JR_MVP_STATUS              AS status,
+       jr.JR_MVP_STATUS_AT           AS status_at,
+       jr.JR_JOB_CATEGORY            AS job_category,
+       jr.JR_JOB_TYPE                AS job_type,
+       jr.JR_PRIORITY                AS priority_db,
+       jr.JR_EQM_ID                  AS equipment_id,
+       jr.JR_EQM_TYPE                AS equipment_type,
+       jr.JR_EQM_NAME                AS equipment_name,
+       jr.JR_EQM_MFR_NAME            AS make,
+       jr.JR_EQM_MODELNO             AS model_no,
+       jr.JR_EQM_SRNO                AS serial_no,
+       jr.JR_EQM_OPTNDESC            AS options_description,
+       jr.JR_AFTERREPAIRS            AS equipment_sent_after_repair,
+       jr.JR_COMPLAINTANDSYMPTOMS    AS complaint_description,
+       jr.JR_REMARKS                 AS remarks,
+       jr.JR_PROJECTID               AS project_name,
+       jr.JR_SUBSYSTEM               AS subsystem,
+       jr.JR_PHOENLAB                AS lab_phone,
+       jr.JR_PHONEROOM               AS room_phone,
+       jr.JR_DESIGNATION             AS submitted_by_designation,
+       jr.Email                      AS submitted_by_email,
+       jr.JR_SUBMITTEDBYID           AS submitted_by_employee_id,
+       jr.JR_SUBMITTEDBYNAME         AS submitted_by_name,
+       jr.JR_TNC_ACCEPTED_AT         AS tnc_accepted_at,
+       jr.JR_TNC_VERSION             AS tnc_version,
+       /* division */
+       jr.JR_DIVISION                AS division_id,
+       sm.SM_SHORTNAME               AS division_code,
+       sm.SM_NAME                    AS division_name,
+       /* approval / rejection metadata */
+       jr.JR_APPROVED_BY             AS approved_by_employee_id,
+       jr.JR_APPROVED_ON             AS approved_at,
+       emp_app.EMM_NAME              AS approved_by_name,
+       jr.JR_REJECTED_BY             AS rejected_by_employee_id,
+       jr.JR_REJECTED_ON             AS rejected_at,
+       emp_rej.EMM_NAME              AS rejected_by_name,
+       jr.JR_REJECTION_REASON        AS rejection_reason,
+       /* engineer */
+       jr.JR_ASSIGNED_ENGINEER       AS assigned_engineer_employee_id,
+       emp_eng.EMM_NAME              AS assigned_engineer_name,
+       /* linked Job Card (if any) */
+       jr.JR_SECTIONJOB_NO           AS linked_job_card_section_no,
+       jc.JM_JobCardNO               AS linked_job_card_no,
+       jc.JM_MVP_STATUS              AS linked_job_card_status,
+       jc.JM_WORKFLOW_TYPE           AS linked_job_card_workflow_type,
+       jc.JM_PlannedComletedDate     AS linked_job_card_target_end_date,
+       jc.JM_CREATED_ON              AS linked_job_card_created_at
+     FROM cmms_jobrequest_mst jr
+     LEFT JOIN cmms_section_mst sm     ON sm.SM_ID  = jr.JR_DIVISION
+     LEFT JOIN cmms_emp_mst   emp_app  ON emp_app.EMM_ID = jr.JR_APPROVED_BY
+     LEFT JOIN cmms_emp_mst   emp_rej  ON emp_rej.EMM_ID = jr.JR_REJECTED_BY
+     LEFT JOIN cmms_emp_mst   emp_eng  ON emp_eng.EMM_ID = jr.JR_ASSIGNED_ENGINEER
+     LEFT JOIN cmms_jobcard_mst jc     ON jc.JM_SectionJobNo = jr.JR_SECTIONJOB_NO
+     WHERE jr.JR_JOBREQUESTNO = ?
+     LIMIT 1`,
+    [jrNo],
+  );
+  const main = rows[0];
+  if (!main) return null;
+
+  // ── 2. Accessories ────────────────────────────────────────────────
+  // Cheap separate query — the JR list page already paginates these
+  // away, so we only load them on detail view. Index `jr_no` on the
+  // child table makes this an O(N) seek where N is < 20.
+  const [acc] = await pool.query(
+    `SELECT accessory_type AS type, accessory_name AS name,
+            serial_no, position
+       FROM job_request_accessories
+      WHERE jr_no = ?
+      ORDER BY position ASC, acc_id ASC`,
+    [jrNo],
+  );
+  main.accessories = acc;
+  // Canonicalise the priority enum on the way out so the FE never
+  // sees "NORMAL" or "URGENT" (legacy values).
+  main.priority = toCanonicalPriority(main.priority_db);
+  delete main.priority_db;
+  return main;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 7 SLICE 2  ·  STATUS HISTORY FETCH
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Return all status-history rows for a JR, oldest first. Joined to
+ * cmms_emp_mst so the FE can render "Approved by R. Sharma" without
+ * a second round-trip.
+ *
+ * @param {number} jrNo
+ * @returns {Promise<Array<{ from_status, to_status, transitioned_at,
+ *                           transitioned_by_employee_id, transitioned_by_name,
+ *                           reason }>>}
+ */
+async function findHistory(jrNo) {
+  const [rows] = await pool.query(
+    `SELECT
+       h.from_status,
+       h.to_status,
+       h.transitioned_at,
+       h.transitioned_by                 AS transitioned_by_employee_id,
+       emp.EMM_NAME                      AS transitioned_by_name,
+       h.reason
+     FROM job_request_status_history h
+     LEFT JOIN cmms_emp_mst emp ON emp.EMM_ID = h.transitioned_by
+     WHERE h.jr_no = ?
+     ORDER BY h.transitioned_at ASC, h.history_id ASC`,
+    [jrNo],
+  );
+  return rows;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 7 SLICE 2  ·  LOAD-FOR-MUTATION (txn-scoped, FOR UPDATE)
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Locked SELECT used inside Convert / Reject transactions. Returns the
+ * minimum columns the service needs to verify state + build the JC + run
+ * the audit notes. `FOR UPDATE` serialises concurrent attempts on the
+ * same JR (e.g. two LICs hitting Convert at the same time — second
+ * waits, sees the now-ASSIGNED state, and is rejected by the state
+ * machine).
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {number} jrNo
+ * @returns {Promise<Object | null>}
+ */
+async function findForMutation(conn, jrNo) {
+  const [rows] = await conn.query(
+    `SELECT
+       JR_JOBREQUESTNO         AS jr_no,
+       JR_MVP_STATUS           AS status,
+       JR_JOB_TYPE             AS job_type,
+       JR_JOB_CATEGORY         AS job_category,
+       JR_EQM_TYPE             AS equipment_type,
+       JR_EQM_ID               AS equipment_id,
+       JR_EQM_NAME             AS equipment_name,
+       JR_PRIORITY             AS priority_db,
+       JR_SUBMITTEDBYID        AS submitted_by_employee_id,
+       JR_SUBMITTEDBYNAME      AS submitted_by_name,
+       JR_COMPLAINTANDSYMPTOMS AS complaint_description
+     FROM cmms_jobrequest_mst
+     WHERE JR_JOBREQUESTNO = ?
+     FOR UPDATE`,
+    [jrNo],
+  );
+  return rows[0] || null;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 7 SLICE 2  ·  UPDATE ON CONVERT
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Atomic single-statement UPDATE that flips the JR to ASSIGNED and
+ * stamps in approval metadata + engineer + JC link. Caller's transaction
+ * has already validated state via `transition()` and inserted the new JC
+ * — this is the LAST write before INSERTing the second history row.
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {string} args.approverEmployeeId
+ * @param {string} args.engineerEmployeeId
+ * @param {string} args.sectionJobNo   The new JC's JM_SectionJobNo (varchar 9)
+ */
+async function updateOnConvert(conn, { jrNo, approverEmployeeId, engineerEmployeeId, sectionJobNo }) {
+  await conn.query(
+    `UPDATE cmms_jobrequest_mst
+        SET JR_MVP_STATUS         = 'ASSIGNED',
+            JR_MVP_STATUS_AT      = NOW(6),
+            JR_UPDATED_AT         = NOW(6),
+            JR_APPROVED_BY        = ?,
+            JR_APPROVED_ON        = NOW(6),
+            JR_ASSIGNED_ENGINEER  = ?,
+            JR_SECTIONJOB_NO      = ?
+      WHERE JR_JOBREQUESTNO       = ?`,
+    [approverEmployeeId, engineerEmployeeId, sectionJobNo, jrNo],
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  PHASE 7 SLICE 2  ·  UPDATE ON REJECT
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Atomic single-statement UPDATE that flips the JR to REJECTED and
+ * stamps in rejection metadata + reason.
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn
+ * @param {Object} args
+ * @param {number} args.jrNo
+ * @param {string} args.rejecterEmployeeId
+ * @param {string} args.reason  10..500 chars (already zod-validated)
+ */
+async function updateOnReject(conn, { jrNo, rejecterEmployeeId, reason }) {
+  await conn.query(
+    `UPDATE cmms_jobrequest_mst
+        SET JR_MVP_STATUS       = 'REJECTED',
+            JR_MVP_STATUS_AT    = NOW(6),
+            JR_UPDATED_AT       = NOW(6),
+            JR_REJECTED_BY      = ?,
+            JR_REJECTED_ON      = NOW(6),
+            JR_REJECTION_REASON = ?
+      WHERE JR_JOBREQUESTNO     = ?`,
+    [rejecterEmployeeId, reason, jrNo],
+  );
+}
+
 module.exports = {
   listJobRequests,
   nextJrNo,
@@ -416,6 +656,12 @@ module.exports = {
   appendStatusHistory,
   replaceAccessories,
   writeAuditLog,
+  // Phase 7 Slice 2 additions:
+  findByIdWithDetails,
+  findHistory,
+  findForMutation,
+  updateOnConvert,
+  updateOnReject,
   // exports used by tests and dropdown population
   PRIORITY_CANONICAL_TO_DB,
   PRIORITY_DB_TO_CANONICAL,

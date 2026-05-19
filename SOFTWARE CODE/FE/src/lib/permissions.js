@@ -32,6 +32,7 @@ import {
   Settings,
   Users,
   IdCard,
+  RefreshCw,
 } from 'lucide-react';
 
 /**
@@ -46,6 +47,10 @@ import {
 export const ALL_NAV_ITEMS = [
   { label: 'Dashboard',    to: '/dashboard',    icon: LayoutGrid,     requires: 'dashboard:view' },
   { label: 'Job Requests', to: '/job-requests', icon: FileText,       requires: 'job_request:read-own' },
+  // Phase 7 Slice 2 — Conversion is the LIC + SA workspace where pending
+  // requests get turned into Job Cards. Gated on the approve permission,
+  // which only LAB_IN_CHARGE and SUPER_ADMIN hold (per Phase 3 role grants).
+  { label: 'Conversion',   to: '/conversion',   icon: RefreshCw,      requires: 'job_request:approve' },
   { label: 'Job Cards',    to: '/job-cards',    icon: ClipboardList,  requires: 'job_card:read-list' },
   { label: 'Equipment',    to: '/equipment',    icon: Wrench,         requires: 'equipment:read-list' },
   { label: 'Schedule',     to: '/schedule',     icon: Calendar,       requires: 'equipment:read-list' },

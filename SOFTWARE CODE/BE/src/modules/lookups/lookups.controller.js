@@ -26,4 +26,16 @@ async function getEquipmentSearch(req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { getDivisions, getEquipmentSearch };
+/**
+ * GET /api/v1/lookups/engineers
+ * Returns every active LAB_ENGINEER with workload counts. Sorted
+ * ascending by active_card_count (least-loaded first).
+ */
+async function getEngineers(_req, res, next) {
+  try {
+    const items = await repo.listEngineersWithWorkload();
+    return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
+module.exports = { getDivisions, getEquipmentSearch, getEngineers };

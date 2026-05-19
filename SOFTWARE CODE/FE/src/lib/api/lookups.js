@@ -26,3 +26,22 @@ export async function searchEquipment(q, limit = 20, signal) {
   });
   return r.data.data.items;
 }
+
+// ============================================================================
+//                          PHASE 7 SLICE 2  ·  ENGINEERS LOOKUP
+// ============================================================================
+
+/**
+ * Fetch every active LAB_ENGINEER with workload counts. Sorted ascending
+ * by `active_card_count`. Used by the Convert modal's Engineer dropdown.
+ *
+ * Each item: { id, employee_id, full_name, division_id, division_code,
+ *              active_card_count }
+ *
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<Array<Object>>}
+ */
+export async function fetchEngineers(signal) {
+  const r = await api.get('/lookups/engineers', { signal });
+  return r.data.data.items;
+}
