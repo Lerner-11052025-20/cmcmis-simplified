@@ -29,6 +29,7 @@ const express = require('express');
 
 const authenticate = require('../../middleware/authenticate');
 const authorize    = require('../../middleware/authorize');
+const { authorizeAny } = require('../../middleware/authorize');
 const validate     = require('../../middleware/validate');
 const { errors }   = require('../../middleware/errorHandler');
 
@@ -37,16 +38,23 @@ const ctrl = require('./analytics.controller');
 
 const router = express.Router();
 
-// Composite gate — same shape as reports.routes.js. Reused locally to
-// keep the route table flat.
-function requireExport(viewPerm) {
+// PHASE 11 SLICE 2 — accept either permission so the same chart endpoints
+// power BOTH the Reports-page chart grid (Phase 10) AND the new standalone
+// /analytics dashboard (Phase 11 Slice 2). Either gate unlocks the read.
+const VIEW_PERMS = ['analytics:view', 'reports:view-analytics'];
+
+// CSV download requires the export permission ON TOP of one of the view
+// permissions. We can't use authorizeAny alone (would let a user with just
+// reports:export through). So we layer authorizeAny(viewPerms) → requireExport.
+function requireExport() {
   return function gate(req, _res, next) {
     if (!req.user || !Array.isArray(req.user.permissions)) {
       return next(errors.unauthorized('Authentication required'));
     }
     const owned = new Set(req.user.permissions);
-    if (!owned.has(viewPerm))        return next(errors.forbidden(`Missing required permission: ${viewPerm}`));
-    if (!owned.has('reports:export')) return next(errors.forbidden(`Missing required permission: reports:export`));
+    if (!owned.has('reports:export')) {
+      return next(errors.forbidden('Missing required permission: reports:export'));
+    }
     next();
   };
 }
@@ -55,13 +63,14 @@ function requireExport(viewPerm) {
 function register(path, jsonHandler, csvHandler) {
   router.get(path,
     authenticate,
-    authorize('reports:view-analytics'),
+    authorizeAny(...VIEW_PERMS),
     validate(commonChartQuery, 'query'),
     jsonHandler,
   );
   router.get(`${path}/csv`,
     authenticate,
-    requireExport('reports:view-analytics'),
+    authorizeAny(...VIEW_PERMS),
+    requireExport(),
     validate(commonChartQuery, 'query'),
     csvHandler,
   );
