@@ -22,7 +22,6 @@ import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button }   from '../../components/ui/Button.jsx';
 import { Input }    from '../../components/ui/Input.jsx';
 import { Select }   from '../../components/ui/Select.jsx';
-import { MadeWithLove } from '../../components/MadeWithLove.jsx';
 import { useAuth }  from '../../lib/auth-context.jsx';
 import { useScheduleMutations } from '../../lib/hooks/useSchedule.js';
 import { api } from '../../lib/api-client.js';
@@ -300,9 +299,6 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
             </Button>
           </div>
         </div>
-
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </form>
     </div>
   );

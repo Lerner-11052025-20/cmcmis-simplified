@@ -13,7 +13,6 @@ import { X, AlertTriangle } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input }  from '../../components/ui/Input.jsx';
-import { MadeWithLove } from '../../components/MadeWithLove.jsx';
 import { useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 import { searchVendors } from '../../lib/api/procurement.js';
 
@@ -172,9 +171,6 @@ export function SparePartFormModal({ spare, onClose }) {
             {busy ? 'Saving…' : (isEdit ? 'Save changes' : 'Add Spare Part')}
           </Button>
         </div>
-
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </form>
     </div>
   );

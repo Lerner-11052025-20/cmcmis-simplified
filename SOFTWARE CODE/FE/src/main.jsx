@@ -23,6 +23,16 @@ import { App } from './App.jsx';
 // mutation (bell badge ticks instantly, not on the 30 s poll).
 import { setQueryClient } from './lib/tokens/tokenInterceptor.js';
 
+// ── Authorship credit (LOCKED · SEALED · NON-DELETABLE) ────────────────────
+// Side-effect import. Loads src/components/MadeWithLove.jsx, which on
+// module-load installs the bottom-right floating credit pill + a
+// MutationObserver watchdog that re-paints the pill if it is removed
+// from the DOM. The pill MUST remain visible — see file header for the
+// full copyright + tamper-resistance contract. Removal of this import
+// or the file it loads requires the WRITTEN CONSENT of Deep Sorathiya
+// and Moksh Gandhi (the named authors).
+import './components/MadeWithLove.jsx';
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   // Fail loudly during boot — easier to debug than a blank white page.

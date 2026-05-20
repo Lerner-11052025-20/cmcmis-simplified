@@ -31,7 +31,6 @@ import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import { DataTable } from '../../../components/DataTable.jsx';
 import { Pagination } from '../../../components/Pagination.jsx';
-import { MadeWithLove } from '../../../components/MadeWithLove.jsx';
 import { useAdminUserList, invalidateAdminUserCache } from '../../../lib/hooks/useAdminUserList.js';
 import { useAuth } from '../../../lib/auth-context.jsx';
 import { ROLE_LABELS, ROLE_CODES } from '../../../lib/schemas/adminUserSchemas.js';
@@ -281,8 +280,6 @@ function Modal({ title, onClose, children, footer }) {
         </div>
         <div>{children}</div>
         <div className="flex justify-end gap-2 pt-2">{footer}</div>
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </div>
     </div>
   );

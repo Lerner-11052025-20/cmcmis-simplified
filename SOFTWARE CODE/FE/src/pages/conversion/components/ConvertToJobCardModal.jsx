@@ -45,7 +45,6 @@ import { X, CheckCircle2, Users, Calendar, FileText, Wrench, AlertTriangle } fro
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
-import { MadeWithLove } from '../../../components/MadeWithLove.jsx';
 import {
   jobRequestConvertSchema,
   WORKFLOW_BUCKET,
@@ -414,9 +413,6 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
             </Button>
           </div>
         </div>
-
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </div>
     </div>
   );

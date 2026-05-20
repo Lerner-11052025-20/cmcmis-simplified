@@ -15,7 +15,6 @@ import { X, AlertTriangle, ShoppingCart, CheckCircle2 } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input }  from '../../components/ui/Input.jsx';
-import { MadeWithLove } from '../../components/MadeWithLove.jsx';
 import { useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -132,9 +131,6 @@ export function OrderModal({ spare, onClose }) {
             </Button>
           ) : null}
         </div>
-
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </form>
     </div>
   );

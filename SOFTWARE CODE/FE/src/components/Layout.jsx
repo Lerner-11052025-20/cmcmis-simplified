@@ -36,10 +36,11 @@ import { TopBar } from './TopBar.jsx';
 // TopBar and the page content. Mounted once here so EVERY route can fire
 // pushToken() without each page wiring its own host.
 import { TokenHost } from './tokens/TokenHost.jsx';
-// Authorship credit — rendered once here so every routed page automatically
-// shows the "Made with love by Deep Sorathiya (DS) & Moksh Gandhi" pill at
-// its bottom. Modals/drawers add their own copy via the same component.
-import { MadeWithLove } from './MadeWithLove.jsx';
+
+// NOTE — the authorship credit pill is rendered globally by the WATCHDOG
+// inside src/components/MadeWithLove.jsx (loaded as a side-effect import
+// in src/main.jsx). It paints itself in the bottom-right corner of every
+// page and is self-healing. Inline page-bottom pills are no longer used.
 
 // Single source of truth for the localStorage key — exported in case a
 // future hook (e.g. a "collapse on mobile" effect) wants to write it too.
@@ -94,13 +95,7 @@ export function Layout({ children }) {
             ABOVE the page heading (per spec §4.1). Renders empty when
             no tokens are active (no layout shift). */}
         <TokenHost />
-        <main className="flex-1 overflow-auto p-8">
-          {children}
-          {/* Authorship pill — appears at the BOTTOM of every routed page.
-              Pushed to the bottom of the scroll content so it doesn't fight
-              with the page's own bottom controls. */}
-          <MadeWithLove />
-        </main>
+        <main className="flex-1 overflow-auto p-8">{children}</main>
       </div>
     </div>
   );

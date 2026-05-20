@@ -53,9 +53,11 @@ import { Input } from '../components/ui/Input.jsx';
 import { FormField } from '../components/ui/FormField.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Spinner } from '../components/ui/Spinner.jsx';
-import { MadeWithLove } from '../components/MadeWithLove.jsx';
 import { useAuth } from '../lib/auth-context.jsx';
 import { loginSchema } from '../lib/schemas/loginSchema.js';
+// NOTE — authorship credit is rendered globally by the watchdog (loaded via
+// the side-effect import in src/main.jsx). It paints itself in the
+// bottom-right corner and is self-healing. No inline credit on this page.
 
 export function Login() {
   const { login, user, loading } = useAuth();
@@ -213,15 +215,7 @@ export function Login() {
           <p className="mt-5 text-[11px] text-ink-soft text-center">
             Authorised personnel only. All sign-in attempts are logged.
           </p>
-
-          {/* Authorship credit — bottom of the sign-in card. */}
-          <MadeWithLove size="sm" />
         </div>
-
-        {/* Page-level authorship credit — appears under the card too so the
-            sign-in screen carries the same "made-with-love" mark as every
-            authenticated page. */}
-        <MadeWithLove />
       </div>
     </main>
   );

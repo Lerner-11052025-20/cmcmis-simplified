@@ -27,6 +27,13 @@
  * ║   including (but not limited to) claims under copyright, moral        ║
  * ║   rights, and contractual attribution obligations.                    ║
  * ║                                                                        ║
+ * ║   ─── DELIVERY MODE (2026-05-22 lock-down) ──────────────────────────── ║
+ * ║                                                                        ║
+ * ║   Per the authors' direction, the ONLY visible credit in the running   ║
+ * ║   app is the LOCKED, SEALED, BOTTOM-RIGHT FLOATING PILL painted by      ║
+ * ║   the L4 watchdog below. Inline page-bottom pills have been retired.   ║
+ * ║   The floating pill must remain visible on every screen of the app.   ║
+ * ║                                                                        ║
  * ║   ─── TAMPER-RESISTANCE LAYERS (do NOT defeat these) ──────────────── ║
  * ║                                                                        ║
  * ║     L1  Legal header (above) — public copyright + attribution claim.  ║
@@ -36,15 +43,18 @@
  * ║     L3  Integrity fingerprint — the decoded names are checksummed at  ║
  * ║         load time; mismatches console-warn and surface a visible      ║
  * ║         banner to the deploying admin.                                 ║
- * ║     L4  DOM watchdog — a MutationObserver runs on the first import   ║
- * ║         of this module. If the inline credit pill is removed from    ║
- * ║         the page, the watchdog re-injects a floating credit in the   ║
- * ║         bottom-right corner. Defeating it requires deleting the      ║
- * ║         entire file — which immediately breaks 13+ import sites and  ║
- * ║         fails the build.                                              ║
- * ║     L5  Multiple call sites — the pill is rendered from Layout.jsx,  ║
- * ║         Login.jsx, Forbidden.jsx, and every modal/drawer in the app. ║
- * ║         Each site is a separate edit a tamperer would have to make.  ║
+ * ║     L4  DOM watchdog — runs at module load. ALWAYS paints a floating  ║
+ * ║         credit pill in the bottom-right corner of every page. Bound   ║
+ * ║         to document.body via MutationObserver so any DOM scrubber     ║
+ * ║         that removes the pill triggers re-injection on the very next  ║
+ * ║         mutation. Inline-styled (Tailwind-independent), z-index max.  ║
+ * ║         Defeating it requires deleting the entire file — which         ║
+ * ║         removes the side-effect import in main.jsx and fails the      ║
+ * ║         build with "Cannot resolve module".                            ║
+ * ║     L5  Side-effect import in main.jsx — guarantees this module       ║
+ * ║         loads (and therefore the watchdog runs) before any route     ║
+ * ║         renders. A tamperer who removes the import strips the L4     ║
+ * ║         protection from the app root — a highly visible PR diff.     ║
  * ║                                                                        ║
  * ╚════════════════════════════════════════════════════════════════════════╝
  * ============================================================================
@@ -132,16 +142,14 @@ if (!_integrityOK && typeof console !== 'undefined') {
 // ─────────────────────────────────────────────────────────────────────────
 //  L4 · DOM WATCHDOG  (runs ONCE per page-load, singleton via window flag)
 // -------------------------------------------------------------------------
-// If every inline pill is removed from the page (e.g. someone deletes the
-// <MadeWithLove /> imports), this watchdog detects the absence and paints
-// a floating credit in the bottom-right corner that re-appears every time
-// it's removed. The watchdog is bound to document.body via MutationObserver,
-// so any DOM scrubber that nukes the floating node triggers re-injection
-// on the very next mutation.
+// ALWAYS paints a floating credit pill in the bottom-right corner of the
+// page. Bound to document.body via MutationObserver, so any DOM scrubber
+// that removes the floating node triggers re-injection on the very next
+// mutation.
 //
-// To kill the watchdog the tamperer must delete this file. Doing so breaks
-// 13+ imports across the app and the build fails (`Cannot resolve module
-// ./MadeWithLove.jsx`).
+// To kill the watchdog the tamperer must delete this file AND remove the
+// side-effect import in src/main.jsx — both diffs are very visible in code
+// review and trip the L1 copyright-breach clause.
 // ─────────────────────────────────────────────────────────────────────────
 const FLOATING_MARK = 'data-cmcmis-credit-floating';
 
@@ -185,12 +193,12 @@ function _floatingMarkup() {
 }
 
 function _ensureFloatingCredit() {
-  // ANY inline pill on the page satisfies the "credit is visible" invariant.
-  // Only when EVERY pill (inline + floating) is gone do we paint a new one.
+  // The floating pill is the ONLY visible credit in the running app
+  // (per the 2026-05-22 lockdown). If a tamperer (or some DOM scrubber)
+  // removes it from the body, the next MutationObserver tick re-paints
+  // it. Inline pills are no longer rendered by the React tree.
   if (typeof document === 'undefined' || !document.body) return;
-  const inline   = document.querySelectorAll('[data-cmcmis-credit-pill]');
-  const floating = document.querySelector('[' + FLOATING_MARK + ']');
-  if (inline.length > 0 || floating) return;
+  if (document.querySelector('[' + FLOATING_MARK + ']')) return;
   try {
     document.body.appendChild(_floatingMarkup());
   } catch (_) { /* never crash the app over a credit pill */ }

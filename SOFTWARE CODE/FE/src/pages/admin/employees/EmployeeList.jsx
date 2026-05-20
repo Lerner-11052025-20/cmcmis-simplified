@@ -21,7 +21,6 @@ import { Link } from 'react-router-dom';
 import { Search as SearchIcon, Plus, Pencil, Trash2, UserPlus, RefreshCw } from 'lucide-react';
 
 import { Button } from '../../../components/ui/Button.jsx';
-import { MadeWithLove } from '../../../components/MadeWithLove.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import { DataTable } from '../../../components/DataTable.jsx';
@@ -229,8 +228,6 @@ function Modal({ title, onClose, children, footer }) {
         </div>
         <div>{children}</div>
         <div className="flex justify-end gap-2 pt-2">{footer}</div>
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </div>
     </div>
   );

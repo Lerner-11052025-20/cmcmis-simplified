@@ -17,7 +17,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X, XCircle, AlertTriangle } from 'lucide-react';
 
 import { Button } from '../../../components/ui/Button.jsx';
-import { MadeWithLove } from '../../../components/MadeWithLove.jsx';
 import { jobRequestRejectSchema } from '../../../lib/schemas/jobRequestSchemas.js';
 import { rejectJobRequest } from '../../../lib/api/jobRequests.js';
 
@@ -150,9 +149,6 @@ export function RejectModal({ jr, onClose, onSuccess }) {
             {isSubmitting ? 'Rejecting…' : 'Reject Request'}
           </Button>
         </div>
-
-        {/* Authorship credit — bottom of every modal. */}
-        <MadeWithLove size="sm" />
       </div>
     </div>
   );
