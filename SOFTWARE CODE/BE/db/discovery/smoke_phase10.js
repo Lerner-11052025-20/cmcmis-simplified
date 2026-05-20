@@ -95,6 +95,7 @@ const REPORTS = [
 ];
 
 const CHARTS = [
+  // Phase 10 — G1..G8
   { id: 'G1', key: 'monthly-activity',              shape: ['month', 'calibrations', 'repairs'] },
   { id: 'G2', key: 'equipment-status',              shape: ['status', 'count'] },
   { id: 'G3', key: 'monthly-jobs',                  shape: ['month', 'completed', 'pending'] },
@@ -103,6 +104,11 @@ const CHARTS = [
   { id: 'G6', key: 'job-type-distribution',         shape: ['job_type', 'count'] },
   { id: 'G7', key: 'engineer-workload',             shape: ['engineer_employee_id', 'engineer_name', 'open_load', 'done'] },
   { id: 'G8', key: 'calibration-status-breakdown',  shape: ['band', 'count'] },
+  // Phase 11 Slice 3 — G9..G12
+  { id: 'G9',  key: 'weekly-activity',              shape: ['week', 'calibrations', 'repairs'] },
+  { id: 'G10', key: 'jc-lifecycle-funnel',          shape: ['stage', 'count'] },
+  { id: 'G11', key: 'equipment-registration-trend', shape: ['month', 'registered'] },
+  { id: 'G12', key: 'priority-mix-trend',           shape: ['month', 'low', 'medium', 'high'] },
 ];
 
 // ── Main ─────────────────────────────────────────────────────────

@@ -27,6 +27,12 @@ async function getJobTypeDistribution(params)   { return repo.jobTypeDistributio
 async function getEngineerWorkload(params)      { return repo.engineerWorkload(params); }
 async function getCalibrationStatusBreakdown(params) { return repo.calibrationStatusBreakdown(params); }
 
+// Phase 11 Slice 3 — new chart endpoints (G9..G12)
+async function getWeeklyActivityTrend(params)        { return repo.weeklyActivityTrend(params); }
+async function getJcLifecycleFunnel(params)          { return repo.jcLifecycleFunnel(params); }
+async function getEquipmentRegistrationTrend(params) { return repo.equipmentRegistrationTrend(params); }
+async function getPriorityMixTrend(params)           { return repo.priorityMixTrend(params); }
+
 
 // ── CSV helpers ────────────────────────────────────────────────────────
 
@@ -100,8 +106,24 @@ function csvCalibrationStatusBreakdown(rows) {
   return toCsv(['band', 'count'], rows, ['Calibration Band', 'Count']);
 }
 
+// ── G9..G12 CSV serialisers (Phase 11 Slice 3) ─────────────────────────
+function csvWeeklyActivityTrend(rows) {
+  return toCsv(['week', 'calibrations', 'repairs'], rows,
+               ['ISO Week', 'Calibrations', 'Repairs']);
+}
+function csvJcLifecycleFunnel(rows) {
+  return toCsv(['stage', 'count'], rows, ['Lifecycle Stage', 'Count']);
+}
+function csvEquipmentRegistrationTrend(rows) {
+  return toCsv(['month', 'registered'], rows, ['Month', 'Equipment Registered']);
+}
+function csvPriorityMixTrend(rows) {
+  return toCsv(['month', 'low', 'medium', 'high'], rows,
+               ['Month', 'Low', 'Medium', 'High']);
+}
+
 module.exports = {
-  // JSON
+  // JSON — G1..G8
   getMonthlyActivityTrends,
   getEquipmentStatus,
   getMonthlyJobTrends,
@@ -110,7 +132,12 @@ module.exports = {
   getJobTypeDistribution,
   getEngineerWorkload,
   getCalibrationStatusBreakdown,
-  // CSV
+  // JSON — G9..G12 (Phase 11 Slice 3)
+  getWeeklyActivityTrend,
+  getJcLifecycleFunnel,
+  getEquipmentRegistrationTrend,
+  getPriorityMixTrend,
+  // CSV — G1..G8
   csvMonthlyActivityTrends,
   csvEquipmentStatus,
   csvMonthlyJobTrends,
@@ -119,4 +146,9 @@ module.exports = {
   csvJobTypeDistribution,
   csvEngineerWorkload,
   csvCalibrationStatusBreakdown,
+  // CSV — G9..G12
+  csvWeeklyActivityTrend,
+  csvJcLifecycleFunnel,
+  csvEquipmentRegistrationTrend,
+  csvPriorityMixTrend,
 };

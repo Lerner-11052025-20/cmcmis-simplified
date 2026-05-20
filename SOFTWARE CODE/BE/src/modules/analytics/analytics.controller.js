@@ -68,6 +68,19 @@ const engineerWorkloadHandlers      = makeChartHandlers('engineerWorkload',
 const calibrationStatusHandlers     = makeChartHandlers('calibrationStatusBreakdown',
   svc.getCalibrationStatusBreakdown, 'calibration-status-breakdown', svc.csvCalibrationStatusBreakdown);
 
+// Phase 11 Slice 3 — additional chart handlers (G9..G12)
+const weeklyActivityHandlers        = makeChartHandlers('weeklyActivity',
+  svc.getWeeklyActivityTrend, 'weekly-activity-trend', svc.csvWeeklyActivityTrend);
+
+const jcLifecycleFunnelHandlers     = makeChartHandlers('jcLifecycleFunnel',
+  svc.getJcLifecycleFunnel, 'jc-lifecycle-funnel', svc.csvJcLifecycleFunnel);
+
+const equipmentRegistrationHandlers = makeChartHandlers('equipmentRegistrationTrend',
+  svc.getEquipmentRegistrationTrend, 'equipment-registration-trend', svc.csvEquipmentRegistrationTrend);
+
+const priorityMixHandlers           = makeChartHandlers('priorityMixTrend',
+  svc.getPriorityMixTrend, 'priority-mix-trend', svc.csvPriorityMixTrend);
+
 module.exports = {
   ...monthlyActivityHandlers,
   ...equipmentStatusHandlers,
@@ -77,4 +90,9 @@ module.exports = {
   ...jobTypeDistributionHandlers,
   ...engineerWorkloadHandlers,
   ...calibrationStatusHandlers,
+  // Phase 11 Slice 3
+  ...weeklyActivityHandlers,
+  ...jcLifecycleFunnelHandlers,
+  ...equipmentRegistrationHandlers,
+  ...priorityMixHandlers,
 };

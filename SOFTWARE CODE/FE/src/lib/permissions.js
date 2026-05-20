@@ -29,6 +29,7 @@ import {
   Package,
   Search,
   BarChart3,
+  LineChart,
   Settings,
   Users,
   IdCard,
@@ -56,6 +57,10 @@ export const ALL_NAV_ITEMS = [
   { label: 'Schedule',     to: '/schedule',     icon: Calendar,       requires: 'equipment:read-list' },
   { label: 'Procurement',  to: '/procurement',  icon: Package,        requires: 'equipment:read-list' },
   { label: 'Inquiry',      to: '/inquiry',      icon: Search,         requires: 'inquiry:search-instruments' },
+  // Phase 11 Slice 2 — standalone Analytics dashboard (8 chart cards).
+  // Sits between Inquiry and Reports because it's a quick at-a-glance
+  // destination; Reports remains the heavier detailed-table + PDF surface.
+  { label: 'Analytics',    to: '/analytics',    icon: LineChart,      requires: 'analytics:view' },
   // Phase 10 — gated by reports:view-analytics (all 5 roles hold it),
   // so the link surface is broad. Per-card visibility inside the page is
   // enforced via the per-report reports:view-* permissions independently.

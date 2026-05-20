@@ -86,4 +86,10 @@ register('/job-type-distribution',        ctrl.jobTypeDistribution,         ctrl
 register('/engineer-workload',            ctrl.engineerWorkload,            ctrl.engineerWorkloadCsv);
 register('/calibration-status-breakdown', ctrl.calibrationStatusBreakdown,  ctrl.calibrationStatusBreakdownCsv);
 
+// ── G9..G12 (Phase 11 Slice 3) ─────────────────────────────────────────
+register('/weekly-activity',              ctrl.weeklyActivity,              ctrl.weeklyActivityCsv);
+register('/jc-lifecycle-funnel',          ctrl.jcLifecycleFunnel,           ctrl.jcLifecycleFunnelCsv);
+register('/equipment-registration-trend', ctrl.equipmentRegistrationTrend,  ctrl.equipmentRegistrationTrendCsv);
+register('/priority-mix-trend',           ctrl.priorityMixTrend,            ctrl.priorityMixTrendCsv);
+
 module.exports = router;

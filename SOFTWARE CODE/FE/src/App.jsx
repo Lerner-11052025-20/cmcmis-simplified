@@ -54,6 +54,8 @@ import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
 import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
 // Phase 10 — Reports & Analytics landing page (replaces Phase-8 placeholder)
 import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
+// Phase 11 Slice 2 — standalone Analytics dashboard (sidebar entry)
+import { Analytics } from './pages/analytics/Analytics.jsx';
 
 export function App() {
   return (
@@ -201,6 +203,18 @@ export function App() {
             element={
               <ProtectedRoute requiredPermission="reports:view-analytics">
                 <ReportsLanding />
+              </ProtectedRoute>
+            }
+          />
+          {/* Phase 11 Slice 2 — standalone Analytics dashboard. Shares the
+              underlying chart endpoints with Reports but lives at its own
+              /analytics sidebar destination. Gated by analytics:view (all
+              5 roles hold it per mig 420). */}
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute requiredPermission="analytics:view">
+                <Analytics />
               </ProtectedRoute>
             }
           />

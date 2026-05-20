@@ -42,7 +42,8 @@ import { ReportFilters } from './ReportFilters.jsx';
 import { SummaryTiles } from './SummaryTiles.jsx';
 import { ReportTable } from './ReportTable.jsx';
 import { ExportPanel } from './ExportPanel.jsx';
-import { AnalyticsGrid } from './charts/AnalyticsGrid.jsx';
+// Phase 11 Slice 3 — analytics charts moved to the dedicated /analytics page.
+// The Reports page is now strictly the report-table + filter + export surface.
 
 const PAGE_SIZE = 50;
 
@@ -83,13 +84,9 @@ export function ReportsLanding() {
     keepPreviousData: true,
   });
 
-  // ── Analytics params — strip the per-report status filter ───────────
-  const chartParams = useMemo(() => ({
-    dateFrom:   filters.dateFrom   || undefined,
-    dateTo:     filters.dateTo     || undefined,
-    divisionId: filters.divisionId || undefined,
-    months:     filters.dateFrom && filters.dateTo ? undefined : 6,
-  }), [filters]);
+  // Phase 11 Slice 3 — analytics chart grid moved to /analytics. The Reports
+  // page no longer hosts the chart grid; users get the spacious redesigned
+  // dashboard at /analytics instead.
 
   return (
     <Layout>
@@ -134,13 +131,10 @@ export function ReportsLanding() {
           </p>
         )}
 
-        {/* Analytics chart grid (G1..G8) */}
-        {owned.has('reports:view-analytics') ? (
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-ink">Analytics</h2>
-            <AnalyticsGrid params={chartParams} />
-          </div>
-        ) : null}
+        {/* Phase 11 Slice 3 — the analytics chart grid lives on its own
+            /analytics page now. Users wanting charts navigate there from the
+            sidebar. This keeps Reports focused on the detailed table + PDF
+            export workflow. */}
 
         {/* Export panel — bottom of the page */}
         {cfg ? (

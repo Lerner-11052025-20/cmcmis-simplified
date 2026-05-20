@@ -269,7 +269,130 @@ async function calibrationStatusBreakdown(params) {
   ];
 }
 
+// ────────────────────────────────────────────────────────────────────
+//  PHASE 11 SLICE 3 — additional analytics endpoints (G9..G12)
+//  The new charts use the same `resolveWindow + applyWindow` helpers
+//  so filter behaviour is consistent with G1..G8.
+// ────────────────────────────────────────────────────────────────────
+
+// ── G9 · Weekly Activity Trend (last 12 weeks) ─────────────────────────
+// "Stock-market wavy" hero chart. Returns Calibrations vs Repairs counts
+// bucketed by ISO week. Always a 12-row return for a continuous x-axis.
+//
+// We don't honour `months` here — the chart is fixed to 12 weeks for the
+// wavy stock-market look that the UI demands. divisionId still applies.
+async function weeklyActivityTrend(params) {
+  const args = [];
+  // Bucket key: '%x-W%v' = ISO-year + ISO-week so months that straddle a
+  // year boundary don't collide.
+  const divClause = params.divisionId ? ' AND e.EQM_DIVID = ?' : '';
+  if (params.divisionId) args.push(params.divisionId);
+
+  const sql = `
+    SELECT DATE_FORMAT(jc.JM_JCRecdDate, '%x-W%v') AS week_label,
+           MIN(jc.JM_JCRecdDate)                    AS week_start,
+           SUM(CASE WHEN jc.JM_WORKFLOW_TYPE LIKE 'CALIBRATION%' OR jr.JR_JOB_TYPE = 'CALIBRATION' THEN 1 ELSE 0 END) AS calibrations,
+           SUM(CASE WHEN jc.JM_WORKFLOW_TYPE LIKE 'INSPECTION%'  OR jr.JR_JOB_TYPE = 'REPAIR'      THEN 1 ELSE 0 END) AS repairs
+      FROM cmms_jobcard_mst jc
+      LEFT JOIN cmms_eqip_mst       e  ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
+      LEFT JOIN cmms_jobrequest_mst jr ON jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
+     WHERE jc.JM_JCRecdDate >= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
+       ${divClause}
+     GROUP BY week_label
+     ORDER BY week_start ASC`;
+  const [rows] = await pool.query(sql, args);
+  return rows.map((r) => ({
+    week:         r.week_label,
+    calibrations: Number(r.calibrations) || 0,
+    repairs:      Number(r.repairs)      || 0,
+  }));
+}
+
+
+// ── G10 · Job Card Lifecycle Funnel ───────────────────────────────────
+// Counts at each lifecycle stage in canonical order. The order is
+// deterministic so the FE can render a funnel/staircase without sorting.
+async function jcLifecycleFunnel(params) {
+  const win = resolveWindow(params);
+  const where = [];
+  const args = [];
+  applyWindow(where, args, win, 'JM_JCRecdDate');
+  if (params.divisionId) {
+    where.push('EXISTS (SELECT 1 FROM cmms_eqip_mst e WHERE e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID AND e.EQM_DIVID = ?)');
+    args.push(params.divisionId);
+  }
+  const sql = `
+    SELECT JM_MVP_STATUS AS stage, COUNT(*) AS n
+      FROM cmms_jobcard_mst jc
+     WHERE ${where.join(' AND ')}
+     GROUP BY JM_MVP_STATUS`;
+  const [rows] = await pool.query(sql, args);
+  // Map onto the canonical funnel order so the FE doesn't have to sort.
+  const map = Object.fromEntries(rows.map((r) => [r.stage, Number(r.n) || 0]));
+  return [
+    { stage: 'ASSIGNED',         count: map.ASSIGNED         || 0 },
+    { stage: 'IN_PROGRESS',      count: map.IN_PROGRESS      || 0 },
+    { stage: 'COMPLETED',        count: map.COMPLETED        || 0 },
+    { stage: 'VERIFIED_CLOSED',  count: map.VERIFIED_CLOSED  || 0 },
+    { stage: 'REOPENED',         count: map.REOPENED         || 0 },
+  ];
+}
+
+
+// ── G11 · Equipment Registration Trend ────────────────────────────────
+// Equipment added per month — useful for capacity-growth trending.
+// Smooth wavy area chart on the FE.
+async function equipmentRegistrationTrend(params) {
+  const win = resolveWindow(params);
+  const where = ['EQM_CREATED_ON IS NOT NULL'];
+  const args = [];
+  applyWindow(where, args, win, 'EQM_CREATED_ON');
+  if (params.divisionId) { where.push('EQM_DIVID = ?'); args.push(params.divisionId); }
+  const sql = `
+    SELECT DATE_FORMAT(EQM_CREATED_ON, '%Y-%m') AS month,
+           COUNT(*)                              AS registered
+      FROM cmms_eqip_mst
+     WHERE ${where.join(' AND ')}
+     GROUP BY month
+     ORDER BY month ASC`;
+  const [rows] = await pool.query(sql, args);
+  return rows.map((r) => ({
+    month:      r.month,
+    registered: Number(r.registered) || 0,
+  }));
+}
+
+
+// ── G12 · Priority Mix Trend (stacked area) ───────────────────────────
+// Bucket: month. Series: LOW / MEDIUM / HIGH (legacy NORMAL collapses
+// into MEDIUM, URGENT collapses into HIGH per Phase-6 P6-D1 mapping).
+async function priorityMixTrend(params) {
+  const win = resolveWindow(params);
+  const where = [];
+  const args = [];
+  applyWindow(where, args, win, 'JR_CREATED_AT');
+  if (params.divisionId) { where.push('JR_DIVISION = ?'); args.push(params.divisionId); }
+  const sql = `
+    SELECT DATE_FORMAT(JR_CREATED_AT, '%Y-%m') AS month,
+           SUM(CASE WHEN JR_PRIORITY = 'LOW'                       THEN 1 ELSE 0 END) AS low_count,
+           SUM(CASE WHEN JR_PRIORITY IN ('NORMAL','MEDIUM')        THEN 1 ELSE 0 END) AS medium_count,
+           SUM(CASE WHEN JR_PRIORITY IN ('HIGH','URGENT')          THEN 1 ELSE 0 END) AS high_count
+      FROM cmms_jobrequest_mst
+     WHERE ${where.join(' AND ')}
+     GROUP BY month
+     ORDER BY month ASC`;
+  const [rows] = await pool.query(sql, args);
+  return rows.map((r) => ({
+    month:  r.month,
+    low:    Number(r.low_count)    || 0,
+    medium: Number(r.medium_count) || 0,
+    high:   Number(r.high_count)   || 0,
+  }));
+}
+
+
 module.exports = {
+  // G1..G8 (Phase 10)
   monthlyActivityTrends,
   equipmentStatusDistribution,
   monthlyJobTrends,
@@ -278,4 +401,9 @@ module.exports = {
   jobTypeDistribution,
   engineerWorkload,
   calibrationStatusBreakdown,
+  // G9..G12 (Phase 11 Slice 3)
+  weeklyActivityTrend,
+  jcLifecycleFunnel,
+  equipmentRegistrationTrend,
+  priorityMixTrend,
 };

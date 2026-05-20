@@ -99,6 +99,7 @@ export async function downloadReportPdf(key, params) {
 // ── ANALYTICS — JSON + CSV ─────────────────────────────────────────────
 
 const CHART_PATHS = {
+  // G1..G8 (Phase 10)
   monthlyActivity:             '/analytics/monthly-activity',
   equipmentStatus:             '/analytics/equipment-status',
   monthlyJobs:                 '/analytics/monthly-jobs',
@@ -107,6 +108,11 @@ const CHART_PATHS = {
   jobTypeDistribution:         '/analytics/job-type-distribution',
   engineerWorkload:            '/analytics/engineer-workload',
   calibrationStatusBreakdown:  '/analytics/calibration-status-breakdown',
+  // G9..G12 (Phase 11 Slice 3)
+  weeklyActivity:              '/analytics/weekly-activity',
+  jcLifecycleFunnel:           '/analytics/jc-lifecycle-funnel',
+  equipmentRegistrationTrend:  '/analytics/equipment-registration-trend',
+  priorityMixTrend:            '/analytics/priority-mix-trend',
 };
 
 export async function fetchChart(key, params, signal) {
