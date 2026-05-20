@@ -61,6 +61,9 @@ import { Notifications } from './pages/notifications/Notifications.jsx';
 // Phase 13 — Schedule + Procurement real pages (replace the Phase-5 placeholders)
 import { SchedulePage }    from './pages/schedule/SchedulePage.jsx';
 import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
+// Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only viewer
+// over audit_log + user_role_history + status-history tables.
+import { AuditViewer }     from './pages/audit/AuditViewer.jsx';
 
 export function App() {
   return (
@@ -268,11 +271,14 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* Phase 14 — Audit Log Viewer. Gate: audit:read-list (mig 600,
+              SUPER_ADMIN-only). Strictly read-only — no mutation controls
+              anywhere on the page. */}
           <Route
             path="/audit"
             element={
-              <ProtectedRoute requiredPermission="audit_log:read">
-                <Layout><ModulePlaceholder title="Audit Log" phase={8} /></Layout>
+              <ProtectedRoute requiredPermission="audit:read-list">
+                <Layout><AuditViewer /></Layout>
               </ProtectedRoute>
             }
           />

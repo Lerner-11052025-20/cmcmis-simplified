@@ -24,6 +24,12 @@
 // for these two items are REPLACED below with their proper codes. View-Only
 // retains visibility on both (read-list granted by mig 510) — write/order/
 // export actions are gated inside the pages by their specific perms.
+//
+// PHASE 14 (2026-05-22) — Admin · Audit Log nav item added under the Admin
+// section, gated on `audit:read-list` (migration 600). SUPER_ADMIN-only by
+// default. The new gate replaces the legacy `audit_log:read` reference the
+// placeholder route used between Phase 8 and Phase 13. Auto-hidden for every
+// other role via visibleNavItems().
 // ============================================================================
 
 import {
@@ -40,6 +46,7 @@ import {
   Users,
   IdCard,
   RefreshCw,
+  ScrollText,
 } from 'lucide-react';
 
 /**
@@ -76,6 +83,11 @@ export const ALL_NAV_ITEMS = [
   // Slice 2 may collapse into a collapsible group with Audit Log etc.
   { label: 'Admin · Users',     to: '/admin/users',     icon: Users,    requires: 'user:read-list' },
   { label: 'Admin · Employees', to: '/admin/employees', icon: IdCard,   requires: 'master:employees:manage' },
+  // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only.
+  // Gated on the new `audit:read-list` (mig 600); legacy `audit_log:read`
+  // (mig 006) is left in place for any historical reference but is no
+  // longer consulted by the FE.
+  { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
 ];
 
 /**

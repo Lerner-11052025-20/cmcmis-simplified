@@ -295,6 +295,13 @@ app.use(`${env.API_BASE_PATH}/schedules`, scheduleRoutes);
 const procurementRoutes = require('./modules/procurement/procurement.routes');
 app.use(`${env.API_BASE_PATH}/procurement`, procurementRoutes);
 
+// ── Audit Log Viewer (Phase 14) ─────────────────────────────────────────
+// Mounted at /api/v1/audit. STRICTLY read-only — every endpoint is a GET
+// over audit_log / user_role_history / status-history tables. Super-Admin-
+// only by default (audit:read-list + audit:export, mig 600).
+const auditRoutes = require('./modules/audit/audit.routes');
+app.use(`${env.API_BASE_PATH}/audit`, auditRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.
