@@ -252,6 +252,18 @@ app.use(`${env.API_BASE_PATH}/dashboard`, dashboardRoutes);
 const inquiryRoutes = require('./modules/inquiry/inquiry.routes');
 app.use(`${env.API_BASE_PATH}/inquiry`, inquiryRoutes);
 
+// ── Notifications module (Phase 12) ────────────────────────────────────
+// Mounted at /api/v1/notifications. Recipient-scoped at the SQL layer:
+// every endpoint serves ONLY the caller's own notifications. View-Only
+// users are excluded — they hold neither notifications:read-own nor
+// notifications:mark-own, so authorize() rejects them with 403.
+//
+// The WRITE side (emit() from inside JR/JC state-machine transactions)
+// is NOT exposed as an HTTP route — notifications are produced by
+// workflow events, never directly by clients.
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
+app.use(`${env.API_BASE_PATH}/notifications`, notificationsRoutes);
+
 // ── Reports module (Phase 10) ───────────────────────────────────────────
 // Mounted at /api/v1/reports. Six read-only reports (calibration-due,
 // pending-jobs, equipment-utilization, engineer-summary, job-card-summary,

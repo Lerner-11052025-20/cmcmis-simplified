@@ -35,6 +35,10 @@ import {
   setCsrfToken,
   clearAuthTokens,
 } from './api-client.js';
+// Phase 12 — register the token-capsule interceptor (side-effect import)
+// and keep its permission snapshot in sync with the current user.
+import './tokens/tokenInterceptor.js';
+import { setAuthSnapshot } from './tokens/tokenInterceptor.js';
 
 // ── Module-level singleton for the mount-time silent refresh ─────────────
 // React.StrictMode in development double-invokes effects to surface side-
@@ -79,6 +83,14 @@ const AuthContext = createContext(/** @type {AuthContextValue|null} */ (null));
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(/** @type {User|null} */ (null));
   const [loading, setLoading] = useState(true);
+
+  // Phase 12 — keep the token-interceptor's permission snapshot fresh
+  // whenever `user` changes. The interceptor uses this to decide whether
+  // to fire capsule tokens (View-Only users get none — they hold no
+  // notifications:read-own).
+  useEffect(() => {
+    setAuthSnapshot(user);
+  }, [user]);
 
   // ── Mount-time silent refresh + profile enrichment ────────────────────
   // Phase 4: just /auth/refresh.

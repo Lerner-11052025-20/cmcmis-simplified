@@ -56,6 +56,8 @@ import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
 import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
 // Phase 11 Slice 2 — standalone Analytics dashboard (sidebar entry)
 import { Analytics } from './pages/analytics/Analytics.jsx';
+// Phase 12 — Notifications page (linked from the TopBar bell dropdown)
+import { Notifications } from './pages/notifications/Notifications.jsx';
 
 export function App() {
   return (
@@ -215,6 +217,18 @@ export function App() {
             element={
               <ProtectedRoute requiredPermission="analytics:view">
                 <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          {/* Phase 12 — Notifications inbox. View-Only users do NOT hold
+              notifications:read-own (per mig 431) so they cannot reach this
+              URL even if they type it directly — ProtectedRoute redirects
+              them to /forbidden. */}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute requiredPermission="notifications:read-own">
+                <Notifications />
               </ProtectedRoute>
             }
           />

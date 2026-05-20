@@ -20,6 +20,60 @@ const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 
 // Phase 7 Slice 2 priority canonicaliser (LOW/NORMAL/HIGH/URGENT → LOW/MEDIUM/HIGH).
 const { toCanonicalPriority } = require('../jobRequests/jobRequests.repo');
+const jrRepo = require('../jobRequests/jobRequests.repo');
+
+/**
+ * Look up the JR owner (submitter) given a parent JR number. Returns
+ * `null` for legacy JCs that pre-date Phase 7 Slice 2 (no parent linked).
+ * Used by JC notification fan-out so the original requester is told
+ * when their work is verified / closed.
+ */
+async function findJrSubmitter(conn, parentJrNo) {
+  if (!parentJrNo) return null;
+  const [rows] = await conn.query(
+    'SELECT JR_SUBMITTEDBYID AS sub FROM cmms_jobrequest_mst WHERE JR_JOBREQUESTNO = ?',
+    [parentJrNo],
+  );
+  return rows[0]?.sub || null;
+}
+
+// Phase 12 — workflow event notifications. Emit inside the same txn as
+// audit + history so a rolled-back state change writes no notification.
+const { emit: emitNotification } = require('../notifications/notifications.emitter');
+const { getManagerialRecipients } = require('../notifications/notifications.recipients');
+
+/**
+ * Build the canonical JC code from the section job no / created date.
+ * The repo doesn't always have JM_JCRecdDate cheaply available in every
+ * mutation path; we fall back to current year when null.
+ */
+function jcCodeFrom(jc) {
+  const yr = jc?.jc_recd_date ? new Date(jc.jc_recd_date).getUTCFullYear()
+           : jc?.created_at   ? new Date(jc.created_at).getUTCFullYear()
+           : new Date().getUTCFullYear();
+  const num = String(jc?.jc_no || jc?.JM_JobCardNO || '').padStart(4, '0');
+  return `JC-${yr}-${num}`;
+}
+
+/**
+ * Pick a coarse "tab hint" for the JC_TAB_UPDATED notification body —
+ * just enough detail to make "Card updated" actionable without echoing
+ * 80 column names. Maps body keys onto the 13-tab vocabulary.
+ */
+function pickTabHint(body) {
+  if (!body || typeof body !== 'object') return 'details';
+  const keys = Object.keys(body);
+  if (keys.some((k) => k.startsWith('awaiting_') || ['supplier_name','indent_no','po_no','mirv_no'].includes(k))) return 'Awaiting Information';
+  if (keys.some((k) => ['vendor_supplier_name','intimation_sent_on','sent_to_vendor_date','gate_pass_no','invoice_no','cost_of_component','labour_charges'].includes(k))) return 'Contract / Warranty';
+  if (keys.includes('observations_text') || keys.includes('job_status_display')) return 'Observations';
+  if (keys.includes('plug_in_accessories'))     return 'Accessories';
+  if (keys.includes('equipments_used'))         return 'Equipments Used';
+  if (keys.includes('completion_summary'))      return 'Completion';
+  if (keys.some((k) => ['reviewed_by','review_comments','final_closure_notes','equipment_received_by_customer'].includes(k))) return 'Closure';
+  if (keys.includes('job_request_remarks') || keys.includes('repair_type') || keys.includes('job_complete_planned_date')) return 'Job Card Details';
+  if (keys.includes('submitted_by') || keys.includes('received_by')) return 'Submitted & Received';
+  return 'details';
+}
 
 // ── Helper: is the JC "legacy"? (D-9.14 read-only banner condition) ──
 // Legacy = pre-Phase-9 row: no parent JR, no assigned engineer (Phase 7
@@ -294,6 +348,23 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
       _updated_by_employee_id: actor.employeeId,
     });
 
+    // Phase 12 — notify the assigned engineer + managerial queue that a
+    // tab was edited. The actor is stripped by the emitter, so if the
+    // engineer edited their own card the only recipients are managers.
+    // We pick a coarse "tab hint" from the body keys touched so the
+    // notification copy is informative without enumerating every column.
+    const managers = await getManagerialRecipients();
+    const tabHint = pickTabHint(body);
+    await emitNotification({
+      conn,
+      event_type:  'JC_TAB_UPDATED',
+      entity_type: 'JOB_CARD',
+      entity_id:   sectionJobNo,
+      entity:      { cardCode: jcCodeFrom(jc), cardSectionNo: sectionJobNo, tabHint },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jc.assigned_engineer_employee_id, ...managers],
+    });
+
     await conn.commit();
     return { id: sectionJobNo, updated_columns: updated };
   } catch (err) {
@@ -331,6 +402,20 @@ async function startWorkJobCard({ sectionJobNo, actor, ipAddress, userAgent }) {
       userAgent,
       details: { from: jc.status, to: newState },
     });
+
+    // Phase 12 — notify engineer (echo of own action) + managers.
+    {
+      const managers = await getManagerialRecipients();
+      await emitNotification({
+        conn,
+        event_type:  'JC_START_WORK',
+        entity_type: 'JOB_CARD',
+        entity_id:   sectionJobNo,
+        entity:      { cardCode: jcCodeFrom(jc), cardSectionNo: sectionJobNo },
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [jc.assigned_engineer_employee_id, ...managers],
+      });
+    }
 
     await conn.commit();
 
@@ -413,6 +498,21 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
       },
     });
 
+    // Phase 12 — JC_MARKED_COMPLETE: engineer (echo) + managerial queue
+    // (LIC + SA need to know there's a card awaiting verification).
+    {
+      const managers = await getManagerialRecipients();
+      await emitNotification({
+        conn,
+        event_type:  'JC_MARKED_COMPLETE',
+        entity_type: 'JOB_CARD',
+        entity_id:   sectionJobNo,
+        entity:      { cardCode: jcCodeFrom(jc), cardSectionNo: sectionJobNo },
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [jc.assigned_engineer_employee_id, ...managers],
+      });
+    }
+
     await conn.commit();
     kpiCache.invalidate(KPI_KEYS.ORG);
     return { id: sectionJobNo, status: newState };
@@ -469,6 +569,23 @@ async function verifyCloseJobCard({ sectionJobNo, body, actor, ipAddress, userAg
     // eslint-disable-next-line no-console
     console.log(`[Phase11-stub] equipment.last_cal_date should be bumped for ${jc.equipment_type}-${jc.equipment_id} on verify-close of ${sectionJobNo}`);
 
+    // Phase 12 — JC_VERIFIED_CLOSED: engineer + original JR owner +
+    // managerial queue (echo). The JR owner gets closure confirmation —
+    // their request lifecycle is complete.
+    {
+      const managers   = await getManagerialRecipients();
+      const jrOwner    = await findJrSubmitter(conn, jc.parent_jr_no);
+      await emitNotification({
+        conn,
+        event_type:  'JC_VERIFIED_CLOSED',
+        entity_type: 'JOB_CARD',
+        entity_id:   sectionJobNo,
+        entity:      { cardCode: jcCodeFrom(jc), cardSectionNo: sectionJobNo },
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [jc.assigned_engineer_employee_id, jrOwner, ...managers],
+      });
+    }
+
     await conn.commit();
     kpiCache.invalidate(KPI_KEYS.ORG);
     return { id: sectionJobNo, status: newState };
@@ -516,6 +633,25 @@ async function reopenJobCard({ sectionJobNo, body, actor, ipAddress, userAgent }
         reason: String(body.reason).slice(0, 200),
       },
     });
+
+    // Phase 12 — JC_REOPENED: engineer (work is back on their plate) +
+    // managerial queue (queue state changed).
+    {
+      const managers = await getManagerialRecipients();
+      await emitNotification({
+        conn,
+        event_type:  'JC_REOPENED',
+        entity_type: 'JOB_CARD',
+        entity_id:   sectionJobNo,
+        entity:      {
+          cardCode: jcCodeFrom(jc),
+          cardSectionNo: sectionJobNo,
+          reason: String(body.reason).slice(0, 200),
+        },
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [jc.assigned_engineer_employee_id, ...managers],
+      });
+    }
 
     await conn.commit();
     kpiCache.invalidate(KPI_KEYS.ORG);

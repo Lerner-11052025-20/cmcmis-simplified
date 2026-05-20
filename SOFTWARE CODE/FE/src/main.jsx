@@ -18,6 +18,10 @@ import { Toaster } from 'sonner';
 
 import './styles/globals.css';
 import { App } from './App.jsx';
+// Phase 12 — token interceptor needs the QueryClient handle so it can
+// invalidate the notifications cache after every successful workflow
+// mutation (bell badge ticks instantly, not on the 30 s poll).
+import { setQueryClient } from './lib/tokens/tokenInterceptor.js';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -45,6 +49,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Phase 12 — hand the QueryClient to the token interceptor so it can
+// invalidate `['notifications', …]` queries after every workflow
+// mutation. Without this, the bell badge would wait up to 30 s (the
+// poll cadence) before reflecting a brand-new notification.
+setQueryClient(queryClient);
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>

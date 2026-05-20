@@ -56,6 +56,11 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context.jsx';
+import {
+  useUnreadCount,
+  useCanReadNotifications,
+} from '../lib/hooks/useNotifications.js';
+import { NotificationDropdown } from './notifications/NotificationDropdown.jsx';
 
 /**
  * Compute 2-letter initials from a display name or employee_id.
@@ -83,6 +88,33 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
   const [menuOpen, setMenuOpen] = useState(false);
   // Ref on the wrapper so we can detect "click was outside me".
   const menuRef = useRef(null);
+
+  // ── Phase 12 — notifications bell ────────────────────────────────────
+  // canReadNotifications gates the bell entirely (hidden for View-Only).
+  // unread is polled every 30 s by react-query; the badge shows "9+" when
+  // saturated to avoid layout shift on a 3-digit count.
+  const canReadNotifications = useCanReadNotifications();
+  const { unread } = useUnreadCount();
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef(null);
+
+  // Outside-click + Escape closes the bell dropdown (mirrors the user-menu pattern).
+  useEffect(() => {
+    if (!bellOpen) return undefined;
+    function handlePointer(e) {
+      if (bellRef.current && bellRef.current.contains(e.target)) return;
+      setBellOpen(false);
+    }
+    function handleKey(e) {
+      if (e.key === 'Escape') setBellOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [bellOpen]);
 
   // Search submit — navigate to /inquiry?q=… (BE wiring in Phase 7).
   function onSearchSubmit(e) {
@@ -184,17 +216,37 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
       {/* ── Right cluster ───────────────────────────────────────── */}
       <div className="flex items-center gap-4">
-        {/* Notifications (visual placeholder — wires up in Phase 8) */}
-        <button
-          type="button"
-          aria-label="Notifications (coming in Phase 8)"
-          title="Notifications — coming in Phase 8"
-          className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-base-elev hover:text-ink"
-        >
-          <Bell size={18} strokeWidth={1.5} aria-hidden="true" />
-          {/* Unread dot — static placeholder for now */}
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger" />
-        </button>
+        {/* Phase 12 — live notifications bell. Hidden entirely for users
+            without `notifications:read-own` (i.e. View-Only) so the
+            UI never offers an action the BE would 403. */}
+        {canReadNotifications ? (
+          <div className="relative" ref={bellRef}>
+            <button
+              type="button"
+              onClick={() => setBellOpen((o) => !o)}
+              aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
+              aria-haspopup="menu"
+              aria-expanded={bellOpen}
+              title={unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Notifications'}
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-base-elev hover:text-ink transition-colors"
+            >
+              <Bell size={18} strokeWidth={1.5} aria-hidden="true" />
+              {/* Live unread indicator. Show a count badge when ≥ 1; the
+                  badge caps visually at "9+" so the layout doesn't shift
+                  on a 3-digit count. */}
+              {unread > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-danger text-white text-[10px] font-semibold leading-none tabular-nums">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              ) : null}
+            </button>
+            {bellOpen ? (
+              <div className="absolute right-0 mt-2 z-20">
+                <NotificationDropdown onClose={() => setBellOpen(false)} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* ── User cluster + dropdown ─────────────────────────── */}
         {user ? (

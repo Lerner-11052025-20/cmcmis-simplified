@@ -32,6 +32,12 @@ const jcRepo = require('../jobCards/jobCards.repo');
 const lookupsRepo = require('../lookups/lookups.repo');
 const { WORKFLOW_BUCKET } = require('./jobRequests.validators');
 
+// Phase 12 — workflow events emit in-app notifications. The emitter must
+// be called INSIDE the same transaction as audit + status-history so a
+// failed transition writes no notification (atomicity, no orphans).
+const { emit: emitNotification } = require('../notifications/notifications.emitter');
+const { getManagerialRecipients } = require('../notifications/notifications.recipients');
+
 // ────────────────────────────────────────────────────────────────────
 //  LIST
 // ────────────────────────────────────────────────────────────────────
@@ -188,6 +194,41 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       },
     });
 
+    // ── Phase 12 — notification emit (atomic with the txn) ───────────
+    // wantsSubmit: notify the submitter (echo) + every manager (LIC + SA).
+    //   The emitter strips the actor from the recipient list, so the
+    //   echo line below is a no-op when actor === submitter — which is
+    //   always true for create. Still we keep the owner in the list for
+    //   clarity (and for the rare case where create-on-behalf-of is added).
+    // draft path: notify the owner only — managers don't watch drafts.
+    const jrEntity = {
+      code: formatJrCode(jrNo, new Date()),
+      id:   jrNo,
+      equipmentName: body.equipment_name,
+    };
+    if (wantsSubmit) {
+      const managers = await getManagerialRecipients();
+      await emitNotification({
+        conn,
+        event_type:  'JR_SUBMITTED',
+        entity_type: 'JOB_REQUEST',
+        entity_id:   jrNo,
+        entity:      jrEntity,
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [actor.employeeId, ...managers],
+      });
+    } else {
+      await emitNotification({
+        conn,
+        event_type:  'JR_DRAFT_SAVED',
+        entity_type: 'JOB_REQUEST',
+        entity_id:   jrNo,
+        entity:      jrEntity,
+        actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+        recipients:  [actor.employeeId],
+      });
+    }
+
     await conn.commit();
 
     // Phase 8: KPI cache invalidation (P8-D15). The org snapshot and
@@ -253,6 +294,19 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
       ipAddress,
       userAgent,
       details: { from: jr.status, to: newState, tnc_version: body.tnc_version || 'v1' },
+    });
+
+    // Phase 12 — notify the submitter (their request was sent for approval)
+    // + the managerial queue (LIC + SA hold job_request:approve).
+    const managers = await getManagerialRecipients();
+    await emitNotification({
+      conn,
+      event_type:  'JR_SUBMITTED',
+      entity_type: 'JOB_REQUEST',
+      entity_id:   jrNo,
+      entity:      { code: formatJrCode(jrNo, jr.created_at), id: jrNo, equipmentName: jr.equipment_name },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jr.submitted_by_employee_id, ...managers],
     });
 
     await conn.commit();
@@ -338,6 +392,21 @@ async function editDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) 
       },
     });
 
+    // Phase 12 — owner-only edit, so the only recipient is the owner.
+    // The emitter strips the actor (= owner) → effectively a self-event
+    // that records "draft updated at X" in the user's notification
+    // history. We keep this for traceability even though it produces 0
+    // rows in the common case.
+    await emitNotification({
+      conn,
+      event_type:  'JR_EDIT_DRAFT',
+      entity_type: 'JOB_REQUEST',
+      entity_id:   jrNo,
+      entity:      { code: formatJrCode(jrNo, jr.created_at), id: jrNo, equipmentName: body.equipment_name || jr.equipment_name },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jr.submitted_by_employee_id],
+    });
+
     await conn.commit();
     return { id: jrNo, request_code: formatJrCode(jrNo, jr.created_at), status: 'DRAFT' };
   } catch (err) {
@@ -404,6 +473,19 @@ async function cancelDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }
         to:     'CANCELLED',
         reason: reason ? reason.slice(0, 200) : null,
       },
+    });
+
+    // Phase 12 — notify the owner + the managerial queue (they were
+    // watching the SUBMITTED bucket; a cancel removes it).
+    const managers = await getManagerialRecipients();
+    await emitNotification({
+      conn,
+      event_type:  'JR_CANCELLED',
+      entity_type: 'JOB_REQUEST',
+      entity_id:   jrNo,
+      entity:      { code: formatJrCode(jrNo, jr.created_at), id: jrNo, reason: reason || null },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jr.submitted_by_employee_id, ...managers],
     });
 
     await conn.commit();
@@ -761,6 +843,36 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
       },
     });
 
+    // ── Phase 12 — fan out TWO logical events from Convert ───────────
+    // (a) JR_APPROVED_CONVERTED → owner + assigned engineer + managers.
+    //     The owner sees "approved", the engineer sees "new card",
+    //     other managers see the queue moved.
+    // (b) JC_CREATED → assigned engineer + managers (managers track
+    //     creation events for queue visibility).
+    const managers = await getManagerialRecipients();
+    const jcCode = `JC-${new Date().getUTCFullYear()}-${String(jcNo).padStart(4, '0')}`;
+    const jrCode = formatJrCode(jr.jr_no, jr.created_at);
+
+    await emitNotification({
+      conn,
+      event_type:  'JR_APPROVED_CONVERTED',
+      entity_type: 'JOB_REQUEST',
+      entity_id:   jr.jr_no,
+      entity:      { code: jrCode, id: jr.jr_no, cardCode: jcCode, cardSectionNo: sectionJobNo },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jr.submitted_by_employee_id, engineer.employee_id, ...managers],
+    });
+
+    await emitNotification({
+      conn,
+      event_type:  'JC_CREATED',
+      entity_type: 'JOB_CARD',
+      entity_id:   sectionJobNo,
+      entity:      { cardCode: jcCode, cardSectionNo: sectionJobNo },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [engineer.employee_id, ...managers],
+    });
+
     await conn.commit();
 
     // 13) After-commit side effects. The kpiCache invalidation MUST run
@@ -873,6 +985,23 @@ async function rejectJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
         // to 500 chars by buildAuditNotes().
         reason: String(body.reason).slice(0, 200),
       },
+    });
+
+    // Phase 12 — notify the owner only (the rejection is the owner's
+    // problem to address; managers don't need a queue update since the
+    // SUBMITTED bucket already loses the row).
+    await emitNotification({
+      conn,
+      event_type:  'JR_REJECTED',
+      entity_type: 'JOB_REQUEST',
+      entity_id:   jrNo,
+      entity:      {
+        code: formatJrCode(jr.jr_no, jr.created_at),
+        id:   jr.jr_no,
+        reason: String(body.reason).slice(0, 200),
+      },
+      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
+      recipients:  [jr.submitted_by_employee_id],
     });
 
     await conn.commit();

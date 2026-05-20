@@ -32,6 +32,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
+// Phase 12 — TokenHost renders capsule pop-ups in the strip between the
+// TopBar and the page content. Mounted once here so EVERY route can fire
+// pushToken() without each page wiring its own host.
+import { TokenHost } from './tokens/TokenHost.jsx';
 
 // Single source of truth for the localStorage key — exported in case a
 // future hook (e.g. a "collapse on mobile" effect) wants to write it too.
@@ -82,6 +86,10 @@ export function Layout({ children }) {
       <Sidebar collapsed={collapsed} onToggle={handleToggleSidebar} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar collapsed={collapsed} onToggleSidebar={handleToggleSidebar} />
+        {/* Phase 12 — capsule strip. Sits BELOW the sticky TopBar and
+            ABOVE the page heading (per spec §4.1). Renders empty when
+            no tokens are active (no layout shift). */}
+        <TokenHost />
         <main className="flex-1 overflow-auto p-8">{children}</main>
       </div>
     </div>
