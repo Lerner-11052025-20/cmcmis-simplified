@@ -114,6 +114,19 @@ const SUCCESS_RULES = [
   { method: 'PATCH',  pattern: /^\/admin\/users\/[^/]+\/role\/?$/,       msg: 'Role updated' },
   { method: 'PATCH',  pattern: /^\/admin\/users\/[^/]+\/(activate|deactivate)\/?$/,
                                                                        msg: 'User status changed' },
+
+  // ── Phase 13 · Schedule ───────────────────────────────────────────
+  { method: 'POST',   pattern: /^\/schedules\/?$/,                       msg: 'Schedule created' },
+  { method: 'PATCH',  pattern: /^\/schedules\/[^/]+\/?$/,                msg: 'Schedule updated' },
+  { method: 'POST',   pattern: /^\/schedules\/[^/]+\/status\/?$/,        msg: 'Schedule status changed' },
+  { method: 'DELETE', pattern: /^\/schedules\/[^/]+\/?$/,                msg: 'Schedule cancelled' },
+
+  // ── Phase 13 · Procurement ────────────────────────────────────────
+  { method: 'POST',   pattern: /^\/procurement\/purchase-orders\/?$/,                msg: 'Purchase Order created' },
+  { method: 'PATCH',  pattern: /^\/procurement\/purchase-orders\/[^/]+\/?$/,         msg: 'Purchase Order updated' },
+  { method: 'POST',   pattern: /^\/procurement\/spare-parts\/?$/,                    msg: 'Spare part added' },
+  { method: 'PATCH',  pattern: /^\/procurement\/spare-parts\/[^/]+\/?$/,             msg: 'Spare part updated' },
+  { method: 'POST',   pattern: /^\/procurement\/spare-parts\/[^/]+\/order\/?$/,      msg: 'Order placed' },
 ];
 
 /** Find the first matching rule for a given (method, url). */

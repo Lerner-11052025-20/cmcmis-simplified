@@ -58,6 +58,9 @@ import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
 import { Analytics } from './pages/analytics/Analytics.jsx';
 // Phase 12 — Notifications page (linked from the TopBar bell dropdown)
 import { Notifications } from './pages/notifications/Notifications.jsx';
+// Phase 13 — Schedule + Procurement real pages (replace the Phase-5 placeholders)
+import { SchedulePage }    from './pages/schedule/SchedulePage.jsx';
+import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
 
 export function App() {
   return (
@@ -164,20 +167,20 @@ export function App() {
             }
           />
 
-          {/* ── Other placeholders (gated routes lock URL surface) ─ */}
+          {/* ── Phase 13 — Schedule + Procurement (real CRUD) ─────── */}
           <Route
             path="/schedule"
             element={
-              <ProtectedRoute requiredPermission="equipment:read-list">
-                <Layout><ModulePlaceholder title="Schedule" phase={7} /></Layout>
+              <ProtectedRoute requiredPermission="schedule:read-list">
+                <Layout><SchedulePage /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
             path="/procurement"
             element={
-              <ProtectedRoute requiredPermission="equipment:read-list">
-                <Layout><ModulePlaceholder title="Procurement" phase={7} /></Layout>
+              <ProtectedRoute requiredPermission="procurement:read-list">
+                <Layout><ProcurementPage /></Layout>
               </ProtectedRoute>
             }
           />

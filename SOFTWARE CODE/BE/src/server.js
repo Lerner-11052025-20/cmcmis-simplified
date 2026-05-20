@@ -280,6 +280,21 @@ app.use(`${env.API_BASE_PATH}/reports`, reportsRoutes);
 const analyticsRoutes = require('./modules/analytics/analytics.routes');
 app.use(`${env.API_BASE_PATH}/analytics`, analyticsRoutes);
 
+// ── Schedule module (Phase 13) ──────────────────────────────────────────
+// Mounted at /api/v1/schedules. PM + Calibration plan CRUD + ICS export.
+// Each endpoint is gated by its own permission (schedule:read-list /
+// schedule:create / schedule:update / schedule:delete / schedule:export) —
+// no borrowed gate from other modules.
+const scheduleRoutes = require('./modules/schedule/schedule.routes');
+app.use(`${env.API_BASE_PATH}/schedules`, scheduleRoutes);
+
+// ── Procurement module (Phase 13) ───────────────────────────────────────
+// Mounted at /api/v1/procurement. Two sub-areas — purchase-orders/ +
+// spare-parts/ — each with list/create/update + CSV export, plus the
+// /spare-parts/:id/order action that creates or augments a PO.
+const procurementRoutes = require('./modules/procurement/procurement.routes');
+app.use(`${env.API_BASE_PATH}/procurement`, procurementRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.

@@ -11,13 +11,19 @@
 //   2. Job Requests   — every role
 //   3. Job Cards      — every role (read-list permission)
 //   4. Equipment      — every role
-//   5. Schedule       — placeholder, gated by equipment:read-list this phase
-//   6. Procurement    — placeholder, gated by equipment:read-list this phase
+//   5. Schedule       — Phase 13 ships real CRUD; gate = schedule:read-list
+//   6. Procurement    — Phase 13 ships real CRUD; gate = procurement:read-list
 //   7. Inquiry        — every role
 //   8. Reports        — placeholder, gated by dashboard:view this phase
 //   9. Admin          — SUPER_ADMIN only (user:read-list permission)
 //
 // Per BR-RBAC-03 we check PERMISSION CODES, never role names.
+//
+// PHASE 13 (2026-05-21) — Schedule + Procurement gained their own permission
+// codes (migration 510). The previously-borrowed `equipment:read-list` gates
+// for these two items are REPLACED below with their proper codes. View-Only
+// retains visibility on both (read-list granted by mig 510) — write/order/
+// export actions are gated inside the pages by their specific perms.
 // ============================================================================
 
 import {
@@ -54,8 +60,8 @@ export const ALL_NAV_ITEMS = [
   { label: 'Conversion',   to: '/conversion',   icon: RefreshCw,      requires: 'job_request:approve' },
   { label: 'Job Cards',    to: '/job-cards',    icon: ClipboardList,  requires: 'job_card:read-list' },
   { label: 'Equipment',    to: '/equipment',    icon: Wrench,         requires: 'equipment:read-list' },
-  { label: 'Schedule',     to: '/schedule',     icon: Calendar,       requires: 'equipment:read-list' },
-  { label: 'Procurement',  to: '/procurement',  icon: Package,        requires: 'equipment:read-list' },
+  { label: 'Schedule',     to: '/schedule',     icon: Calendar,       requires: 'schedule:read-list' },
+  { label: 'Procurement',  to: '/procurement',  icon: Package,        requires: 'procurement:read-list' },
   { label: 'Inquiry',      to: '/inquiry',      icon: Search,         requires: 'inquiry:search-instruments' },
   // Phase 11 Slice 2 — standalone Analytics dashboard (8 chart cards).
   // Sits between Inquiry and Reports because it's a quick at-a-glance
