@@ -2,19 +2,90 @@
 // pages/jobCards/components/DetailHeader.jsx
 // ----------------------------------------------------------------------------
 // Top strip of the JC detail page: back-link, JC code + Section JobNo,
-// equipment summary, status pill + priority pill, Update-Status / PDF
-// buttons (PDF is Phase 11 — disabled here).
+// equipment summary, status pill + priority pill, Download buttons.
 //
-// Matches image-19 / 20.
+// PHASE 11 UPDATE
+//   The "Download Report" button (Certificate, PDF #1) is now WIRED.
+//   It's enabled when:
+//     - the user holds `job_card:download-certificate`, AND
+//     - the JC's status ∈ { COMPLETED, VERIFIED_CLOSED }.
+//   Otherwise we keep it disabled with a tooltip explaining why — the BE
+//   independently re-validates (returns 409 on ineligible status, 403
+//   on missing permission), so the FE gate is UX only.
+//
+//   A new "Download Full Details" button (PDF #2) appears next to it,
+//   gated by `job_card:download-details`. Available for any JC the
+//   user is already viewing.
 // ============================================================================
 
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileDown } from 'lucide-react';
+import { ArrowLeft, FileDown, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { StatusPill } from '../../../components/StatusPill.jsx';
 import { PriorityLabel } from '../../../components/PriorityLabel.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
+import { useAuth } from '../../../lib/auth-context.jsx';
+import {
+  downloadJobCardCertificate,
+  downloadJobCardDetails,
+  isCertificateEligible,
+} from '../../../lib/api/pdf.js';
 
 export function DetailHeader({ jc }) {
+  const { user } = useAuth();
+  const perms = user?.permissions || [];
+  const canDownloadCert    = perms.includes('job_card:download-certificate');
+  const canDownloadDetails = perms.includes('job_card:download-details');
+
+  // Tooltip + disabled-reason logic — keep the UX explicit about WHY a
+  // download is unavailable. The BE is the real gate; this is just a
+  // helpful UX hint.
+  const certEligible = isCertificateEligible(jc.status);
+  const certDisabled = !canDownloadCert || !certEligible;
+  const certTooltip = !canDownloadCert
+    ? 'You do not have permission to download the certificate.'
+    : !certEligible
+      ? 'Certificate is available once the job card is COMPLETED or VERIFIED_CLOSED.'
+      : `Download Job Card Certificate (${jc.section_job_no})`;
+
+  // Local "busy" flag so the button shows feedback while the BE streams.
+  const [busy, setBusy] = useState(null);  // 'cert' | 'details' | null
+
+  async function onDownloadCert() {
+    setBusy('cert');
+    const id = toast.loading('Preparing Certificate PDF…');
+    try {
+      const { filename } = await downloadJobCardCertificate(jc.section_job_no);
+      toast.success(`Downloaded ${filename}`, { id });
+    } catch (e) {
+      // pdf.js attaches the parsed JSON envelope on err.response.data.
+      const msg = e.response?.data?.error?.message
+              || e.message
+              || 'Failed to download certificate';
+      toast.error(msg, { id });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onDownloadDetails() {
+    setBusy('details');
+    const id = toast.loading('Preparing Job Card Details PDF…');
+    try {
+      const { filename } = await downloadJobCardDetails(jc.section_job_no);
+      toast.success(`Downloaded ${filename}`, { id });
+    } catch (e) {
+      const msg = e.response?.data?.error?.message
+              || e.message
+              || 'Failed to download details';
+      toast.error(msg, { id });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <Link
@@ -48,15 +119,35 @@ export function DetailHeader({ jc }) {
           <div className="text-xs text-ink-soft">
             Priority: <PriorityLabel priority={jc.priority} />
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled
-            title="PDF generation ships in Phase 11"
-          >
-            <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
-            Download Report
-          </Button>
+
+          {/* ── PDF download buttons ─────────────────────────── */}
+          <div className="flex items-center gap-2">
+            {canDownloadDetails ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy === 'details'}
+                title={`Download full Job Card details (${jc.section_job_no})`}
+                onClick={onDownloadDetails}
+              >
+                <FileText size={14} strokeWidth={1.75} aria-hidden="true" />
+                {busy === 'details' ? 'Preparing…' : 'Download Full Details'}
+              </Button>
+            ) : null}
+            {/* Certificate button is the canonical "Download Report" CTA
+                shown in the attached UI screenshot. We keep the label
+                'Download Report' for continuity. */}
+            <Button
+              variant={certDisabled ? 'secondary' : 'primary'}
+              size="sm"
+              disabled={certDisabled || busy === 'cert'}
+              title={certTooltip}
+              onClick={onDownloadCert}
+            >
+              <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+              {busy === 'cert' ? 'Preparing…' : 'Download Report'}
+            </Button>
+          </div>
         </div>
       </div>
 

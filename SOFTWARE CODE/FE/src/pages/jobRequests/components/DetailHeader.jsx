@@ -1,17 +1,24 @@
 // ============================================================================
 // pages/jobRequests/components/DetailHeader.jsx
 // ----------------------------------------------------------------------------
-// Top strip of the Detail page: back-link, JR code, status pill, priority
+// Top strip of the JR Detail page: back-link, JR code, status pill, priority
 // pill, type label, created/submitted timestamps.
 //
-// Pure presentation — no fetching, no state. Receives the JR detail
-// payload from the orchestrator.
+// PHASE 11 UPDATE — adds "Download Request PDF" button (PDF #3).
+// Gated by `job_request:download-details`. BE re-validates row-level scope
+// (Normal Users see only their own JRs) and returns 404 for foreign IDs.
 // ============================================================================
 
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileDown } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { StatusPill } from '../../../components/StatusPill.jsx';
 import { PriorityLabel } from '../../../components/PriorityLabel.jsx';
+import { Button } from '../../../components/ui/Button.jsx';
+import { useAuth } from '../../../lib/auth-context.jsx';
+import { downloadJobRequestDetails } from '../../../lib/api/pdf.js';
 
 const JOB_TYPE_LABEL = {
   CALIBRATION:  'Calibration',
@@ -36,6 +43,26 @@ function fmt(iso) {
  * @param {Object} props.jr  Full JR detail payload from /:id endpoint
  */
 export function DetailHeader({ jr }) {
+  const { user } = useAuth();
+  const canDownload = (user?.permissions || []).includes('job_request:download-details');
+  const [busy, setBusy] = useState(false);
+
+  async function onDownload() {
+    setBusy(true);
+    const id = toast.loading('Preparing Job Request PDF…');
+    try {
+      const { filename } = await downloadJobRequestDetails(jr.id || jr.jr_no);
+      toast.success(`Downloaded ${filename}`, { id });
+    } catch (e) {
+      const msg = e.response?.data?.error?.message
+              || e.message
+              || 'Failed to download request PDF';
+      toast.error(msg, { id });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Back-link */}
@@ -70,12 +97,24 @@ export function DetailHeader({ jr }) {
           </div>
         </div>
 
-        {/* Right: status + priority pills */}
+        {/* Right: status + priority pills + Download button (Phase 11) */}
         <div className="flex flex-col items-end gap-1.5">
           <StatusPill status={jr.status} />
           <div className="text-xs text-ink-soft">
             Priority: <PriorityLabel priority={jr.priority} />
           </div>
+          {canDownload ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy}
+              title={`Download Job Request PDF (${jr.request_code})`}
+              onClick={onDownload}
+            >
+              <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+              {busy ? 'Preparing…' : 'Download Request PDF'}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

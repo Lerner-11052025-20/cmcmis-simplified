@@ -191,6 +191,21 @@ app.use(`${env.API_BASE_PATH}`, usersRoutes);
 const equipmentRoutes = require('./modules/equipment/equipment.routes');
 app.use(`${env.API_BASE_PATH}/equipment`, equipmentRoutes);
 
+// ── Phase 11 PDF endpoints (MOUNTED FIRST so .pdf paths take precedence) ──
+// Three streamed PDF endpoints:
+//   GET /api/v1/job-cards/:id/certificate.pdf  (LOCKED single-page certificate;
+//                                               status must be COMPLETED or
+//                                               VERIFIED_CLOSED — else 409)
+//   GET /api/v1/job-cards/:id/details.pdf      (multi-page full Job Card details)
+//   GET /api/v1/job-requests/:id/details.pdf   (multi-page Job Request details)
+//
+// IMPORTANT — order matters. These must mount BEFORE the corresponding
+// jobCards / jobRequests routers so their `.pdf` paths win the route
+// match. Express resolves routes top-down.
+const { jobCardPdfRouter, jobRequestPdfRouter } = require('./modules/pdf/pdf.routes');
+app.use(`${env.API_BASE_PATH}/job-requests`, jobRequestPdfRouter);
+app.use(`${env.API_BASE_PATH}/job-cards`,    jobCardPdfRouter);
+
 // ── Job Requests module (Phase 6 Slice 1) ───────────────────────────────
 // Mounted at /api/v1/job-requests. List + create + submit implemented;
 // detail / approve / reject stubbed with 404 until Phase 6 Slice 2.
