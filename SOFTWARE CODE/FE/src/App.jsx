@@ -52,6 +52,8 @@ import { Conversion } from './pages/conversion/Conversion.jsx';
 import { UserList } from './pages/admin/users/UserList.jsx';
 import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
 import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
+// Phase 10 — Reports & Analytics landing page (replaces Phase-8 placeholder)
+import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
 
 export function App() {
   return (
@@ -188,11 +190,17 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* Phase 10 — Reports & Analytics. Gate uses the broadest of the
+              new perms (reports:view-analytics — every role except none).
+              Per-card visibility is handled inside ReportsLanding by checking
+              each card's `requires` against the user's permission set; the
+              BE re-enforces the same gates on every /api/v1/reports/* and
+              /api/v1/analytics/* endpoint independently. */}
           <Route
             path="/reports"
             element={
-              <ProtectedRoute requiredPermission="dashboard:view">
-                <Layout><ModulePlaceholder title="Reports" phase={8} /></Layout>
+              <ProtectedRoute requiredPermission="reports:view-analytics">
+                <ReportsLanding />
               </ProtectedRoute>
             }
           />

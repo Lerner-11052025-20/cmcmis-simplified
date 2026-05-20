@@ -56,7 +56,10 @@ export const ALL_NAV_ITEMS = [
   { label: 'Schedule',     to: '/schedule',     icon: Calendar,       requires: 'equipment:read-list' },
   { label: 'Procurement',  to: '/procurement',  icon: Package,        requires: 'equipment:read-list' },
   { label: 'Inquiry',      to: '/inquiry',      icon: Search,         requires: 'inquiry:search-instruments' },
-  { label: 'Reports',      to: '/reports',      icon: BarChart3,      requires: 'dashboard:view' },
+  // Phase 10 — gated by reports:view-analytics (all 5 roles hold it),
+  // so the link surface is broad. Per-card visibility inside the page is
+  // enforced via the per-report reports:view-* permissions independently.
+  { label: 'Reports',      to: '/reports',      icon: BarChart3,      requires: 'reports:view-analytics' },
   // Phase 7 — Admin module (Super Admin only). Old "Admin" placeholder
   // is replaced by these two flat items. Q-7 locked: flat now; future
   // Slice 2 may collapse into a collapsible group with Audit Log etc.

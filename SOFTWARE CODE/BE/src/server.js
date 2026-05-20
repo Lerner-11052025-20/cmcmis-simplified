@@ -237,6 +237,22 @@ app.use(`${env.API_BASE_PATH}/dashboard`, dashboardRoutes);
 const inquiryRoutes = require('./modules/inquiry/inquiry.routes');
 app.use(`${env.API_BASE_PATH}/inquiry`, inquiryRoutes);
 
+// ── Reports module (Phase 10) ───────────────────────────────────────────
+// Mounted at /api/v1/reports. Six read-only reports (calibration-due,
+// pending-jobs, equipment-utilization, engineer-summary, job-card-summary,
+// job-request-summary). Each exposes a JSON view + PDF stream. Strictly
+// read-only — no DB writes, no report logs, no persisted PDFs (Phase-10 §1.F).
+const reportsRoutes = require('./modules/reports/reports.routes');
+app.use(`${env.API_BASE_PATH}/reports`, reportsRoutes);
+
+// ── Analytics module (Phase 10) ─────────────────────────────────────────
+// Mounted at /api/v1/analytics. Eight chart aggregation endpoints (G1..G8)
+// — monthly activity, equipment status donut, monthly job trends, division-
+// wise jobs, calibration completion trend, job-type distribution, engineer
+// workload, calibration status breakdown. Each exposes JSON + CSV download.
+const analyticsRoutes = require('./modules/analytics/analytics.routes');
+app.use(`${env.API_BASE_PATH}/analytics`, analyticsRoutes);
+
 // ── 13a. 404 — anything that didn't match a route above falls through ───
 // Mounted JUST BEFORE the error handler. notFoundHandler synthesises an
 // AppError(NOT_FOUND) and forwards it; errorHandler does the rendering.
