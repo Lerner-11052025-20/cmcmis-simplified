@@ -31,6 +31,7 @@
 
 import { X as XIcon, ExternalLink, Code2 } from 'lucide-react';
 
+import { MadeWithLove } from '../../components/MadeWithLove.jsx';
 import { useAuditDetail } from '../../lib/hooks/useAuditLog.js';
 
 
@@ -122,6 +123,9 @@ export function AuditDetailDrawer({ row, onClose }) {
           <Section title="Details" icon={Code2}>
             <NotesView notes_json={r.notes_json} notes_text={r.notes_text} />
           </Section>
+
+          {/* Authorship credit — bottom of the drawer. */}
+          <MadeWithLove size="sm" />
         </div>
       </div>
     </div>

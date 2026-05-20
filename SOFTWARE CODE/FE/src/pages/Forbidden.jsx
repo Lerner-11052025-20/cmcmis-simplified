@@ -20,6 +20,7 @@
 import { Link } from 'react-router-dom';
 import { ShieldOff } from 'lucide-react';
 import { Button } from '../components/ui/Button.jsx';
+import { MadeWithLove } from '../components/MadeWithLove.jsx';
 import { useAuth } from '../lib/auth-context.jsx';
 
 /**
@@ -67,6 +68,9 @@ export function Forbidden({ requiredPermission }) {
           </Link>
           <Button variant="ghost" onClick={logout}>Sign out</Button>
         </div>
+
+        {/* Authorship credit — bottom of the 403 card. */}
+        <MadeWithLove size="sm" />
       </div>
     </main>
   );

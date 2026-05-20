@@ -18,6 +18,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/Button.jsx';
+import { MadeWithLove } from '../../../components/MadeWithLove.jsx';
 import { jobCardReopenSchema } from '../../../lib/schemas/jobCardSchemas.js';
 import { reopenJobCard } from '../../../lib/api/jobCards.js';
 
@@ -125,6 +126,9 @@ export function ReopenModal({ jc, onClose, onSuccess }) {
             {isSubmitting ? 'Reopening…' : 'Reopen Job Card'}
           </Button>
         </div>
+
+        {/* Authorship credit — bottom of every modal. */}
+        <MadeWithLove size="sm" />
       </div>
     </div>
   );
