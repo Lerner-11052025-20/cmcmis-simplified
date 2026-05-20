@@ -191,15 +191,17 @@ async function calibrationCompletionTrend(params) {
   const sql = `
     SELECT DATE_FORMAT(JM_VERIFIED_ON, '%Y-%m') AS month,
            SUM(CASE WHEN JM_PlannedComletedDate IS NULL OR JM_VERIFIED_ON <= JM_PlannedComletedDate THEN 1 ELSE 0 END) AS on_time,
-           SUM(CASE WHEN JM_PlannedComletedDate IS NOT NULL AND JM_VERIFIED_ON >  JM_PlannedComletedDate THEN 1 ELSE 0 END) AS delayed
+           SUM(CASE WHEN JM_PlannedComletedDate IS NOT NULL AND JM_VERIFIED_ON >  JM_PlannedComletedDate THEN 1 ELSE 0 END) AS delayed_count
       FROM cmms_jobcard_mst
      WHERE ${where.join(' AND ')}
      GROUP BY month ORDER BY month`;
+  // NOTE: `delayed` alone is a reserved word in MariaDB — alias as
+  // `delayed_count` in SQL, then expose canonical `delayed` to the FE.
   const [rows] = await pool.query(sql, args);
   return rows.map((r) => ({
     month:   r.month,
-    on_time: Number(r.on_time) || 0,
-    delayed: Number(r.delayed) || 0,
+    on_time: Number(r.on_time)       || 0,
+    delayed: Number(r.delayed_count) || 0,
   }));
 }
 
@@ -259,7 +261,7 @@ async function calibrationStatusBreakdown(params) {
       SUM(CASE WHEN EQM_CAL_DUE_DATE IS NULL OR EQM_CAL_DUE_DATE > CURDATE() + INTERVAL 30 DAY THEN 1 ELSE 0 END) AS valid
       FROM cmms_eqip_mst
      WHERE ${where.join(' AND ')}`;
-  const [[rows]] = await pool.query(sql, args);
+  const [rows] = await pool.query(sql, args);
   return [
     { band: 'VALID',    count: Number(rows[0].valid)    || 0 },
     { band: 'DUE_SOON', count: Number(rows[0].due_soon) || 0 },

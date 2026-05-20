@@ -229,7 +229,8 @@ async function summaryCalibrationDue(params) {
     FROM cmms_eqip_mst e
     WHERE ${where.join(' AND ')}`;
 
-  const [[rows]] = await pool.query(sql, [dueSoonDays, dueSoonDays, ...args]);
+  // mysql2 returns [rows, fields]; destructure once to get the rows array.
+  const [rows] = await pool.query(sql, [dueSoonDays, dueSoonDays, ...args]);
   return {
     total:    Number(rows[0].total)    || 0,
     overdue:  Number(rows[0].overdue)  || 0,
@@ -364,7 +365,7 @@ async function summaryPendingJobs(params, rowScope = { canReadAll: true }) {
   if (dateFromTs) dynArgs.push(dateFromTs);
   if (dateToTs)   dynArgs.push(dateToTs);
 
-  const [[rows]] = await pool.query(sql, [...dynArgs, ...divArgs, ...scopeClauseArgs]);
+  const [rows] = await pool.query(sql, [...dynArgs, ...divArgs, ...scopeClauseArgs]);
   return {
     total_pending: Number(rows[0].total_pending) || 0,
     new_requests:  Number(rows[0].new_requests)  || 0,
@@ -486,7 +487,7 @@ async function summaryEquipmentUtilization(params) {
     ...subDateArgs,                       // inner date window
   ];
 
-  const [[rows]] = await pool.query(sql, bindings);
+  const [rows] = await pool.query(sql, bindings);
   const total = Number(rows[0].total_equipment) || 0;
   const used  = Number(rows[0].used_equipment)  || 0;
   return {
@@ -599,7 +600,7 @@ async function summaryEngineerSummary(params) {
     ${divJoinSql}
     WHERE ${where.join(' AND ')}`;
 
-  const [[rows]] = await pool.query(sql, args);
+  const [rows] = await pool.query(sql, args);
   return {
     engineers:       Number(rows[0].engineers)       || 0,
     assigned_jcs:    Number(rows[0].assigned_jcs)    || 0,
@@ -700,7 +701,7 @@ async function summaryJobCardSummary(params) {
     FROM cmms_jobcard_mst jc
     ${divJoin}
     ${whereSql}`;
-  const [[rows]] = await pool.query(sql, args);
+  const [rows] = await pool.query(sql, args);
   return {
     total:           Number(rows[0].total)           || 0,
     open_assigned:   Number(rows[0].open_assigned)   || 0,
@@ -809,7 +810,7 @@ async function summaryJobRequestSummary(params, rowScope = { canReadAll: true })
     FROM cmms_jobrequest_mst jr
     WHERE ${where.join(' AND ')}`;
 
-  const [[rows]] = await pool.query(sql, args);
+  const [rows] = await pool.query(sql, args);
   return {
     total:           Number(rows[0].total)           || 0,
     draft:           Number(rows[0].draft)           || 0,
