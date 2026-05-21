@@ -287,6 +287,46 @@ async function writeAuditLog(conn, { actorEmployeeId, actorRoleCode, eqmType, eq
   );
 }
 
+// ────────────────────────────────────────────────────────────────────────
+//  PHASE 15  ·  BULK CALIBRATION DONE  (admin legacy-data migration helper)
+// ────────────────────────────────────────────────────────────────────────
+/**
+ * For every equipment row whose EQM_CAL_DUE_DATE is strictly in the past
+ * and whose status is neither CONDEMNED nor RETIRED:
+ *   • Sets EQM_MVP_STATUS = 'ACTIVE'
+ *   • Clears EQM_CAL_DUE_DATE to NULL (stops the red overdue indicator)
+ *
+ * A single audit_log row is written for the entire bulk operation
+ * (not one per equipment — that would be 5 700+ rows for a legacy backlog).
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn  Caller-owned txn.
+ * @param {string} actorEmpId  SUPER_ADMIN employee_id for the audit row.
+ * @returns {Promise<number>}  Count of rows actually updated.
+ */
+async function bulkMarkCalibrationDone(conn, actorEmpId) {
+  // Step 1 — write ONE summary audit row BEFORE the UPDATE so the log
+  // records what was intended even if the UPDATE somehow fails.
+  await conn.query(
+    `INSERT INTO audit_log
+       (action, actor_employee_id, actor_role_code, entity_type, entity_id,
+        ip_address, user_agent, notes, occurred_at)
+     VALUES ('EQUIPMENT_BULK_CAL_DONE', ?, NULL, 'equipment', 'BULK',
+             NULL, NULL, '{"reason":"Bulk calibration completed — legacy data migration"}',
+             NOW(6))`,
+    [actorEmpId],
+  );
+
+  // Step 2 — batch UPDATE: mark ACTIVE + clear the overdue date.
+  const [result] = await conn.query(
+    `UPDATE cmms_eqip_mst
+        SET EQM_MVP_STATUS  = 'ACTIVE',
+            EQM_CAL_DUE_DATE = NULL
+      WHERE EQM_CAL_DUE_DATE  < NOW()
+        AND EQM_MVP_STATUS NOT IN ('CONDEMNED', 'RETIRED')`,
+  );
+  return result.affectedRows;
+}
+
 module.exports = {
   listEquipment,
   listEquipmentTypes,
@@ -297,5 +337,7 @@ module.exports = {
   nextEqmIdForType,
   insertEquipment,
   writeAuditLog,
+  // Phase 15 addition:
+  bulkMarkCalibrationDone,
   SORT_COLUMNS,
 };

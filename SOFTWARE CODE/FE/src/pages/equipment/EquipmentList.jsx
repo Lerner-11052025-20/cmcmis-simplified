@@ -30,7 +30,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Filter, Plus, Search as SearchIcon } from 'lucide-react';
+import { CheckCircle, Download, Filter, Plus, Search as SearchIcon } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
@@ -38,7 +38,7 @@ import { Select } from '../../components/ui/Select.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { useEquipmentList } from '../../lib/hooks/useEquipmentList.js';
-import { fetchTypes } from '../../lib/api/equipment.js';
+import { fetchTypes, bulkMarkCalibrationDone } from '../../lib/api/equipment.js';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { calDueClass } from './utils/calColor.js';
 
@@ -58,7 +58,8 @@ const DEFAULT_PAGE_SIZE = 25;
 
 export function EquipmentList() {
   const { hasPermission } = useAuth();
-  const canCreate = hasPermission('equipment:create');
+  const canCreate       = hasPermission('equipment:create');
+  const canBulkCalDone  = hasPermission('equipment:bulk-cal-done');
 
   // ── Filter state ──────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -66,6 +67,12 @@ export function EquipmentList() {
   const [q, setQ] = useState('');
   const [typeId, setTypeId] = useState('');
   const [status, setStatus] = useState('');
+
+  // ── Bulk-cal-done state ───────────────────────────────────────────
+  // refreshSeed is bumped after the bulk mutation to bust the cache key
+  // and force an immediate re-fetch without changing any API params.
+  const [refreshSeed, setRefreshSeed] = useState(0);
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   // ── Debounce search input by 300ms ────────────────────────────────
   const debTimer = useRef(null);
@@ -79,6 +86,8 @@ export function EquipmentList() {
   }, [qInput]);
 
   // ── Build the hook params object (memoised so cache key is stable) ──
+  // _refresh is stripped by the hook before it reaches the API; it only
+  // exists to make the JSON cache key unique after a bulk mutation.
   const params = useMemo(
     () => ({
       page,
@@ -88,11 +97,41 @@ export function EquipmentList() {
       ...(status ? { status } : {}),
       sort: 'equipment_code',
       order: 'asc',
+      _refresh: refreshSeed,
     }),
-    [page, q, typeId, status],
+    [page, q, typeId, status, refreshSeed],
   );
 
-  const { data, error, loading } = useEquipmentList(params);
+  const { data, error, loading, invalidateAll } = useEquipmentList(params);
+
+  // ── Bulk calibration-done handler ────────────────────────────────
+  async function handleBulkCalDone() {
+    const ok = window.confirm(
+      'This will mark ALL equipment with overdue calibration dates as ACTIVE\n' +
+      'and clear their calibration due dates.\n\n' +
+      'CONDEMNED and RETIRED items are skipped. This cannot be undone.\n\n' +
+      'Proceed?',
+    );
+    if (!ok) return;
+
+    setBulkRunning(true);
+    try {
+      const result = await bulkMarkCalibrationDone();
+      // Clear the hook cache and bump the seed so the table re-fetches
+      // immediately with the updated statuses and cleared dates.
+      invalidateAll();
+      setRefreshSeed((s) => s + 1);
+      setPage(1);
+      alert(`Done — ${result.updated_count} equipment record(s) marked as Active (calibration cleared).`);
+    } catch (err) {
+      alert(
+        'Bulk calibration update failed: ' +
+        (err?.response?.data?.error?.message || err?.message || 'Unknown error.'),
+      );
+    } finally {
+      setBulkRunning(false);
+    }
+  }
 
   // ── Load equipment types for the Type filter dropdown (once) ──────
   const [types, setTypes] = useState([]);
@@ -156,14 +195,28 @@ export function EquipmentList() {
             Manage and track all equipment inventory
           </p>
         </div>
-        {canCreate ? (
-          <Link to="/equipment/new">
-            <Button variant="primary">
-              <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-              Add Equipment
+        <div className="flex items-center gap-2">
+          {/* Visible only to SUPER_ADMIN — marks all overdue cal dates as done */}
+          {canBulkCalDone ? (
+            <Button
+              variant="secondary"
+              className="text-danger border-danger hover:bg-danger/10"
+              onClick={handleBulkCalDone}
+              disabled={bulkRunning}
+            >
+              <CheckCircle size={16} strokeWidth={1.75} aria-hidden="true" />
+              {bulkRunning ? 'Updating…' : 'Mark All Cal Done'}
             </Button>
-          </Link>
-        ) : null}
+          ) : null}
+          {canCreate ? (
+            <Link to="/equipment/new">
+              <Button variant="primary">
+                <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+                Add Equipment
+              </Button>
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {/* ── Filter strip ────────────────────────────────────── */}

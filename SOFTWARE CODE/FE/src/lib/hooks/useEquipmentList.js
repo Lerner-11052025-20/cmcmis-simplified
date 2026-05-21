@@ -20,8 +20,14 @@ const cache = new Map();         // key -> { data, ts }
 
 /**
  * @param {Object} params  All keys serialisable (page, page_size, q, …)
+ *   _refresh (optional): internal seed — stripped before reaching the API,
+ *   only used to bust the JSON cache key after a bulk mutation.
  */
 export function useEquipmentList(params) {
+  // Strip the internal _refresh seed before it reaches the API.
+  const { _refresh: _refreshSeed, ...apiParams } = params;
+
+  // Include _refresh in the cache key so bumping it forces a fresh fetch.
   const key = JSON.stringify(params);
 
   const cached = cache.get(key);
@@ -42,7 +48,7 @@ export function useEquipmentList(params) {
     setLoading(true);
     setError(null);
 
-    fetchEquipmentList(params, ctrl.signal)
+    fetchEquipmentList(apiParams, ctrl.signal)
       .then((d) => {
         if (cancelled) return;
         cache.set(key, { data: d, ts: Date.now() });
@@ -66,5 +72,8 @@ export function useEquipmentList(params) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { data, error, loading };
+  // Exposed so bulk-mutation flows can clear the cache and force a re-fetch.
+  function invalidateAll() { cache.clear(); }
+
+  return { data, error, loading, invalidateAll };
 }

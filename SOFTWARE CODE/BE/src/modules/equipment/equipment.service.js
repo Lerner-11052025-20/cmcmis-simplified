@@ -232,6 +232,47 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
   }
 }
 
+// ============================================================================
+//                     PHASE 15  ·  BULK CALIBRATION DONE
+// ============================================================================
+
+/**
+ * POST /api/v1/equipment/bulk-cal-done
+ *
+ * SUPER_ADMIN-only migration helper. For every equipment whose
+ * EQM_CAL_DUE_DATE is in the past and whose status is not CONDEMNED or
+ * RETIRED:
+ *   • Sets EQM_MVP_STATUS  = 'ACTIVE'
+ *   • Sets EQM_CAL_DUE_DATE = NULL  (clears the red overdue indicator)
+ *
+ * Runs inside a single transaction; writes one summary audit_log row
+ * (not one per equipment — that would flood the log for 5 700+ rows).
+ * Busts the KPI org cache after commit.
+ *
+ * @param {{ actor: Object, ipAddress: string, userAgent: string }} args
+ * @returns {{ updated_count: number }}
+ */
+async function bulkMarkCalibrationDone({ actor, ipAddress, userAgent }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const updatedCount = await repo.bulkMarkCalibrationDone(conn, actor.employeeId);
+
+    await conn.commit();
+
+    // Bust the org KPI cache — equipment counts / statuses have changed.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+
+    return { updated_count: updatedCount };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   listEquipment,
   listTypes,
@@ -239,4 +280,6 @@ module.exports = {
   listDivisions,
   createEquipment,
   formatEquipmentCode,
+  // Phase 15 addition:
+  bulkMarkCalibrationDone,
 };

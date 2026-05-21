@@ -54,4 +54,29 @@ async function getDivisions(req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { getList, postCreate, getTypes, getMakes, getDivisions };
+// ============================================================================
+//                     PHASE 15  ·  BULK CALIBRATION DONE
+// ============================================================================
+
+/**
+ * POST /api/v1/equipment/bulk-cal-done
+ * Auth: authenticate → authorize('equipment:bulk-cal-done')  [SUPER_ADMIN only]
+ *
+ * No body required. Returns { updated_count: number }.
+ */
+async function postBulkCalibrationDone(req, res, next) {
+  try {
+    const result = await service.bulkMarkCalibrationDone({
+      actor: {
+        employeeId: req.user.employeeId,
+        role:       req.user.role,
+        userId:     req.user.userId,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
+module.exports = { getList, postCreate, getTypes, getMakes, getDivisions, postBulkCalibrationDone };

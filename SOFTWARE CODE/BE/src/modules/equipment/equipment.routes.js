@@ -62,6 +62,16 @@ router.post('/',
   ctrl.postCreate,
 );
 
+// ── PHASE 15  ·  BULK CALIBRATION DONE ───────────────────────────────
+// Placed BEFORE /:id stubs — Express would otherwise swallow the static
+// segment "bulk-cal-done" as the :id parameter.
+
+router.post('/bulk-cal-done',
+  authenticate,
+  authorize('equipment:bulk-cal-done'),
+  ctrl.postBulkCalibrationDone,
+);
+
 // ── Phase-6 stubs (lock the URL surface + permission gates now) ───────
 const PHASE6 = (_req, _res, next) => next(errors.notFound('Ships in Phase 6'));
 

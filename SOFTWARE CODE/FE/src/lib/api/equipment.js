@@ -55,3 +55,20 @@ export async function createEquipment(body) {
   const r = await api.post('/equipment', body);
   return r.data.data;     // → { equipment_id, equipment_code, status }
 }
+
+// ============================================================================
+//                     PHASE 15  ·  BULK CALIBRATION DONE
+// ============================================================================
+
+/**
+ * POST /api/v1/equipment/bulk-cal-done
+ *
+ * SUPER_ADMIN-only. Marks every equipment with a past EQM_CAL_DUE_DATE
+ * (and status not CONDEMNED/RETIRED) as ACTIVE and clears the due date.
+ *
+ * @returns {Promise<{ updated_count: number }>}
+ */
+export async function bulkMarkCalibrationDone() {
+  const r = await api.post('/equipment/bulk-cal-done');
+  return r.data.data;
+}
