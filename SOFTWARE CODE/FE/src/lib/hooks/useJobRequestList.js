@@ -12,6 +12,11 @@ const TTL_MS = 30 * 1000;
 const cache = new Map();
 
 export function useJobRequestList(params) {
+  // Strip the internal _refresh seed before it reaches the API — the server's
+  // Zod schema doesn't know about it and we only use it to bust the cache key.
+  const { _refresh: _refreshSeed, ...apiParams } = params;
+
+  // Include _refresh in the cache key so bumping it forces a fresh fetch.
   const key = JSON.stringify(params);
   const cached = cache.get(key);
   const fresh = cached && Date.now() - cached.ts < TTL_MS;
@@ -30,7 +35,7 @@ export function useJobRequestList(params) {
     setLoading(true);
     setError(null);
 
-    fetchJobRequestList(params, ctrl.signal)
+    fetchJobRequestList(apiParams, ctrl.signal)
       .then((d) => {
         if (cancelled) return;
         cache.set(key, { data: d, ts: Date.now() });

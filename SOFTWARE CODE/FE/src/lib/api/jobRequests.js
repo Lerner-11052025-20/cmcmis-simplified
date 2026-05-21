@@ -129,3 +129,20 @@ export async function cancelJobRequestDraft(id, body = {}) {
   const r = await api.post(`/job-requests/${encodeURIComponent(id)}/cancel`, body);
   return r.data.data;
 }
+
+// ============================================================================
+//                          PHASE 15  ·  BULK VERIFY ALL
+// ============================================================================
+
+/**
+ * POST /api/v1/job-requests/bulk-verify-all
+ *
+ * SUPER_ADMIN-only. Marks every non-verified, non-cancelled job request in
+ * the database as VERIFIED_CLOSED. One atomic transaction on the server.
+ *
+ * @returns {Promise<{ verified_count: number }>}
+ */
+export async function bulkVerifyAllJobRequests() {
+  const r = await api.post('/job-requests/bulk-verify-all');
+  return r.data.data;
+}

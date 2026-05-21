@@ -247,6 +247,32 @@ async function postCancelDraft(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+// ============================================================================
+//                          PHASE 15  ·  BULK VERIFY ALL
+// ============================================================================
+
+/**
+ * POST /api/v1/job-requests/bulk-verify-all
+ * Auth: authenticate → authorize('job_request:bulk-verify')  [SUPER_ADMIN only]
+ *
+ * No body required. Returns { verified_count: number }.
+ */
+async function postBulkVerifyAll(req, res, next) {
+  try {
+    const result = await service.bulkVerifyAllJobRequests({
+      actor: {
+        employeeId:  req.user.employeeId,
+        role:        req.user.role,
+        userId:      req.user.userId,
+        permissions: req.user.permissions,
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
 module.exports = {
   list,
   create,
@@ -259,4 +285,6 @@ module.exports = {
   // Phase 9 additions:
   patchEditDraft,
   postCancelDraft,
+  // Phase 15 addition:
+  postBulkVerifyAll,
 };

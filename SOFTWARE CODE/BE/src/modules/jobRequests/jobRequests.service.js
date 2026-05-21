@@ -1027,6 +1027,63 @@ async function rejectJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
   }
 }
 
+// ============================================================================
+//                          PHASE 15  ·  BULK VERIFY ALL
+// ============================================================================
+
+/**
+ * POST /api/v1/job-requests/bulk-verify-all
+ *
+ * SUPER_ADMIN-only migration helper. Marks every job request that is not
+ * already VERIFIED_CLOSED (and not logically cancelled) as VERIFIED_CLOSED
+ * in a single atomic transaction.
+ *
+ * Writes:
+ *   • One status_history row per updated JR (via bulk INSERT SELECT in repo).
+ *   • ONE audit_log row for the entire bulk operation (entity_id = 'BULK').
+ *   • Invalidates the full KPI cache (org + all personal keys).
+ *
+ * @param {{ actor: Object, ipAddress: string, userAgent: string }} args
+ * @returns {{ verified_count: number }}
+ */
+async function bulkVerifyAllJobRequests({ actor, ipAddress, userAgent }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Batch-update in repo: inserts history rows then flips status column.
+    const verifiedCount = await repo.bulkVerifyAll(conn, actor.employeeId);
+
+    // One audit row for the whole operation (not one per JR — would be
+    // thousands of rows for a legacy backlog).
+    await repo.writeAuditLog(conn, {
+      actorEmployeeId: actor.employeeId,
+      actorRoleCode:   actor.role,
+      action:          'JR_BULK_VERIFIED',
+      jrNo:            'BULK',        // entity_id = 'BULK' — no single JR
+      ipAddress,
+      userAgent,
+      details: {
+        verified_count: verifiedCount,
+        reason:         'Bulk verify — legacy data migration',
+      },
+    });
+
+    await conn.commit();
+
+    // Wipe the KPI cache — org total + every personal bucket have changed.
+    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.PERSONAL_PREFIX);
+
+    return { verified_count: verifiedCount };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   listJobRequests,
   createJobRequest,
@@ -1039,4 +1096,6 @@ module.exports = {
   // Phase 9 additions (JR loose ends):
   editDraftJobRequest,
   cancelDraftJobRequest,
+  // Phase 15 addition:
+  bulkVerifyAllJobRequests,
 };

@@ -720,6 +720,49 @@ async function updateDraftFields(conn, jrNo, body) {
 }
 
 // ───────────────────────────────────────────────────────────────────────
+//  PHASE 15  ·  BULK VERIFY ALL  (admin legacy-data migration helper)
+// ───────────────────────────────────────────────────────────────────────
+/**
+ * Bulk-mark ALL job requests that are not already VERIFIED_CLOSED (and not
+ * logically cancelled) as VERIFIED_CLOSED in two atomic batch statements:
+ *
+ *   1) INSERT SELECT → batch-append one status_history row per qualifying JR.
+ *   2) UPDATE        → flip JR_MVP_STATUS + timestamps in a single pass.
+ *
+ * Both statements use the identical WHERE predicate so the history rows and
+ * the status updates target exactly the same set.
+ *
+ * @param {import('mysql2/promise').PoolConnection} conn  Caller-owned txn.
+ * @param {string} actorEmpId  SUPER_ADMIN employee_id (stamped as transitioned_by).
+ * @returns {Promise<number>}  Count of rows actually updated.
+ */
+async function bulkVerifyAll(conn, actorEmpId) {
+  // Step 1 — batch-insert status history for every qualifying JR.
+  // INSERT … SELECT is a single round-trip even for thousands of rows.
+  await conn.query(
+    `INSERT INTO job_request_status_history
+       (jr_no, from_status, to_status, transitioned_at, transitioned_by, reason)
+     SELECT JR_JOBREQUESTNO, JR_MVP_STATUS, 'VERIFIED_CLOSED', NOW(6), ?,
+            'Bulk verify — legacy data migration'
+       FROM cmms_jobrequest_mst
+      WHERE JR_MVP_STATUS  != 'VERIFIED_CLOSED'
+        AND JR_CANCELLED_AT IS NULL`,
+    [actorEmpId],
+  );
+
+  // Step 2 — batch-update the status column on the same predicate.
+  const [result] = await conn.query(
+    `UPDATE cmms_jobrequest_mst
+        SET JR_MVP_STATUS    = 'VERIFIED_CLOSED',
+            JR_MVP_STATUS_AT = NOW(6),
+            JR_UPDATED_AT    = NOW(6)
+      WHERE JR_MVP_STATUS  != 'VERIFIED_CLOSED'
+        AND JR_CANCELLED_AT IS NULL`,
+  );
+  return result.affectedRows;
+}
+
+// ───────────────────────────────────────────────────────────────────────
 //  PHASE 9  ·  CANCEL DRAFT  (logical CANCELLED — D-9.11)
 // ───────────────────────────────────────────────────────────────────────
 /**
@@ -761,6 +804,8 @@ module.exports = {
   // Phase 9 additions:
   updateDraftFields,
   applyDraftCancel,
+  // Phase 15 additions:
+  bulkVerifyAll,
   // exports used by tests and dropdown population
   PRIORITY_CANONICAL_TO_DB,
   PRIORITY_DB_TO_CANONICAL,

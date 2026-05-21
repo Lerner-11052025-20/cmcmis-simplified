@@ -55,6 +55,16 @@ router.post('/:id/submit',
   ctrl.submit,
 );
 
+// ── PHASE 15  ·  BULK VERIFY ALL ────────────────────────────────────
+// IMPORTANT: must be registered BEFORE any /:id route — Express would
+// otherwise absorb "bulk-verify-all" as the :id param on a GET /:id.
+
+router.post('/bulk-verify-all',
+  authenticate,
+  authorize('job_request:bulk-verify'),
+  ctrl.postBulkVerifyAll,
+);
+
 // ── PHASE 7 SLICE 2 ──────────────────────────────────────────────────
 
 // GET /:id → Detail page. Same auth shape as the list endpoint:

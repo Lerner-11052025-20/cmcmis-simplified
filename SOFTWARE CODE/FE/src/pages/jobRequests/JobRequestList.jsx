@@ -31,7 +31,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Filter, Plus, Search as SearchIcon } from 'lucide-react';
+import { CheckCircle, Download, Filter, Plus, Search as SearchIcon } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
@@ -42,6 +42,7 @@ import { StatusPill } from '../../components/StatusPill.jsx';
 import { PriorityLabel } from '../../components/PriorityLabel.jsx';
 import { useJobRequestList } from '../../lib/hooks/useJobRequestList.js';
 import { useAuth } from '../../lib/auth-context.jsx';
+import { bulkVerifyAllJobRequests } from '../../lib/api/jobRequests.js';
 
 // ── Filter dropdown option sets (locked to backend enums) ──────────────
 const TYPE_OPTIONS = [
@@ -70,7 +71,8 @@ const JOB_TYPE_DISPLAY = {
 
 export function JobRequestList() {
   const { hasPermission } = useAuth();
-  const canCreate = hasPermission('job_request:create');
+  const canCreate      = hasPermission('job_request:create');
+  const canBulkVerify  = hasPermission('job_request:bulk-verify');
 
   // ── Filter state ──────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -78,6 +80,12 @@ export function JobRequestList() {
   const [q, setQ] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
+
+  // ── Bulk-verify state ─────────────────────────────────────────────
+  // refreshSeed is bumped after bulk-verify to bust the hook's cache key
+  // and force an immediate re-fetch without touching any API params.
+  const [refreshSeed, setRefreshSeed] = useState(0);
+  const [bulkVerifying, setBulkVerifying] = useState(false);
 
   // ── Debounce search input by 300ms (R-spec: ONE request per change) ──
   const debTimer = useRef(null);
@@ -91,6 +99,8 @@ export function JobRequestList() {
   }, [qInput]);
 
   // ── Build the hook params (memoised so cache key is stable) ────────
+  // _refresh is stripped by the hook before it reaches the API; it only
+  // exists to make the JSON cache key unique after a bulk-verify.
   const params = useMemo(
     () => ({
       page,
@@ -99,11 +109,40 @@ export function JobRequestList() {
       ...(type ? { type } : {}),
       ...(status ? { status } : {}),
       sort: '-created_at',
+      _refresh: refreshSeed,
     }),
-    [page, q, type, status],
+    [page, q, type, status, refreshSeed],
   );
 
-  const { data, error, loading } = useJobRequestList(params);
+  const { data, error, loading, invalidateAll } = useJobRequestList(params);
+
+  // ── Bulk-verify handler ───────────────────────────────────────────
+  async function handleBulkVerify() {
+    const ok = window.confirm(
+      'This will mark ALL non-verified job requests in the database as VERIFIED.\n\n' +
+      'Cancelled requests are left untouched. This action cannot be undone.\n\n' +
+      'Proceed?',
+    );
+    if (!ok) return;
+
+    setBulkVerifying(true);
+    try {
+      const result = await bulkVerifyAllJobRequests();
+      // Clear the hook cache and bump the refresh seed so the table
+      // re-fetches with the new statuses immediately.
+      invalidateAll();
+      setRefreshSeed((s) => s + 1);
+      setPage(1);
+      alert(`Done — ${result.verified_count} job request(s) marked as Verified.`);
+    } catch (err) {
+      alert(
+        'Bulk verify failed: ' +
+        (err?.response?.data?.error?.message || err?.message || 'Unknown error.'),
+      );
+    } finally {
+      setBulkVerifying(false);
+    }
+  }
 
   // ── Columns ──────────────────────────────────────────────────────
   const columns = useMemo(
@@ -160,14 +199,28 @@ export function JobRequestList() {
             Manage equipment calibration and maintenance requests
           </p>
         </div>
-        {canCreate ? (
-          <Link to="/job-requests/new">
-            <Button variant="primary">
-              <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-              New Job Request
+        <div className="flex items-center gap-2">
+          {/* Visible only to SUPER_ADMIN — marks all legacy JRs as Verified */}
+          {canBulkVerify ? (
+            <Button
+              variant="secondary"
+              className="text-danger border-danger hover:bg-danger/10"
+              onClick={handleBulkVerify}
+              disabled={bulkVerifying}
+            >
+              <CheckCircle size={16} strokeWidth={1.75} aria-hidden="true" />
+              {bulkVerifying ? 'Verifying…' : 'Verify All Legacy'}
             </Button>
-          </Link>
-        ) : null}
+          ) : null}
+          {canCreate ? (
+            <Link to="/job-requests/new">
+              <Button variant="primary">
+                <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+                New Job Request
+              </Button>
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {/* ── Filter strip ────────────────────────────────────── */}
