@@ -49,18 +49,18 @@ function ProgressBar({ pct }) {
   );
 }
 
+// Job ID bumped to text-sm for readability.
+// Assigned Engineer removed — in the legacy DB this field is sparse / often null.
 const COLUMNS = [
-  { header: 'Job ID',            accessor: 'job_code',
-    className: 'font-mono text-xs text-accent' },
-  { header: 'Equipment',         accessor: 'equipment_name',
+  { header: 'Job ID',         accessor: 'job_code',
+    className: 'font-mono text-sm font-semibold text-accent' },
+  { header: 'Equipment',      accessor: 'equipment_name',
     className: 'text-ink' },
-  { header: 'Status',            accessor: 'status_label',
+  { header: 'Status',         accessor: 'status_label',
     format: (_, r) => <StatusBadge label={r.status_label} accent={r.status_accent} /> },
-  { header: 'Assigned Engineer', accessor: 'assigned_engineer',
-    className: 'text-ink-soft' },
-  { header: 'Submitted Date',    accessor: 'received_at',
+  { header: 'Received',       accessor: 'received_at',
     className: 'text-ink-soft tabular-nums' },
-  { header: 'Progress',          accessor: 'progress_pct',
+  { header: 'Progress',       accessor: 'progress_pct',
     format: (_, r) => <ProgressBar pct={r.progress_pct} /> },
 ];
 

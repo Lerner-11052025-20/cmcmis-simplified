@@ -117,30 +117,31 @@ function formatPctDelta(current, previous, suffix) {
 //   }
 
 async function buildOrgCards() {
-  // Run all four KPI groups in parallel — independent queries, independent
-  // pool connections. The repo's parallel sub-queries inside each group
-  // mean we issue ~8 SELECTs concurrently; the pool max is ≥ 10 and the
-  // queries are sub-50 ms each on the new indexes, so this finishes well
-  // under our 150 ms p50 target for cold cache misses.
+  // Run all 8 KPI groups in parallel — independent queries, independent
+  // pool connections. The pool max is ≥ 10; these are all COUNT-only
+  // sub-50 ms queries so the batch finishes well under the 150 ms p50
+  // target for cold cache misses.
+  // Run 7 KPI groups in parallel (Calibration Due removed per UX decision).
   const [
     pending,
-    calibration,
     completed,
-    utilization,
+    activeEqm,
+    inProgress,
+    openJC,
+    overdueCalibration,
+    newEqmThisWeek,
   ] = await Promise.all([
     repo.orgPendingJobs(),
-    repo.orgCalibrationDue7d(),
     repo.orgCompletedThisWeek(),
-    repo.orgEquipmentUtilization(),
+    repo.orgTotalActiveEquipment(),
+    repo.orgInProgressJobs(),
+    repo.orgOpenJobCards(),
+    repo.orgOverdueCalibrations(),
+    repo.orgNewEquipmentThisWeek(),
   ]);
 
-  // Equipment Utilization percentage — guard divide-by-zero.
-  const utilPct =
-    utilization.active === 0
-      ? 0
-      : Math.round((utilization.withOpenWork / utilization.active) * 100);
-
   return [
+    // ── Row 1 ────────────────────────────────────────────────────────
     {
       id: 'pending_jobs',
       label: 'Pending Jobs',
@@ -154,16 +155,6 @@ async function buildOrgCards() {
       href: '/job-requests?status=SUBMITTED',
     },
     {
-      id: 'calibration_due',
-      label: 'Calibration Due',
-      value: calibration.total,
-      value_kind: 'count',
-      subtitle: 'Within 7 days',
-      icon: 'alert-circle',
-      accent: 'red',
-      href: '/equipment?calibration_due=7d',
-    },
-    {
       id: 'completed_this_week',
       label: 'Completed This Week',
       value: completed.thisWeek,
@@ -174,13 +165,56 @@ async function buildOrgCards() {
       href: '/job-cards?status=COMPLETED&period=this_week',
     },
     {
-      id: 'equipment_utilization',
-      label: 'Equipment Utilization',
-      value: utilPct,
-      value_kind: 'percent',
-      subtitle: utilizationBandLabel(utilPct),
-      icon: 'trending-up',
+      id: 'total_active_equipment',
+      label: 'Active Equipment',
+      value: activeEqm.total,
+      value_kind: 'count',
+      subtitle: activeEqm.thisWeek > 0
+        ? `+${activeEqm.thisWeek} registered this week`
+        : 'No new registrations this week',
+      icon: 'box',
+      accent: 'emerald',
+      href: '/equipment',
+    },
+    {
+      id: 'in_progress_jobs',
+      label: 'In Progress Jobs',
+      value: inProgress.total,
+      value_kind: 'count',
+      subtitle: inProgress.total > 0 ? 'Work underway' : 'No work in progress',
+      icon: 'activity',
       accent: 'blue',
+      href: '/job-requests?status=IN_PROGRESS',
+    },
+    // ── Row 2 ────────────────────────────────────────────────────────
+    {
+      id: 'open_job_cards',
+      label: 'Open Job Cards',
+      value: openJC.total,
+      value_kind: 'count',
+      subtitle: openJC.total > 0 ? 'Awaiting completion' : 'All cards closed',
+      icon: 'clipboard-list',
+      accent: 'indigo',
+      href: '/job-cards',
+    },
+    {
+      id: 'overdue_calibrations',
+      label: 'Overdue Calibrations',
+      value: overdueCalibration.total,
+      value_kind: 'count',
+      subtitle: overdueCalibration.total > 0 ? 'Past due date — action needed' : 'No overdue equipment',
+      icon: 'alert-triangle',
+      accent: 'orange',
+      href: '/equipment',
+    },
+    {
+      id: 'new_equipment_this_week',
+      label: 'New Equipment (Week)',
+      value: newEqmThisWeek.total,
+      value_kind: 'count',
+      subtitle: formatPctDelta(newEqmThisWeek.total, newEqmThisWeek.lastWeek, 'last week'),
+      icon: 'calendar-plus',
+      accent: 'violet',
       href: '/equipment',
     },
   ];
@@ -192,14 +226,23 @@ async function buildMyCards(employeeId) {
     inProgress,
     completed,
     calibration,
+    drafts,
+    myEqm,
+    overdueCalibration,
+    approvedQueued,
   ] = await Promise.all([
     repo.myActiveRequests(employeeId),
     repo.myInProgress(employeeId),
     repo.myCompletedThisMonth(employeeId),
     repo.myCalibrationDue30d(employeeId),
+    repo.myDraftRequests(employeeId),
+    repo.myEquipmentCount(employeeId),
+    repo.myOverdueCalibrations(employeeId),
+    repo.myApprovedQueued(employeeId),
   ]);
 
   return [
+    // ── Row 1 ────────────────────────────────────────────────────────
     {
       id: 'active_requests',
       label: 'Active Requests',
@@ -242,6 +285,47 @@ async function buildMyCards(employeeId) {
       accent: 'red',
       href: '/equipment?registered_by_me=1&calibration_due=30d',
     },
+    // ── Row 2 ────────────────────────────────────────────────────────
+    {
+      id: 'my_drafts',
+      label: 'My Drafts',
+      value: drafts.total,
+      value_kind: 'count',
+      subtitle: drafts.total > 0 ? 'Unsent — click to review' : 'No pending drafts',
+      icon: 'file-plus',
+      accent: 'slate',
+      href: '/job-requests?mine=1&status=DRAFT',
+    },
+    {
+      id: 'my_equipment',
+      label: 'My Equipment',
+      value: myEqm.total,
+      value_kind: 'count',
+      subtitle: 'Registered by me (active)',
+      icon: 'package',
+      accent: 'emerald',
+      href: '/equipment?registered_by_me=1',
+    },
+    {
+      id: 'my_overdue_calibrations',
+      label: 'My Overdue Cal.',
+      value: overdueCalibration.total,
+      value_kind: 'count',
+      subtitle: overdueCalibration.total > 0 ? 'Past due — action needed' : 'All calibrations current',
+      icon: 'alert-triangle',
+      accent: 'orange',
+      href: '/equipment?registered_by_me=1',
+    },
+    {
+      id: 'my_approved_queued',
+      label: 'Approved & Queued',
+      value: approvedQueued.total,
+      value_kind: 'count',
+      subtitle: approvedQueued.total > 0 ? 'Waiting for engineer to start' : 'No queued work',
+      icon: 'hourglass',
+      accent: 'violet',
+      href: '/job-requests?mine=1&status=ASSIGNED',
+    },
   ];
 }
 
@@ -279,15 +363,18 @@ async function getKpis(actor) {
     };
   }
 
-  // Cache miss — compute, then memoise.
-  const cards =
+  // Cache miss — compute cards + recent activity in parallel, then memoise.
+  const [cards, recent_activity] = await Promise.all([
     variant === 'org'
-      ? await buildOrgCards()
-      : await buildMyCards(actor.employeeId);
+      ? buildOrgCards()
+      : buildMyCards(actor.employeeId),
+    repo.recentActivity(variant, actor.employeeId),
+  ]);
 
   const payload = {
     variant,
     cards,
+    recent_activity,
     quick_actions: quickActionsFor(variant),
     generatedAt: new Date().toISOString(),
     cacheAgeMs: 0,

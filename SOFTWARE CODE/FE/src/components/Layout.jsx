@@ -95,7 +95,11 @@ export function Layout({ children }) {
             ABOVE the page heading (per spec §4.1). Renders empty when
             no tokens are active (no layout shift). */}
         <TokenHost />
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        {/* pb-20 (80px) reserves space for the fixed-position credit badge
+            (≈36px pill + 14px bottom offset + 30px breathing room) so that
+            pagination controls and other bottom-of-page content are never
+            visually obscured anywhere in the app. */}
+        <main className="flex-1 overflow-auto p-8 pb-20">{children}</main>
       </div>
     </div>
   );

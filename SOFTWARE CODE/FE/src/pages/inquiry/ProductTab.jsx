@@ -17,16 +17,17 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { InquirySearchBox } from './InquirySearchBox.jsx';
 
+// Product ID bumped to text-sm for readability.
+// Description removed — nearly always null in the DB; wastes a column.
 const COLUMNS = [
   { header: 'Product ID',       accessor: 'product_code',
-    className: 'font-mono text-xs text-accent' },
+    className: 'font-mono text-sm font-semibold text-accent' },
   { header: 'Product Name',     accessor: 'name',
     className: 'font-medium text-ink' },
-  { header: 'Description',      accessor: 'description',
-    className: 'text-ink-soft' },
   { header: 'Equipment Count',  accessor: 'equipment_count',
     className: 'tabular-nums text-ink' },
   { header: 'Top Manufacturer', accessor: 'top_manufacturer',
+    format: (val) => val || <span className="text-ink-soft">—</span>,
     className: 'text-ink-soft' },
 ];
 

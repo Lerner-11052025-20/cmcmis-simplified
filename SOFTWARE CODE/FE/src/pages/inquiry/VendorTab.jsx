@@ -12,17 +12,18 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { InquirySearchBox } from './InquirySearchBox.jsx';
 
+// Vendor ID font bumped to text-sm so the V-001 codes are readable at a glance.
+// Contact / Email / Address removed — the DB only stores them sparsely (mostly null).
+// Contact Person is the name of the human contact at the vendor — more useful.
 const COLUMNS = [
-  { header: 'Vendor ID', accessor: 'vendor_code',
-    className: 'font-mono text-xs text-accent' },
+  { header: 'Vendor ID',      accessor: 'vendor_code',
+    className: 'font-mono text-sm font-semibold text-accent' },
   { header: 'Name',           accessor: 'name',
     className: 'font-medium text-ink' },
   { header: 'Type',           accessor: 'type' },
-  { header: 'Contact',        accessor: 'contact' },
-  { header: 'Email',          accessor: 'email',
-    className: 'text-accent' },
-  { header: 'Address',        accessor: 'address',
-    className: 'text-ink-soft' },
+  { header: 'Contact Person', accessor: 'contact_person',
+    format: (val) => val || <span className="text-ink-soft">—</span>,
+    className: 'text-ink' },
 ];
 
 /**

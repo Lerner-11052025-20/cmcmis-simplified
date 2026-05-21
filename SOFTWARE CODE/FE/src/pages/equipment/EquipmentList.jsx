@@ -30,7 +30,30 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import { CheckCircle, Download, Filter, Plus, Search as SearchIcon } from 'lucide-react';
+
+// ── Inline status badge (no extra file needed) ────────────────────────
+const STATUS_BADGE = {
+  ACTIVE:               'bg-green-100 text-green-700',
+  PENDING_VERIFICATION: 'bg-amber-100 text-amber-700',
+  UNDER_CALIBRATION:    'bg-blue-100  text-blue-700',
+  UNDER_REPAIR:         'bg-orange-100 text-orange-700',
+  OUT_OF_TOLERANCE:     'bg-red-100   text-red-700',
+  QUARANTINED:          'bg-red-100   text-red-700',
+  CONDEMNED:            'bg-slate-100 text-slate-600',
+  RETIRED:              'bg-slate-100 text-slate-500',
+};
+function StatusBadge({ status }) {
+  const cls = STATUS_BADGE[status] || 'bg-gray-100 text-gray-600';
+  const label = (status || '').replace(/_/g, ' ').toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+  return (
+    <span className={clsx('inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-snug whitespace-nowrap', cls)}>
+      {label}
+    </span>
+  );
+}
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
@@ -40,7 +63,6 @@ import { Pagination } from '../../components/Pagination.jsx';
 import { useEquipmentList } from '../../lib/hooks/useEquipmentList.js';
 import { fetchTypes, bulkMarkCalibrationDone } from '../../lib/api/equipment.js';
 import { useAuth } from '../../lib/auth-context.jsx';
-import { calDueClass } from './utils/calColor.js';
 
 // 8 statuses on cmms_eqip_mst.EQM_MVP_STATUS — fed to the filter dropdown.
 const STATUS_OPTIONS = [
@@ -162,15 +184,18 @@ export function EquipmentList() {
       { header: 'Type', accessor: 'type_name' },
       { header: 'Make', accessor: 'make' },
       {
-        header: 'Calibration Due',
-        accessor: 'next_cal_due_date',
-        format: (val) => val || <span className="text-ink-soft">—</span>,
-        className: (val) => calDueClass(val),
+        // Serial number is more immediately useful than the cal-due date for
+        // identification; status badge gives at-a-glance health signal.
+        header: 'Serial No',
+        accessor: 'serial_no',
+        format: (val) => val
+          ? <span className="font-mono text-xs text-ink">{val}</span>
+          : <span className="text-ink-soft">—</span>,
       },
       {
-        header: 'Division',
-        accessor: 'division_code',
-        className: 'text-ink uppercase text-xs',
+        header: 'Status',
+        accessor: 'status',
+        format: (val) => <StatusBadge status={val} />,
       },
       {
         header: 'Location',

@@ -26,19 +26,24 @@ function StatusBadge({ label, accent }) {
   );
 }
 
+// Equipment ID bumped to text-sm for readability.
+// Last Calibration removed — most legacy rows have null verified dates.
+// Model No + Serial No added — directly useful for instrument identification.
 const COLUMNS = [
-  { header: 'Equipment ID',     accessor: 'equipment_code',
-    className: 'font-mono text-xs text-accent' },
-  { header: 'Name',             accessor: 'name',
+  { header: 'Equipment ID', accessor: 'equipment_code',
+    className: 'font-mono text-sm font-semibold text-accent' },
+  { header: 'Name',         accessor: 'name',
     className: 'font-medium text-ink' },
-  { header: 'Division',         accessor: 'division_code',
+  { header: 'Model No',     accessor: 'model_no',
+    format: (val) => val || <span className="text-ink-soft">—</span>,
+    className: 'font-mono text-xs text-ink' },
+  { header: 'Serial No',    accessor: 'serial_no',
+    format: (val) => val || <span className="text-ink-soft">—</span>,
+    className: 'font-mono text-xs text-ink' },
+  { header: 'Location',     accessor: 'location_name',
     className: 'text-ink-soft' },
-  { header: 'Location',         accessor: 'location_name',
-    className: 'text-ink-soft' },
-  { header: 'Status',           accessor: 'status_label',
+  { header: 'Status',       accessor: 'status_label',
     format: (_, r) => <StatusBadge label={r.status_label} accent={r.status_accent} /> },
-  { header: 'Last Calibration', accessor: 'last_cal_date',
-    className: 'text-ink-soft tabular-nums' },
 ];
 
 export function InstrumentTab({ q, onQChange, page, onPageChange, pageSize }) {

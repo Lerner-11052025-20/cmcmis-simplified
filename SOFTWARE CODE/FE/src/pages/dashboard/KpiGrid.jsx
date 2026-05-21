@@ -12,11 +12,11 @@ import { KpiCard } from './KpiCard.jsx';
  * @param {Array<Object> | null} props.cards
  */
 export function KpiGrid({ cards }) {
-  // First paint — show 4 skeletons.
+  // First paint — show 7 skeletons matching ORG card count.
   if (cards === null) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[0, 1, 2, 3].map((i) => <KpiCard key={i} card={null} loading />)}
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => <KpiCard key={i} card={null} loading />)}
       </div>
     );
   }

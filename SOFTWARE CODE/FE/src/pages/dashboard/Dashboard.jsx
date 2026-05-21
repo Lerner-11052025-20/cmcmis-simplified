@@ -22,6 +22,7 @@ import { useAuth } from '../../lib/auth-context.jsx';
 import { DashboardHeader } from './DashboardHeader.jsx';
 import { QuickActions } from './QuickActions.jsx';
 import { KpiGrid } from './KpiGrid.jsx';
+import { QuickRecap } from './QuickRecap.jsx';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -63,6 +64,12 @@ export function Dashboard() {
         ) : null}
 
         <KpiGrid cards={data?.cards || (loading ? null : [])} />
+
+        {/* Quick Recap — Recent Activity feed (below KPI grid) */}
+        <QuickRecap
+          data={data?.recent_activity || null}
+          loading={loading && !data}
+        />
       </div>
     </Layout>
   );
