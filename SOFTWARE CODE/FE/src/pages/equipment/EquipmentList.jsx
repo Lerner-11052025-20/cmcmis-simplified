@@ -79,9 +79,10 @@ const STATUS_OPTIONS = [
 const DEFAULT_PAGE_SIZE = 25;
 
 export function EquipmentList() {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const canCreate       = hasPermission('equipment:create');
   const canBulkCalDone  = hasPermission('equipment:bulk-cal-done');
+  const isNormalUser    = user?.role === 'NORMAL_USER';
 
   // ── Filter state ──────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -124,7 +125,10 @@ export function EquipmentList() {
     [page, q, typeId, status, refreshSeed],
   );
 
-  const { data, error, loading, invalidateAll } = useEquipmentList(params);
+  const shouldFetchList = !isNormalUser || Boolean(q);
+  const { data, error, loading, invalidateAll } = useEquipmentList(params, {
+    enabled: shouldFetchList,
+  });
 
   // ── Bulk calibration-done handler ────────────────────────────────
   async function handleBulkCalDone() {
@@ -188,8 +192,10 @@ export function EquipmentList() {
         // identification; status badge gives at-a-glance health signal.
         header: 'Serial No',
         accessor: 'serial_no',
+        headerClassName: 'min-w-[130px]',
+        className: 'min-w-[130px] text-ink',
         format: (val) => val
-          ? <span className="font-mono text-xs text-ink">{val}</span>
+          ? <span className="text-sm font-medium whitespace-nowrap">{val}</span>
           : <span className="text-ink-soft">—</span>,
       },
       {
@@ -334,19 +340,29 @@ export function EquipmentList() {
       ) : null}
 
       {/* ── Table ────────────────────────────────────────── */}
-      <DataTable
-        columns={columns}
-        rows={data?.items ?? []}
-        keyField="equipment_id"
-        loading={loading}
-        emptyMessage={
-          q || typeId || status
-            ? 'No equipment matches your filters.'
-            : 'No equipment registered yet.'
-        }
-      />
+      {shouldFetchList ? (
+        <DataTable
+          columns={columns}
+          rows={data?.items ?? []}
+          keyField="equipment_id"
+          loading={loading}
+          emptyMessage={
+            q || typeId || status
+              ? 'No equipment matches your filters.'
+              : 'No equipment registered yet.'
+          }
+        />
+      ) : (
+        <div className="rounded-lg border border-border bg-white shadow-card p-8 text-center">
+          <h2 className="text-base font-semibold text-ink">Search equipment to view records</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Enter an equipment ID, name, make, or model number above.
+          </p>
+        </div>
+      )}
 
       {/* ── Pagination ───────────────────────────────────── */}
+      {shouldFetchList ? (
       <div className="flex items-center justify-between">
         <div className="text-xs text-ink-soft">
           Page {data?.pagination?.page ?? 1} of {data?.pagination?.total_pages ?? 1}
@@ -357,6 +373,7 @@ export function EquipmentList() {
           onPageChange={setPage}
         />
       </div>
+      ) : null}
     </div>
   );
 }

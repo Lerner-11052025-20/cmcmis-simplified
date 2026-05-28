@@ -26,6 +26,7 @@ async function getMe(req, res, next) {
     userId: req.user.userId,
     role: req.user.role,
     permissions: req.user.permissions,
+    laneScopes: req.user.laneScopes || [],
     // Default the profile fields so the FE never reads undefined. Phase 6
     // adds lab_phone / room_phone / division_id|code|name for the JR form
     // Section 4 auto-fill (BR-JR-06).

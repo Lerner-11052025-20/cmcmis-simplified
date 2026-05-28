@@ -110,8 +110,8 @@ export function MonthlyActivity({ params, pollMs }) {
   const total = sum(data, 'calibrations') + sum(data, 'repairs');
   return (
     <ChartCard
-      title="Monthly Activity Trends"
-      subtitle="Calibrations vs repairs by month"
+      title="Monthly Throughput Growth"
+      subtitle="Calibration and repair volume"
       stat={{ value: total.toLocaleString(), accent: 'blue' }}
       loading={q.isLoading}
       error={q.error}
@@ -121,19 +121,15 @@ export function MonthlyActivity({ params, pollMs }) {
       onDownloadCsv={downloadHandler('monthlyActivity', params, 'Monthly Activity')}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g1-cal" color={PALETTE[0]} topOpacity={0.55} />
-          <GradientDef id="g1-rep" color={PALETTE[2]} topOpacity={0.55} />
+        <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Area type="monotone" dataKey="calibrations" stroke={PALETTE[0]} strokeWidth={2.5}
-                fill="url(#g1-cal)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-          <Area type="monotone" dataKey="repairs"      stroke={PALETTE[2]} strokeWidth={2.5}
-                fill="url(#g1-rep)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-        </AreaChart>
+          <Bar dataKey="calibrations" name="Calibrations" fill={PALETTE[0]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Bar dataKey="repairs" name="Repairs" fill={PALETTE[2]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+        </BarChart>
       </ResponsiveContainer>
     </ChartCard>
   );
@@ -185,8 +181,8 @@ export function MonthlyJobs({ params, pollMs }) {
   const totalCompleted = sum(data, 'completed');
   return (
     <ChartCard
-      title="Monthly Job Trends"
-      subtitle="Completed vs pending requests"
+      title="Request Closure Performance"
+      subtitle="Completed work compared with open demand"
       stat={{ value: `${totalCompleted.toLocaleString()} done`, accent: 'green' }}
       loading={q.isLoading}
       error={q.error}
@@ -257,8 +253,8 @@ export function CalibrationCompletion({ params, pollMs }) {
   const rate = (onTime + delayed) === 0 ? null : Math.round(onTime / (onTime + delayed) * 100);
   return (
     <ChartCard
-      title="Calibration Completion Trend"
-      subtitle="On-time vs delayed monthly"
+      title="Calibration SLA Trend"
+      subtitle="On-time completions against delayed work"
       stat={rate !== null ? { value: `${rate}% on-time`, accent: rate >= 80 ? 'green' : 'amber' } : null}
       loading={q.isLoading}
       error={q.error}
@@ -268,19 +264,15 @@ export function CalibrationCompletion({ params, pollMs }) {
       onDownloadCsv={downloadHandler('calibrationCompletion', params, 'Calibration Completion')}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g5-on"  color={PALETTE[1]} topOpacity={0.55} />
-          <GradientDef id="g5-del" color={PALETTE[3]} topOpacity={0.55} />
+        <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Area type="monotone" dataKey="on_time" stroke={PALETTE[1]} strokeWidth={2.5}
-                fill="url(#g5-on)"  animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-          <Area type="monotone" dataKey="delayed" stroke={PALETTE[3]} strokeWidth={2.5}
-                fill="url(#g5-del)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-        </AreaChart>
+          <Bar dataKey="on_time" name="On Time" fill={PALETTE[1]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Bar dataKey="delayed" name="Delayed" fill={PALETTE[3]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+        </BarChart>
       </ResponsiveContainer>
     </ChartCard>
   );
@@ -294,8 +286,8 @@ export function JobTypeDistribution({ params, pollMs }) {
   const data = q.data || [];
   return (
     <ChartCard
-      title="Job Type Distribution"
-      subtitle="JR_JOB_TYPE counts in window"
+      title="Lane Mix by Job Type"
+      subtitle="Calibration and repair demand split"
       loading={q.isLoading}
       error={q.error}
       isFetching={q.isFetching}
@@ -325,7 +317,7 @@ export function EngineerWorkload({ params, pollMs }) {
   return (
     <ChartCard
       title="Engineer Workload (Top 10)"
-      subtitle="Open load vs completed per engineer"
+      subtitle="Open load and completed work per engineer"
       height={400}
       loading={q.isLoading}
       error={q.error}
@@ -336,14 +328,23 @@ export function EngineerWorkload({ params, pollMs }) {
       span={2}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart layout="vertical" data={data} margin={{ ...MARGIN, left: 110 }}>
-          <CartesianGrid {...GRID} horizontal={false} vertical={true} />
-          <XAxis type="number" tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <YAxis type="category" dataKey="engineer_name" tick={TICK} axisLine={false} tickLine={false} width={140} />
+        <BarChart data={data} margin={{ top: 16, right: 24, bottom: 56, left: 4 }}>
+          <CartesianGrid {...GRID} />
+          <XAxis
+            dataKey="engineer_name"
+            tick={TICK}
+            axisLine={false}
+            tickLine={false}
+            angle={-28}
+            textAnchor="end"
+            interval={0}
+            height={64}
+          />
+          <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
           <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Bar dataKey="open_load" stackId="a" fill={PALETTE[2]} animationDuration={ANIMATION_MS} radius={[0, 0, 0, 0]} />
-          <Bar dataKey="done"      stackId="a" fill={PALETTE[1]} animationDuration={ANIMATION_MS} radius={[0, 6, 6, 0]} />
+          <Bar dataKey="open_load" name="Open Load" fill={PALETTE[2]} animationDuration={ANIMATION_MS} radius={[6, 6, 0, 0]} />
+          <Bar dataKey="done" name="Completed" fill={PALETTE[1]} animationDuration={ANIMATION_MS} radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -395,7 +396,7 @@ export function WeeklyActivity({ params, pollMs }) {
   return (
     <ChartCard
       title="Weekly Activity Trend"
-      subtitle="Job Cards by ISO week — calibrations & repairs over the last 12 weeks"
+      subtitle="Weekly job-card growth across calibration and repair"
       stat={{ value: `${total.toLocaleString()} JCs`, accent: 'blue' }}
       height={340}
       loading={q.isLoading}
@@ -478,8 +479,8 @@ export function EquipmentRegistrationTrend({ params, pollMs }) {
   const total = sum(data, 'registered');
   return (
     <ChartCard
-      title="Equipment Registration Trend"
-      subtitle="New equipment added per month (EQM_CREATED_ON)"
+      title="Asset Base Growth"
+      subtitle="New equipment registered per month"
       stat={{ value: `+${total.toLocaleString()} added`, accent: 'green' }}
       height={340}
       loading={q.isLoading}
@@ -505,43 +506,41 @@ export function EquipmentRegistrationTrend({ params, pollMs }) {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────
-//  G12 — Priority Mix Trend   (STACKED AREA, low/med/high)
-// ────────────────────────────────────────────────────────────────────
+// ── G12 - Priority Mix Wave   (3-wave dynamic area chart) ──────────────
 export function PriorityMixTrend({ params, pollMs }) {
   const q = useChartQ('priorityMixTrend', params, pollMs);
   const data = q.data || [];
-  const totalHigh = sum(data, 'high');
+  const total = sum(data, 'low') + sum(data, 'medium') + sum(data, 'high');
   return (
     <ChartCard
-      title="Priority Mix Trend"
-      subtitle="LOW / MEDIUM / HIGH JR priority stacked over time"
-      stat={{ value: `${totalHigh.toLocaleString()} high`, accent: totalHigh > 0 ? 'amber' : 'green' }}
+      title="Priority Mix Wave"
+      subtitle="Low, medium, and high demand waves by month"
+      stat={{ value: total.toLocaleString(), accent: 'blue' }}
       height={340}
       loading={q.isLoading}
       error={q.error}
       isFetching={q.isFetching}
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
-      onDownloadCsv={downloadHandler('priorityMixTrend', params, 'Priority Mix Trend')}
+      onDownloadCsv={downloadHandler('priorityMixTrend', params, 'Priority Mix Wave')}
       span={2}
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g12-low"  color={PALETTE[1]} topOpacity={0.55} />
-          <GradientDef id="g12-med"  color={PALETTE[2]} topOpacity={0.55} />
-          <GradientDef id="g12-high" color={PALETTE[3]} topOpacity={0.55} />
+          <GradientDef id="g12-low" color={PALETTE[1]} topOpacity={0.35} />
+          <GradientDef id="g12-medium" color={PALETTE[2]} topOpacity={0.4} />
+          <GradientDef id="g12-high" color={PALETTE[3]} topOpacity={0.45} />
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
           <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
           <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Area type="monotone" dataKey="low"    stackId="p" name="Low"    stroke={PALETTE[1]}
-                strokeWidth={1.5} fill="url(#g12-low)"  animationDuration={ANIMATION_MS} />
-          <Area type="monotone" dataKey="medium" stackId="p" name="Medium" stroke={PALETTE[2]}
-                strokeWidth={1.5} fill="url(#g12-med)"  animationDuration={ANIMATION_MS} />
-          <Area type="monotone" dataKey="high"   stackId="p" name="High"   stroke={PALETTE[3]}
-                strokeWidth={1.5} fill="url(#g12-high)" animationDuration={ANIMATION_MS} />
+          <Area type="natural" dataKey="low" name="Low" stroke={PALETTE[1]} strokeWidth={2.25}
+                fill="url(#g12-low)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
+          <Area type="natural" dataKey="medium" name="Medium" stroke={PALETTE[2]} strokeWidth={2.25}
+                fill="url(#g12-medium)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
+          <Area type="natural" dataKey="high" name="High" stroke={PALETTE[3]} strokeWidth={2.25}
+                fill="url(#g12-high)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
         </AreaChart>
       </ResponsiveContainer>
     </ChartCard>

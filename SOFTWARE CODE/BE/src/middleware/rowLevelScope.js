@@ -14,6 +14,7 @@
 //       resource:        'job_request' | 'job_card' | ...
 //       canReadAll:      boolean   ← if true, no row-level filter
 //       ownerEmployeeId: string    ← cmms_emp_mst.EMM_ID for the caller
+//       laneScopes:      string[]  ← optional row-level lane filter
 //     }
 //
 // PRECEDENCE (broadest wins)
@@ -81,6 +82,9 @@ function rowLevelScope(resource) {
       resource,
       canReadAll,
       ownerEmployeeId: req.user.employeeId,
+      // Empty array = legacy global role or personal-only user. Non-empty
+      // means "read-all/list is still constrained to these operational lanes".
+      laneScopes: Array.isArray(req.user.laneScopes) ? req.user.laneScopes : [],
     };
     return next();
   };

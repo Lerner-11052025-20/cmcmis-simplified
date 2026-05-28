@@ -31,6 +31,7 @@
 'use strict';
 
 const { errors } = require('../../middleware/errorHandler');
+const { isManagerRole } = require('../../utils/lanes');
 
 /**
  * ALLOWED transitions table. Same shape as jobRequests.stateMachine
@@ -69,7 +70,14 @@ const ALLOWED = {
 };
 
 // Roles that bypass the engineer-ownership constraint.
-const LIC_SA_ROLES = new Set(['LAB_IN_CHARGE', 'SUPER_ADMIN']);
+const LIC_SA_ROLES = new Set([
+  'LAB_IN_CHARGE',
+  'SUPER_ADMIN',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+]);
 
 /**
  * Validate a JC transition request. Throws AppError(409|403|400) on failure.
@@ -98,7 +106,7 @@ function transition(currentState, action, actor, { isOwnEngineer = false, reason
   // 3) Ownership gate.
   //    actorMustBeOwnerOrLicSa=true → engineer (own JC) OR LIC/SA passes.
   //    actorMustBeOwnerOrLicSa=false → ONLY LIC/SA passes.
-  const isLicOrSa = LIC_SA_ROLES.has(actor.role);
+  const isLicOrSa = isManagerRole(actor.role);
   if (rule.actorMustBeOwnerOrLicSa) {
     if (!isOwnEngineer && !isLicOrSa) {
       throw errors.forbidden(

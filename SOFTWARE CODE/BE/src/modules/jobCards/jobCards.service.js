@@ -21,6 +21,7 @@ const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 // Phase 7 Slice 2 priority canonicaliser (LOW/NORMAL/HIGH/URGENT → LOW/MEDIUM/HIGH).
 const { toCanonicalPriority } = require('../jobRequests/jobRequests.repo');
 const jrRepo = require('../jobRequests/jobRequests.repo');
+const { canAccessLane, scopeCanAccessLane } = require('../../utils/lanes');
 
 /**
  * Look up the JR owner (submitter) given a parent JR number. Returns
@@ -55,26 +56,6 @@ function jcCodeFrom(jc) {
   return `JC-${yr}-${num}`;
 }
 
-/**
- * Pick a coarse "tab hint" for the JC_TAB_UPDATED notification body —
- * just enough detail to make "Card updated" actionable without echoing
- * 80 column names. Maps body keys onto the 13-tab vocabulary.
- */
-function pickTabHint(body) {
-  if (!body || typeof body !== 'object') return 'details';
-  const keys = Object.keys(body);
-  if (keys.some((k) => k.startsWith('awaiting_') || ['supplier_name','indent_no','po_no','mirv_no'].includes(k))) return 'Awaiting Information';
-  if (keys.some((k) => ['vendor_supplier_name','intimation_sent_on','sent_to_vendor_date','gate_pass_no','invoice_no','cost_of_component','labour_charges'].includes(k))) return 'Contract / Warranty';
-  if (keys.includes('observations_text') || keys.includes('job_status_display')) return 'Observations';
-  if (keys.includes('plug_in_accessories'))     return 'Accessories';
-  if (keys.includes('equipments_used'))         return 'Equipments Used';
-  if (keys.includes('completion_summary'))      return 'Completion';
-  if (keys.some((k) => ['reviewed_by','review_comments','final_closure_notes','equipment_received_by_customer'].includes(k))) return 'Closure';
-  if (keys.includes('job_request_remarks') || keys.includes('repair_type') || keys.includes('job_complete_planned_date')) return 'Job Card Details';
-  if (keys.includes('submitted_by') || keys.includes('received_by')) return 'Submitted & Received';
-  return 'details';
-}
-
 // ── Helper: is the JC "legacy"? (D-9.14 read-only banner condition) ──
 // Legacy = pre-Phase-9 row: no parent JR, no assigned engineer (Phase 7
 // Slice 2 always sets this on MVP rows), and status=VERIFIED_CLOSED.
@@ -90,6 +71,34 @@ function isOwnEngineer(jc, actor) {
       && jc.assigned_engineer_employee_id === actor.employeeId;
 }
 
+function assertCanAccessLane(jc, actorOrScope) {
+  const allowed = actorOrScope?.resource
+    ? scopeCanAccessLane(actorOrScope, jc?.lane_code)
+    : canAccessLane(actorOrScope, jc?.lane_code);
+  if (!allowed) {
+    throw errors.forbidden('Cannot access a Job Card outside your assigned lane');
+  }
+}
+
+async function syncParentJobRequestStatus(conn, jc, toStatus, actor, reason) {
+  if (!jc?.parent_jr_no) return;
+  const jr = await jrRepo.findForMutation(conn, jc.parent_jr_no);
+  if (!jr || jr.status === toStatus) return;
+
+  // From: JR stopped at ASSIGNED after conversion. To: parent JR mirrors the
+  // real JC lifecycle so request lists/detail show IN_PROGRESS/COMPLETED/
+  // VERIFIED_CLOSED as the work moves.
+  await jrRepo.transitionStatus(conn, jr.jr_no, toStatus);
+  await jrRepo.appendStatusHistory(
+    conn,
+    jr.jr_no,
+    jr.status,
+    toStatus,
+    actor.employeeId,
+    reason || `Synced from Job Card ${jc.section_job_no}`,
+  );
+}
+
 // ── Helper: full read-only view shape from a hydrated jc row ──
 function shapeDetail(row) {
   // Helper to format ISO dates cleanly. Empty → null.
@@ -101,6 +110,9 @@ function shapeDetail(row) {
     card_code:       formatJcCode(row.jc_no, row.jc_recd_date || row.created_at),
     jc_no:           row.jc_no,
     status:          row.status,
+    job_category:    row.job_category,
+    work_type:       row.work_type,
+    lane_code:       row.lane_code,
     /* parent JR */
     parent_jr_no:    row.parent_jr_no,
     parent_jr_code:  row.parent_jr_no ? formatJrCode(row.parent_jr_no, row.jr_date) : null,
@@ -215,8 +227,8 @@ function shapeDetail(row) {
 // ────────────────────────────────────────────────────────────────────
 //  LIST  (Phase 6 — unchanged behaviour)
 // ────────────────────────────────────────────────────────────────────
-async function listJobCards(params /* scope ignored: Phase 6 had no row-level filter */) {
-  const { rows, total } = await repo.listJobCards(params);
+async function listJobCards(params, scope = null) {
+  const { rows, total } = await repo.listJobCards(params, scope);
 
   const items = rows.map((r) => ({
     id:                     r.jc_no,
@@ -228,6 +240,9 @@ async function listJobCards(params /* scope ignored: Phase 6 had no row-level fi
     equipment_name:         r.equipment_name || null,
     assigned_engineer_id:   r.engineer_employee_id || null,
     assigned_engineer_name: r.engineer_name || null,
+    job_category:           r.job_category || null,
+    work_type:              r.work_type || null,
+    lane_code:              r.lane_code || null,
     status:                 r.status,
     start_date:             r.start_date  ? dayjs(r.start_date).format('YYYY-MM-DD') : null,
     due_date:               r.due_date    ? dayjs(r.due_date).format('YYYY-MM-DD')   : null,
@@ -267,12 +282,13 @@ async function listJobCards(params /* scope ignored: Phase 6 had no row-level fi
  *
  * @returns full shaped detail payload (~100 fields)
  */
-async function getJobCardDetail({ sectionJobNo }) {
+async function getJobCardDetail({ sectionJobNo, scope }) {
   if (!sectionJobNo) {
     throw errors.badRequest('Invalid job card id', { field: 'id' });
   }
   const row = await repo.findByIdWithDetails(sectionJobNo);
   if (!row) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  assertCanAccessLane(row, scope);
   return shapeDetail(row);
 }
 
@@ -280,10 +296,13 @@ async function getJobCardDetail({ sectionJobNo }) {
  * GET /api/v1/job-cards/:id/history
  * Chronological state-machine log for the Timeline component.
  */
-async function getJobCardHistory({ sectionJobNo }) {
+async function getJobCardHistory({ sectionJobNo, scope }) {
   if (!sectionJobNo) {
     throw errors.badRequest('Invalid job card id', { field: 'id' });
   }
+  const jc = await repo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  assertCanAccessLane(jc, scope);
   const rows = await repo.findStatusHistory(sectionJobNo);
   return rows.map((r) => ({
     from_status:     r.from_status,
@@ -320,6 +339,7 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
     await conn.beginTransaction();
     const jc = await repo.findForMutation(conn, sectionJobNo);
     if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+    assertCanAccessLane(jc, actor);
 
     // D-9.14: legacy JCs are read-only.
     if (isLegacyRow(jc)) {
@@ -348,23 +368,6 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
       _updated_by_employee_id: actor.employeeId,
     });
 
-    // Phase 12 — notify the assigned engineer + managerial queue that a
-    // tab was edited. The actor is stripped by the emitter, so if the
-    // engineer edited their own card the only recipients are managers.
-    // We pick a coarse "tab hint" from the body keys touched so the
-    // notification copy is informative without enumerating every column.
-    const managers = await getManagerialRecipients();
-    const tabHint = pickTabHint(body);
-    await emitNotification({
-      conn,
-      event_type:  'JC_TAB_UPDATED',
-      entity_type: 'JOB_CARD',
-      entity_id:   sectionJobNo,
-      entity:      { cardCode: jcCodeFrom(jc), cardSectionNo: sectionJobNo, tabHint },
-      actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
-      recipients:  [jc.assigned_engineer_employee_id, ...managers],
-    });
-
     await conn.commit();
     return { id: sectionJobNo, updated_columns: updated };
   } catch (err) {
@@ -385,6 +388,7 @@ async function startWorkJobCard({ sectionJobNo, actor, ipAddress, userAgent }) {
     await conn.beginTransaction();
     const jc = await repo.findForMutation(conn, sectionJobNo);
     if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+    assertCanAccessLane(jc, actor);
     if (isLegacyRow(jc)) throw errors.conflict('Legacy job cards are read-only.');
 
     const { newState } = transition(jc.status, 'start-work', actor, {
@@ -392,6 +396,7 @@ async function startWorkJobCard({ sectionJobNo, actor, ipAddress, userAgent }) {
     });
 
     await repo.setStatusStartWork(conn, sectionJobNo, { actorEmployeeId: actor.employeeId });
+    await syncParentJobRequestStatus(conn, jc, 'IN_PROGRESS', actor, 'Job Card work started');
     await repo.appendStatusHistory(conn, sectionJobNo, jc.status, newState, actor.employeeId);
     await repo.writePhase9AuditLog(conn, {
       actorEmployeeId: actor.employeeId,
@@ -405,7 +410,7 @@ async function startWorkJobCard({ sectionJobNo, actor, ipAddress, userAgent }) {
 
     // Phase 12 — notify engineer (echo of own action) + managers.
     {
-      const managers = await getManagerialRecipients();
+      const managers = await getManagerialRecipients(jc.lane_code);
       await emitNotification({
         conn,
         event_type:  'JC_START_WORK',
@@ -419,7 +424,7 @@ async function startWorkJobCard({ sectionJobNo, actor, ipAddress, userAgent }) {
 
     await conn.commit();
 
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     // Engineer's "Assigned to me" count drops; "In progress" count rises.
 
     return { id: sectionJobNo, status: newState };
@@ -441,6 +446,7 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
     await conn.beginTransaction();
     const jc = await repo.findForMutation(conn, sectionJobNo);
     if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+    assertCanAccessLane(jc, actor);
     if (isLegacyRow(jc)) throw errors.conflict('Legacy job cards are read-only.');
 
     // State machine — also enforces 'complete' permission + own/LIC/SA.
@@ -483,6 +489,7 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
       actualDate:      body.actual_completion_date,
       totalHours:      body.total_hours_spent,
     });
+    await syncParentJobRequestStatus(conn, jc, 'COMPLETED', actor, 'Job Card marked complete');
     await repo.appendStatusHistory(conn, sectionJobNo, jc.status, newState, actor.employeeId);
     await repo.writePhase9AuditLog(conn, {
       actorEmployeeId: actor.employeeId,
@@ -501,7 +508,7 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
     // Phase 12 — JC_MARKED_COMPLETE: engineer (echo) + managerial queue
     // (LIC + SA need to know there's a card awaiting verification).
     {
-      const managers = await getManagerialRecipients();
+      const managers = await getManagerialRecipients(jc.lane_code);
       await emitNotification({
         conn,
         event_type:  'JC_MARKED_COMPLETE',
@@ -514,7 +521,7 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
     }
 
     await conn.commit();
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     return { id: sectionJobNo, status: newState };
   } catch (err) {
     try { await conn.rollback(); } catch { /* ignore */ }
@@ -534,6 +541,7 @@ async function verifyCloseJobCard({ sectionJobNo, body, actor, ipAddress, userAg
     await conn.beginTransaction();
     const jc = await repo.findForMutation(conn, sectionJobNo);
     if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+    assertCanAccessLane(jc, actor);
     if (isLegacyRow(jc)) throw errors.conflict('Legacy job cards are read-only.');
 
     const { newState } = transition(jc.status, 'verify-close', actor, {});
@@ -542,6 +550,7 @@ async function verifyCloseJobCard({ sectionJobNo, body, actor, ipAddress, userAg
       actorEmployeeId: actor.employeeId,
       closureFields:   body,
     });
+    await syncParentJobRequestStatus(conn, jc, 'VERIFIED_CLOSED', actor, 'Job Card verified and closed');
     await repo.appendStatusHistory(conn, sectionJobNo, jc.status, newState, actor.employeeId);
     await repo.writePhase9AuditLog(conn, {
       actorEmployeeId: actor.employeeId,
@@ -573,7 +582,7 @@ async function verifyCloseJobCard({ sectionJobNo, body, actor, ipAddress, userAg
     // managerial queue (echo). The JR owner gets closure confirmation —
     // their request lifecycle is complete.
     {
-      const managers   = await getManagerialRecipients();
+      const managers   = await getManagerialRecipients(jc.lane_code);
       const jrOwner    = await findJrSubmitter(conn, jc.parent_jr_no);
       await emitNotification({
         conn,
@@ -587,7 +596,7 @@ async function verifyCloseJobCard({ sectionJobNo, body, actor, ipAddress, userAg
     }
 
     await conn.commit();
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     return { id: sectionJobNo, status: newState };
   } catch (err) {
     try { await conn.rollback(); } catch { /* ignore */ }
@@ -607,6 +616,7 @@ async function reopenJobCard({ sectionJobNo, body, actor, ipAddress, userAgent }
     await conn.beginTransaction();
     const jc = await repo.findForMutation(conn, sectionJobNo);
     if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+    assertCanAccessLane(jc, actor);
     if (isLegacyRow(jc)) throw errors.conflict('Legacy job cards are read-only.');
 
     const { newState } = transition(jc.status, 'reopen', actor, {
@@ -618,6 +628,7 @@ async function reopenJobCard({ sectionJobNo, body, actor, ipAddress, userAgent }
       reason:               body.reason,
       fromVerifiedClosed:   jc.status === 'VERIFIED_CLOSED',
     });
+    await syncParentJobRequestStatus(conn, jc, 'REOPENED', actor, body.reason);
     await repo.appendStatusHistory(conn, sectionJobNo, jc.status, newState, actor.employeeId, body.reason);
     await repo.writePhase9AuditLog(conn, {
       actorEmployeeId: actor.employeeId,
@@ -637,7 +648,7 @@ async function reopenJobCard({ sectionJobNo, body, actor, ipAddress, userAgent }
     // Phase 12 — JC_REOPENED: engineer (work is back on their plate) +
     // managerial queue (queue state changed).
     {
-      const managers = await getManagerialRecipients();
+      const managers = await getManagerialRecipients(jc.lane_code);
       await emitNotification({
         conn,
         event_type:  'JC_REOPENED',
@@ -654,7 +665,7 @@ async function reopenJobCard({ sectionJobNo, body, actor, ipAddress, userAgent }
     }
 
     await conn.commit();
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     return { id: sectionJobNo, status: newState, reopen_count: Number(jc.reopen_count || 0) + 1 };
   } catch (err) {
     try { await conn.rollback(); } catch { /* ignore */ }
@@ -677,5 +688,6 @@ module.exports = {
   // Helpers exported for sub-modules (taskChecklist + documents):
   isLegacyRow,
   isOwnEngineer,
+  assertCanAccessLane,
   LIC_SA_ROLES,
 };

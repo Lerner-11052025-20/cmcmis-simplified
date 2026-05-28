@@ -1,8 +1,8 @@
 // ============================================================================
 // pages/jobRequests/components/DetailHeader.jsx
 // ----------------------------------------------------------------------------
-// Top strip of the JR Detail page: back-link, JR code, status pill, priority
-// pill, type label, created/submitted timestamps.
+// Top strip of the JR Detail page: back-link, JR code, status pill, type label,
+// created/submitted timestamps.
 //
 // PHASE 11 UPDATE — adds "Download Request PDF" button (PDF #3).
 // Gated by `job_request:download-details`. BE re-validates row-level scope
@@ -15,7 +15,6 @@ import { ArrowLeft, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { StatusPill } from '../../../components/StatusPill.jsx';
-import { PriorityLabel } from '../../../components/PriorityLabel.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { useAuth } from '../../../lib/auth-context.jsx';
 import { downloadJobRequestDetails } from '../../../lib/api/pdf.js';
@@ -97,12 +96,9 @@ export function DetailHeader({ jr }) {
           </div>
         </div>
 
-        {/* Right: status + priority pills + Download button (Phase 11) */}
+        {/* Right: status pill + Download button (Phase 11) */}
         <div className="flex flex-col items-end gap-1.5">
           <StatusPill status={jr.status} />
-          <div className="text-xs text-ink-soft">
-            Priority: <PriorityLabel priority={jr.priority} />
-          </div>
           {canDownload ? (
             <Button
               variant="secondary"

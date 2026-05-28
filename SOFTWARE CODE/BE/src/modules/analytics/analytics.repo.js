@@ -77,6 +77,8 @@ async function monthlyActivityTrends(params) {
     ? ' AND e.EQM_DIVID = ?'
     : '';
   if (params.divisionId) { argsCal.push(params.divisionId); argsRep.push(params.divisionId); }
+  const laneClause = params.laneCode ? ' AND jc.JM_LANE_CODE = ?' : '';
+  if (params.laneCode) { argsCal.push(params.laneCode); argsRep.push(params.laneCode); }
 
   const calSql = `
     SELECT DATE_FORMAT(jc.JM_JCRecdDate, '%Y-%m') AS month, COUNT(*) AS n
@@ -85,6 +87,7 @@ async function monthlyActivityTrends(params) {
       LEFT JOIN cmms_jobrequest_mst jr ON jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
      WHERE ${whereCal.join(' AND ')}
        ${divClause}
+       ${laneClause}
        AND (jc.JM_WORKFLOW_TYPE LIKE 'CALIBRATION%' OR jr.JR_JOB_TYPE = 'CALIBRATION')
      GROUP BY month ORDER BY month`;
 
@@ -95,6 +98,7 @@ async function monthlyActivityTrends(params) {
       LEFT JOIN cmms_jobrequest_mst jr ON jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
      WHERE ${whereRep.join(' AND ')}
        ${divClause}
+       ${laneClause}
        AND (jc.JM_WORKFLOW_TYPE LIKE 'INSPECTION%' OR jr.JR_JOB_TYPE = 'REPAIR')
      GROUP BY month ORDER BY month`;
 
@@ -136,6 +140,7 @@ async function monthlyJobTrends(params) {
   const where = []; const args = [];
   applyWindow(where, args, win, 'JR_CREATED_AT');
   if (params.divisionId) { where.push('JR_DIVISION = ?'); args.push(params.divisionId); }
+  if (params.laneCode) { where.push('JR_LANE_CODE = ?'); args.push(params.laneCode); }
 
   const sql = `
     SELECT DATE_FORMAT(JR_CREATED_AT, '%Y-%m') AS month,
@@ -185,6 +190,7 @@ async function calibrationCompletionTrend(params) {
   const where = ["JM_MVP_STATUS = 'VERIFIED_CLOSED'", 'JM_VERIFIED_ON IS NOT NULL'];
   const args = [];
   applyWindow(where, args, win, 'JM_VERIFIED_ON');
+  if (params.laneCode) { where.push('JM_LANE_CODE = ?'); args.push(params.laneCode); }
   // Calibrations only — workflow_type LIKE 'CALIBRATION%' OR fall back via JR.
   where.push("(JM_WORKFLOW_TYPE LIKE 'CALIBRATION%' OR JM_WORKFLOW_TYPE IS NULL)");
 
@@ -211,6 +217,7 @@ async function jobTypeDistribution(params) {
   const where = ['JR_JOB_TYPE IS NOT NULL']; const args = [];
   applyWindow(where, args, win, 'JR_CREATED_AT');
   if (params.divisionId) { where.push('JR_DIVISION = ?'); args.push(params.divisionId); }
+  if (params.laneCode) { where.push('JR_LANE_CODE = ?'); args.push(params.laneCode); }
   const sql = `
     SELECT JR_JOB_TYPE AS job_type, COUNT(*) AS n
       FROM cmms_jobrequest_mst
@@ -230,6 +237,7 @@ async function engineerWorkload(params) {
     where.push('EXISTS (SELECT 1 FROM cmms_eqip_mst e WHERE e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID AND e.EQM_DIVID = ?)');
     args.push(params.divisionId);
   }
+  if (params.laneCode) { where.push('jc.JM_LANE_CODE = ?'); args.push(params.laneCode); }
   const sql = `
     SELECT jc.JM_ASSIGNED_ENGINEER AS engineer_employee_id,
            COALESCE(emp.EMM_NAME, '') AS engineer_name,
@@ -287,6 +295,8 @@ async function weeklyActivityTrend(params) {
   // year boundary don't collide.
   const divClause = params.divisionId ? ' AND e.EQM_DIVID = ?' : '';
   if (params.divisionId) args.push(params.divisionId);
+  const laneClause = params.laneCode ? ' AND jc.JM_LANE_CODE = ?' : '';
+  if (params.laneCode) args.push(params.laneCode);
 
   const sql = `
     SELECT DATE_FORMAT(jc.JM_JCRecdDate, '%x-W%v') AS week_label,
@@ -298,6 +308,7 @@ async function weeklyActivityTrend(params) {
       LEFT JOIN cmms_jobrequest_mst jr ON jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
      WHERE jc.JM_JCRecdDate >= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
        ${divClause}
+       ${laneClause}
      GROUP BY week_label
      ORDER BY week_start ASC`;
   const [rows] = await pool.query(sql, args);
@@ -321,6 +332,7 @@ async function jcLifecycleFunnel(params) {
     where.push('EXISTS (SELECT 1 FROM cmms_eqip_mst e WHERE e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID AND e.EQM_DIVID = ?)');
     args.push(params.divisionId);
   }
+  if (params.laneCode) { where.push('jc.JM_LANE_CODE = ?'); args.push(params.laneCode); }
   const sql = `
     SELECT JM_MVP_STATUS AS stage, COUNT(*) AS n
       FROM cmms_jobcard_mst jc
@@ -372,6 +384,7 @@ async function priorityMixTrend(params) {
   const args = [];
   applyWindow(where, args, win, 'JR_CREATED_AT');
   if (params.divisionId) { where.push('JR_DIVISION = ?'); args.push(params.divisionId); }
+  if (params.laneCode) { where.push('JR_LANE_CODE = ?'); args.push(params.laneCode); }
   const sql = `
     SELECT DATE_FORMAT(JR_CREATED_AT, '%Y-%m') AS month,
            SUM(CASE WHEN JR_PRIORITY = 'LOW'                       THEN 1 ELSE 0 END) AS low_count,

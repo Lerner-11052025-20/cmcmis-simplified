@@ -31,6 +31,7 @@ const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
 const jcRepo = require('../jobCards/jobCards.repo');
 const lookupsRepo = require('../lookups/lookups.repo');
 const { WORKFLOW_BUCKET } = require('./jobRequests.validators');
+const { deriveLaneCode, canAccessLane, scopeCanAccessLane } = require('../../utils/lanes');
 
 // Phase 12 — workflow events emit in-app notifications. The emitter must
 // be called INSIDE the same transaction as audit + status-history so a
@@ -54,7 +55,9 @@ async function listJobRequests(params, scope) {
     equipment_id:        r.equipment_id,
     equipment_type:      r.equipment_type,
     equipment_name:      r.equipment_name,
+    job_category:        r.job_category,
     job_type:            r.job_type,
+    lane_code:           r.lane_code,
     division_id:         r.division_id,
     division_code:       r.division_code,
     submitted_by_name:   r.submitted_by_name,
@@ -119,6 +122,10 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
   };
 
   const wantsSubmit = body.submit_now === true;
+  const laneCode = deriveLaneCode(body.job_category, body.job_type);
+  if (!canAccessLane(actor, laneCode)) {
+    throw errors.forbidden('Cannot create a Job Request outside your assigned lane');
+  }
 
   // Cross-field guard (defence in depth — zod already enforces this).
   if (wantsSubmit && body.tnc_accepted !== true) {
@@ -139,6 +146,7 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       ...submittedBy,
       job_category:         body.job_category,
       job_type:             body.job_type,
+      lane_code:            laneCode,
       equipment_id:         body.equipment_id ?? null,
       equipment_name:       body.equipment_name,
       make:                 body.make || null,
@@ -187,6 +195,7 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       details: {
         job_category: body.job_category,
         job_type:     body.job_type,
+        lane_code:    laneCode,
         equipment_name: body.equipment_name,
         priority:     body.priority || 'MEDIUM',
         accessories_count: (body.accessories || []).length,
@@ -207,7 +216,7 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       equipmentName: body.equipment_name,
     };
     if (wantsSubmit) {
-      const managers = await getManagerialRecipients();
+      const managers = await getManagerialRecipients(laneCode);
       await emitNotification({
         conn,
         event_type:  'JR_SUBMITTED',
@@ -234,7 +243,7 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
     // Phase 8: KPI cache invalidation (P8-D15). The org snapshot and
     // this submitter's personal snapshot are both affected by a new JR.
     // TTL is the safety net; this is the fast-path.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     kpiCache.invalidate(KPI_KEYS.personal(actor.employeeId));
 
     return {
@@ -269,11 +278,6 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
   // 4) Re-validate that required fields are non-blank server-side.
   //    A user could have saved a draft with empty complaint and then
   //    poked /submit via curl. Defence in depth.
-  if (!jr.complaint_description || jr.complaint_description.length < 10) {
-    throw errors.badRequest('Cannot submit: complaint description is required',
-      { field: 'complaint_description' });
-  }
-
   // 5) Transaction: update status + write state history + write audit.
   const conn = await pool.getConnection();
   try {
@@ -298,7 +302,7 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
 
     // Phase 12 — notify the submitter (their request was sent for approval)
     // + the managerial queue (LIC + SA hold job_request:approve).
-    const managers = await getManagerialRecipients();
+    const managers = await getManagerialRecipients(jr.lane_code);
     await emitNotification({
       conn,
       event_type:  'JR_SUBMITTED',
@@ -313,7 +317,7 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
 
     // Phase 8: KPI cache invalidation — submit moves DRAFT→SUBMITTED, so
     // "Pending Jobs" + "Active Requests" + "Pending Approval" all shift.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id || actor.employeeId));
 
     return { id: jrNo, request_code: formatJrCode(jrNo, jr.created_at), status: newState };
@@ -367,13 +371,25 @@ async function editDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) 
   // transition table has no entry → 409 ILLEGAL_TRANSITION.
   transition(jr.status, 'edit', actor, { isOwner });
 
+  const patchBody = { ...body };
+  if (Object.prototype.hasOwnProperty.call(body, 'job_category')
+      || Object.prototype.hasOwnProperty.call(body, 'job_type')) {
+    patchBody.lane_code = deriveLaneCode(
+      body.job_category || jr.job_category,
+      body.job_type || jr.job_type,
+    );
+  }
+  if (!canAccessLane(actor, patchBody.lane_code || jr.lane_code)) {
+    throw errors.forbidden('Cannot move this Job Request outside your assigned lane');
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
     // Forward the body to the repo updater which honours only the
     // editable fields (BR-JR-06: submitted_by_* never accepted via body).
-    await repo.updateDraftFields(conn, jrNo, body);
+    await repo.updateDraftFields(conn, jrNo, patchBody);
 
     await repo.writeAuditLog(conn, {
       actorEmployeeId: actor.employeeId,
@@ -385,10 +401,11 @@ async function editDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) 
       details: {
         // Don't echo back the whole body — could be 4 KB. Just keep the
         // most-changed fields visible in audit notes.
-        equipment_name:        body.equipment_name,
-        job_type:              body.job_type,
-        priority:              body.priority,
-        complaint_description: body.complaint_description,
+        equipment_name:        patchBody.equipment_name,
+        job_type:              patchBody.job_type,
+        lane_code:             patchBody.lane_code,
+        priority:              patchBody.priority,
+        complaint_description: patchBody.complaint_description,
       },
     });
 
@@ -402,7 +419,7 @@ async function editDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }) 
       event_type:  'JR_EDIT_DRAFT',
       entity_type: 'JOB_REQUEST',
       entity_id:   jrNo,
-      entity:      { code: formatJrCode(jrNo, jr.created_at), id: jrNo, equipmentName: body.equipment_name || jr.equipment_name },
+      entity:      { code: formatJrCode(jrNo, jr.created_at), id: jrNo, equipmentName: patchBody.equipment_name || jr.equipment_name },
       actor:       { employeeId: actor.employeeId, fullName: actor.fullName },
       recipients:  [jr.submitted_by_employee_id],
     });
@@ -477,7 +494,7 @@ async function cancelDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }
 
     // Phase 12 — notify the owner + the managerial queue (they were
     // watching the SUBMITTED bucket; a cancel removes it).
-    const managers = await getManagerialRecipients();
+    const managers = await getManagerialRecipients(jr.lane_code);
     await emitNotification({
       conn,
       event_type:  'JR_CANCELLED',
@@ -491,7 +508,7 @@ async function cancelDraftJobRequest({ jrNo, body, actor, ipAddress, userAgent }
     await conn.commit();
 
     // KPI cache: cancelling removes the JR from "Pending Jobs" etc. counts.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id || actor.employeeId));
 
     return {
@@ -543,6 +560,9 @@ async function getJobRequestDetail({ jrNo, scope, actor }) {
   if (!scope.canReadAll && row.submitted_by_employee_id !== scope.ownerEmployeeId) {
     throw errors.forbidden('Cannot view another user\'s job request');
   }
+  if (!scopeCanAccessLane(scope, row.lane_code)) {
+    throw errors.forbidden('Cannot view a Job Request outside your assigned lane');
+  }
 
   // Shape the payload for the FE. Keep all canonical names; format dates
   // as ISO strings so the JSON wire format is timezone-agnostic.
@@ -552,6 +572,7 @@ async function getJobRequestDetail({ jrNo, scope, actor }) {
     status:                  row.status,
     job_category:            row.job_category,
     job_type:                row.job_type,
+    lane_code:               row.lane_code,
     priority:                row.priority,
     /* dates */
     created_at:              row.created_at  ? dayjs(row.created_at).toISOString()  : null,
@@ -647,6 +668,9 @@ async function getJobRequestHistory({ jrNo, scope }) {
   if (!scope.canReadAll && jr.submitted_by_employee_id !== scope.ownerEmployeeId) {
     throw errors.forbidden('Cannot view another user\'s job request');
   }
+  if (!scopeCanAccessLane(scope, jr.lane_code)) {
+    throw errors.forbidden('Cannot view a Job Request outside your assigned lane');
+  }
 
   const rows = await repo.findHistory(jrNo);
   return rows.map((r) => ({
@@ -718,6 +742,15 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
     if (!jr) {
       throw errors.notFound(`Job request ${jrNo} not found`);
     }
+    if (!canAccessLane(actor, jr.lane_code)) {
+      throw errors.forbidden('Cannot convert a Job Request outside your assigned lane');
+    }
+    if (!canAccessLane(engineer, jr.lane_code)) {
+      throw errors.badRequest(
+        'Selected engineer is not assigned to this Job Request lane',
+        { field: 'engineer_employee_id', lane_code: jr.lane_code },
+      );
+    }
 
     // 2a) PRE-FLIGHT: The legacy cmms_jobcard_mst.JM_EQM_ID is NOT NULL
     //     and forms half of a composite FK to cmms_eqip_mst. If the source
@@ -779,6 +812,8 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
       equipment_type:          jr.equipment_type,
       equipment_id:            jr.equipment_id,
       job_category:            jr.job_category,
+      job_type:                jr.job_type,
+      lane_code:               jr.lane_code,
       equipment_received_date: body.equipment_received_date,
       planned_start_date:      body.planned_start_date,
       target_end_date:         body.target_end_date,
@@ -819,6 +854,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
         engineer_employee_id: engineer.employee_id,
         engineer_name:        engineer.full_name,
         workflow_type:        body.workflow_type,
+        lane_code:            jr.lane_code,
         section_job_no:       sectionJobNo,
         job_card_no:          jcNo,
         target_end_date:      body.target_end_date,
@@ -837,6 +873,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
         parent_jr_no: jr.jr_no,
         engineer_employee_id: engineer.employee_id,
         workflow_type: body.workflow_type,
+        lane_code:     jr.lane_code,
         equipment_received_date: body.equipment_received_date,
         planned_start_date:      body.planned_start_date,
         target_end_date:         body.target_end_date,
@@ -849,7 +886,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
     //     other managers see the queue moved.
     // (b) JC_CREATED → assigned engineer + managers (managers track
     //     creation events for queue visibility).
-    const managers = await getManagerialRecipients();
+    const managers = await getManagerialRecipients(jr.lane_code);
     const jcCode = `JC-${new Date().getUTCFullYear()}-${String(jcNo).padStart(4, '0')}`;
     const jrCode = formatJrCode(jr.jr_no, jr.created_at);
 
@@ -878,7 +915,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
     // 13) After-commit side effects. The kpiCache invalidation MUST run
     //     after the txn so a racing dashboard request that misses the
     //     cache reads the now-committed new state.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     if (jr.submitted_by_employee_id) {
       kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id));
     }
@@ -893,6 +930,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
         id:                  jr.jr_no,
         request_code:        formatJrCode(jr.jr_no, jr.created_at),
         status:              'ASSIGNED',
+        lane_code:           jr.lane_code,
         approved_by_employee_id: actor.employeeId,
         assigned_engineer: {
           employee_id: engineer.employee_id,
@@ -905,6 +943,7 @@ async function convertJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
         job_card_no:    jcNo,
         status:         'ASSIGNED',
         workflow_type:  body.workflow_type,
+        lane_code:      jr.lane_code,
         equipment_received_date: body.equipment_received_date,
         planned_start_date:      body.planned_start_date,
         target_end_date:         body.target_end_date,
@@ -957,6 +996,9 @@ async function rejectJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
 
     const jr = await repo.findForMutation(conn, jrNo);
     if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+    if (!canAccessLane(actor, jr.lane_code)) {
+      throw errors.forbidden('Cannot reject a Job Request outside your assigned lane');
+    }
 
     // State machine: validates source state + permission.
     const { newState } = transition(jr.status, 'reject', actor);
@@ -1006,7 +1048,7 @@ async function rejectJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
 
     await conn.commit();
 
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     if (jr.submitted_by_employee_id) {
       kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id));
     }
@@ -1072,7 +1114,7 @@ async function bulkVerifyAllJobRequests({ actor, ipAddress, userAgent }) {
     await conn.commit();
 
     // Wipe the KPI cache — org total + every personal bucket have changed.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     kpiCache.invalidateByPrefix(KPI_KEYS.PERSONAL_PREFIX);
 
     return { verified_count: verifiedCount };

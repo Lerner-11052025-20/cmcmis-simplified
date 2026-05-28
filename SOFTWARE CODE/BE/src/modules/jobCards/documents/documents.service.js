@@ -25,7 +25,10 @@ const VALID_DOC_TYPES = new Set([
 ]);
 
 // ── List active documents for a JC ──────────────────────────────────
-async function listDocuments({ sectionJobNo }) {
+async function listDocuments({ sectionJobNo, actor }) {
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  jcService.assertCanAccessLane(jc, actor);
   const rows = await repo.listForJc(sectionJobNo, { includeDeleted: false });
   return rows.map((r) => ({
     id:             r.id,
@@ -68,6 +71,12 @@ async function uploadDocument({ sectionJobNo, actor, file, docType, ipAddress, u
   if (jcService.isLegacyRow(jc)) {
     try { fs.unlinkSync(file.path); } catch { /* ignore */ }
     throw errors.conflict('Legacy job cards are read-only.');
+  }
+  try {
+    jcService.assertCanAccessLane(jc, actor);
+  } catch (e) {
+    try { fs.unlinkSync(file.path); } catch { /* ignore */ }
+    throw e;
   }
   const own = jcService.isOwnEngineer(
     { assigned_engineer_employee_id: jc.assigned_engineer_employee_id }, actor,
@@ -128,11 +137,14 @@ async function uploadDocument({ sectionJobNo, actor, file, docType, ipAddress, u
 }
 
 // ── Download a document by id (returns abs path + filename) ─────────
-async function getDocumentForDownload({ sectionJobNo, docRowId }) {
+async function getDocumentForDownload({ sectionJobNo, docRowId, actor }) {
   const doc = await repo.findById(docRowId);
   if (!doc || doc.jc_section_no !== sectionJobNo || doc.deleted_at != null) {
     throw errors.notFound('Document not found');
   }
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  jcService.assertCanAccessLane(jc, actor);
   const abs = absolutePathFor(sectionJobNo, doc.storage_filename);
   return {
     abs,
@@ -155,6 +167,7 @@ async function softDeleteDocument({ sectionJobNo, docRowId, actor, ipAddress, us
   }
   // Legacy-JC check.
   const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (jc) jcService.assertCanAccessLane(jc, actor);
   if (jc && jcService.isLegacyRow(jc)) {
     throw errors.conflict('Legacy job cards are read-only.');
   }

@@ -13,7 +13,10 @@ const { translateMulterError } = require('../../../utils/fileStorage');
 
 async function listDocuments(req, res, next) {
   try {
-    const items = await service.listDocuments({ sectionJobNo: req.params.id });
+    const items = await service.listDocuments({
+      sectionJobNo: req.params.id,
+      actor: { role: req.user.role, laneScopes: req.user.laneScopes || [] },
+    });
     return res.json({ data: { items } });
   } catch (e) { return next(e); }
 }
@@ -32,6 +35,7 @@ async function postUploadDocument(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
       file:    req.file,
       docType: req.body?.doc_type || 'OTHER',
@@ -51,6 +55,7 @@ async function getDownloadDocument(req, res, next) {
     const { abs, filename, mimetype } = await service.getDocumentForDownload({
       sectionJobNo: req.params.id,
       docRowId,
+      actor: { role: req.user.role, laneScopes: req.user.laneScopes || [] },
     });
     // Verify the file actually exists on disk; if not (e.g. someone
     // manually removed it), respond 404 cleanly instead of letting
@@ -77,6 +82,7 @@ async function deleteDocument(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] || '',

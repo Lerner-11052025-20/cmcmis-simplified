@@ -14,6 +14,12 @@ export async function fetchDivisions(signal) {
   return r.data.data.items;
 }
 
+/** Projects for the JR form. */
+export async function fetchProjects(signal) {
+  const r = await api.get('/lookups/projects', { signal });
+  return r.data.data.items;
+}
+
 /**
  * Equipment search for the JR form's "Equipment ID" typeahead.
  * @param {string} q      Query string (>= 1 char)
@@ -22,6 +28,16 @@ export async function fetchDivisions(signal) {
 export async function searchEquipment(q, limit = 20, signal) {
   const r = await api.get('/lookups/equipment/search', {
     params: { q, limit },
+    signal,
+  });
+  return r.data.data.items;
+}
+
+/** Accessories already mapped to a selected equipment master row. */
+export async function fetchEquipmentAccessories(eqmType, eqmId, signal) {
+  if (!eqmType || !eqmId) return [];
+  const r = await api.get('/lookups/equipment/accessories', {
+    params: { eqm_type: eqmType, eqm_id: eqmId },
     signal,
   });
   return r.data.data.items;

@@ -29,6 +29,16 @@ export async function fetchEquipmentList(params = {}, signal) {
   return r.data.data;     // → { items, pagination }
 }
 
+export async function fetchEquipmentDetail(id, signal) {
+  const r = await api.get(`/equipment/${encodeURIComponent(id)}`, { signal });
+  return r.data.data;
+}
+
+export async function verifyEquipment(id) {
+  const r = await api.post(`/equipment/${encodeURIComponent(id)}/verify`);
+  return r.data.data;
+}
+
 /** Equipment-type dropdown options. */
 export async function fetchTypes(signal) {
   const r = await api.get('/equipment/types', { signal });

@@ -14,6 +14,7 @@ const { errors } = require('../../../middleware/errorHandler');
 async function loadAndAuthorize(sectionJobNo, actor) {
   const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
   if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  jcService.assertCanAccessLane(jc, actor);
   if (jcService.isLegacyRow(jc)) throw errors.conflict('Legacy job cards are read-only.');
   const own = jcService.isOwnEngineer(
     { assigned_engineer_employee_id: jc.assigned_engineer_employee_id }, actor,
@@ -25,7 +26,10 @@ async function loadAndAuthorize(sectionJobNo, actor) {
   return jc;
 }
 
-async function listRows({ sectionJobNo }) {
+async function listRows({ sectionJobNo, actor }) {
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  jcService.assertCanAccessLane(jc, actor);
   const rows = await repo.listForJc(sectionJobNo);
   return rows.map((r) => ({
     id: r.id,

@@ -23,7 +23,8 @@ const cache = new Map();         // key -> { data, ts }
  *   _refresh (optional): internal seed — stripped before reaching the API,
  *   only used to bust the JSON cache key after a bulk mutation.
  */
-export function useEquipmentList(params) {
+export function useEquipmentList(params, options = {}) {
+  const enabled = options.enabled !== false;
   // Strip the internal _refresh seed before it reaches the API.
   const { _refresh: _refreshSeed, ...apiParams } = params;
 
@@ -39,6 +40,13 @@ export function useEquipmentList(params) {
   const abortRef = useRef(null);
 
   useEffect(() => {
+    if (!enabled) {
+      abortRef.current?.abort();
+      setLoading(false);
+      setError(null);
+      setData(null);
+      return undefined;
+    }
     // Cancel any earlier request whose result would now be stale.
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -70,7 +78,7 @@ export function useEquipmentList(params) {
     // We intentionally key the effect on the serialised params string so
     // re-renders with the same logical params skip the fetch entirely.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, enabled]);
 
   // Exposed so bulk-mutation flows can clear the cache and force a re-fetch.
   function invalidateAll() { cache.clear(); }

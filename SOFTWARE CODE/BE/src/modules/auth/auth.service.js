@@ -50,12 +50,13 @@ const auditRepo = require('./loginAudit.repo');
  * live JWTs the moment a Super Admin changes a user's role / status /
  * force-logs them out.
  */
-function buildAccessPayload(user, role_code, permissions) {
+function buildAccessPayload(user, role_code, permissions, lane_scopes = []) {
   return {
     sub: user.employee_id, // canonical subject — what authenticate.js maps to employeeId
     uid: user.user_id,
     role: role_code,
     permissions,
+    laneScopes: Array.isArray(lane_scopes) ? lane_scopes : [],
     tv:  user.token_version,
   };
 }
@@ -144,10 +145,10 @@ async function login({ employeeId, password, ipAddress, userAgent }) {
   }
 
   // 4) Load role + permissions in one JOIN
-  const { role_code, permissions } = await usersRepo.loadRoleAndPermissions(user.user_id);
+  const { role_code, permissions, lane_scopes } = await usersRepo.loadRoleAndPermissions(user.user_id);
 
   // 5) Mint tokens
-  const accessPayload = buildAccessPayload(user, role_code, permissions);
+  const accessPayload = buildAccessPayload(user, role_code, permissions, lane_scopes);
   const accessToken = signAccess(accessPayload, user.user_id);
   const refreshToken = signRefresh(user);
 
@@ -232,10 +233,10 @@ async function refresh({ rawRefreshToken, ipAddress, userAgent }) {
   if (!user || !user.is_active || user.is_locked) {
     throw errors.unauthorized('User account is no longer active');
   }
-  const { role_code, permissions } = await usersRepo.loadRoleAndPermissions(user.user_id);
+  const { role_code, permissions, lane_scopes } = await usersRepo.loadRoleAndPermissions(user.user_id);
 
   // 5) Mint new pair
-  const accessPayload = buildAccessPayload(user, role_code, permissions);
+  const accessPayload = buildAccessPayload(user, role_code, permissions, lane_scopes);
   const accessToken = signAccess(accessPayload, user.user_id);
   const newRefreshToken = signRefresh(user);
 

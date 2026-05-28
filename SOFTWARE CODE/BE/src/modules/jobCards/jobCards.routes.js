@@ -59,11 +59,13 @@ router.get('/',
 router.get('/:id',
   authenticate,
   authorize('job_card:read-detail'),
+  rowLevelScope('job_card'),
   ctrl.getDetail,
 );
 router.get('/:id/history',
   authenticate,
   authorize('job_card:read-detail'),
+  rowLevelScope('job_card'),
   ctrl.getHistory,
 );
 

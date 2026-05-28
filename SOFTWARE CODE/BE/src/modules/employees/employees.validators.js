@@ -14,6 +14,7 @@
 'use strict';
 
 const { z } = require('zod');
+const { ALL_ROLE_CODES } = require('../../utils/lanes');
 
 // ── Atoms ────────────────────────────────────────────────────────────
 // Locked employee-id format from FINAL-DESC: ^[A-Z]{2}[0-9]{5}$ — two
@@ -32,7 +33,7 @@ const sortEnum = z.enum([
 ]);
 
 const roleCodeEnum = z.enum([
-  'SUPER_ADMIN', 'LAB_IN_CHARGE', 'LAB_ENGINEER', 'NORMAL_USER', 'VIEW_ONLY',
+  ...ALL_ROLE_CODES,
 ]);
 
 // ── listQuerySchema ─────────────────────────────────────────────────

@@ -23,6 +23,7 @@ async function kpis(req, res, next) {
     const actor = {
       role:       req.user.role,
       employeeId: req.user.employeeId,
+      laneScopes: req.user.laneScopes || [],
     };
     const result = await service.getKpis(actor);
     return res.json({ data: result });

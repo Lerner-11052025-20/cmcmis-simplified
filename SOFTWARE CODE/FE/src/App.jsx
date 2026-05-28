@@ -52,6 +52,7 @@ import { Conversion } from './pages/conversion/Conversion.jsx';
 import { UserList } from './pages/admin/users/UserList.jsx';
 import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
 import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
+import { EquipmentVerification } from './pages/admin/equipment/EquipmentVerification.jsx';
 // Phase 10 — Reports & Analytics landing page (replaces Phase-8 placeholder)
 import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
 // Phase 11 Slice 2 — standalone Analytics dashboard (sidebar entry)
@@ -64,6 +65,8 @@ import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
 // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only viewer
 // over audit_log + user_role_history + status-history tables.
 import { AuditViewer }     from './pages/audit/AuditViewer.jsx';
+
+const SHOW_PROCUREMENT_MODULE = false;
 
 export function App() {
   return (
@@ -179,14 +182,16 @@ export function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/procurement"
-            element={
-              <ProtectedRoute requiredPermission="procurement:read-list">
-                <Layout><ProcurementPage /></Layout>
-              </ProtectedRoute>
-            }
-          />
+          {SHOW_PROCUREMENT_MODULE ? (
+            <Route
+              path="/procurement"
+              element={
+                <ProtectedRoute requiredPermission="procurement:read-list">
+                  <Layout><ProcurementPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+          ) : null}
           {/* ── Inquiry (Phase 8 Slice 1) ───────────────────────── */}
           {/* Gate: any of the 4 inquiry permissions opens the page; the
               tab strip inside is permission-aware per-tab. We gate on
@@ -268,6 +273,14 @@ export function App() {
             element={
               <ProtectedRoute requiredPermission="master:employees:manage">
                 <Layout><EmployeeForm mode="edit" /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/equipment-verification"
+            element={
+              <ProtectedRoute requiredPermission="equipment:verify">
+                <Layout><EquipmentVerification /></Layout>
               </ProtectedRoute>
             }
           />

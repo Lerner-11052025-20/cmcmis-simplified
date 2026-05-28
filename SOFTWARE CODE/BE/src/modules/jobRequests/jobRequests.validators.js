@@ -26,6 +26,7 @@ const { z } = require('zod');
 // ── Shared atoms ─────────────────────────────────────────────────────
 const jobCategoryEnum = z.enum(['TME', 'FPE']);
 const jobTypeEnum     = z.enum(['CALIBRATION', 'REPAIR', 'REGISTRATION']);
+const newJobTypeEnum  = z.enum(['CALIBRATION', 'REPAIR']);
 const priorityEnum    = z.enum(['LOW', 'MEDIUM', 'HIGH']);
 const statusEnum      = z.enum([
   'DRAFT', 'SUBMITTED', 'ASSIGNED', 'REJECTED',
@@ -84,7 +85,7 @@ const listQuerySchema = z.object({
 // regardless of intent.
 const createSchema = z.object({
   job_category:           jobCategoryEnum,
-  job_type:               jobTypeEnum,
+  job_type:               newJobTypeEnum,
   equipment_id:           z.number().int().positive().nullable().optional(),
   // Min(2) required even for drafts — a draft with a 1-char equipment name
   // is functionally indistinguishable from garbage. Drafts can omit
@@ -101,8 +102,7 @@ const createSchema = z.object({
   division_id:            z.number().int().positive(),
   subsystem:              z.string().max(120).optional().or(z.literal('')),
   project_name:           z.string().max(160).optional().or(z.literal('')),
-  // LOOSE for drafts: complaint may be empty/short. STRICT (≥10) enforced
-  // in the superRefine below when submit_now=true.
+  // Complaint is optional for both drafts and direct submit.
   complaint_description:  z.string().max(4000).optional().or(z.literal('')),
   remarks:                z.string().max(2000).optional().or(z.literal('')),
   equipment_sent_after_repair: z.boolean().optional().default(false),
@@ -115,13 +115,6 @@ const createSchema = z.object({
     // SUBMIT-only rules. Drafts skip every check in this block.
     if (!v.submit_now) return;
 
-    if (!v.complaint_description || v.complaint_description.trim().length < 10) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['complaint_description'],
-        message: 'Complaint description must be at least 10 characters before submitting',
-      });
-    }
     if (v.tnc_accepted !== true) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -240,7 +233,7 @@ const rejectSchema = z.object({
  */
 const editDraftSchema = z.object({
   job_category:           jobCategoryEnum.optional(),
-  job_type:               jobTypeEnum.optional(),
+  job_type:               newJobTypeEnum.optional(),
   equipment_id:           z.number().int().positive().nullable().optional(),
   equipment_name:         z.string().min(2).max(200).optional(),
   make:                   z.string().max(120).optional().or(z.literal('')),

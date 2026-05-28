@@ -7,7 +7,19 @@
 import { z } from 'zod';
 
 export const ROLE_CODES = [
-  'SUPER_ADMIN', 'LAB_IN_CHARGE', 'LAB_ENGINEER', 'NORMAL_USER', 'VIEW_ONLY',
+  'SUPER_ADMIN',
+  'LAB_IN_CHARGE',
+  'LAB_ENGINEER',
+  'NORMAL_USER',
+  'VIEW_ONLY',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+  'TME_REPAIR_LAB_ENG',
+  'TME_CAL_LAB_ENG',
+  'FPE_REPAIR_LAB_ENG',
+  'FPE_CAL_LAB_ENG',
 ];
 
 export const ROLE_LABELS = {
@@ -16,6 +28,14 @@ export const ROLE_LABELS = {
   LAB_ENGINEER:  'Lab Engineer',
   NORMAL_USER:   'Normal User',
   VIEW_ONLY:     'View Only',
+  TME_REPAIR_LAB_IN_CHARGE: 'TME Repair Lab In-Charge',
+  TME_CAL_LAB_IN_CHARGE:    'TME Calibration Lab In-Charge',
+  FPE_REPAIR_LAB_IN_CHARGE: 'FPE Repair Lab In-Charge',
+  FPE_CAL_LAB_IN_CHARGE:    'FPE Calibration Lab In-Charge',
+  TME_REPAIR_LAB_ENG:       'TME Repair Lab Engineer',
+  TME_CAL_LAB_ENG:          'TME Calibration Lab Engineer',
+  FPE_REPAIR_LAB_ENG:       'FPE Repair Lab Engineer',
+  FPE_CAL_LAB_ENG:          'FPE Calibration Lab Engineer',
 };
 
 export const roleChangeSchema = z.object({

@@ -18,8 +18,7 @@
 import { z } from 'zod';
 
 export const JOB_CATEGORIES = ['TME', 'FPE'];
-export const JOB_TYPES = ['CALIBRATION', 'REPAIR', 'REGISTRATION'];
-export const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
+export const JOB_TYPES = ['CALIBRATION', 'REPAIR'];
 
 export const accessorySchema = z.object({
   type: z.string().min(1).max(60),
@@ -32,7 +31,7 @@ export const accessorySchema = z.object({
 // equipment_name (>=2), division_id. Everything else may be empty.
 const baseObject = z.object({
   job_category:           z.enum(['TME', 'FPE']),
-  job_type:               z.enum(['CALIBRATION', 'REPAIR', 'REGISTRATION']),
+  job_type:               z.enum(['CALIBRATION', 'REPAIR']),
   equipment_id:           z.number().int().positive().nullable().optional(),
   equipment_name:         z.string().min(2, 'Equipment name is required').max(200),
   make:                   z.string().max(120).optional().or(z.literal('')),
@@ -50,7 +49,6 @@ const baseObject = z.object({
   complaint_description:  z.string().max(4000).optional().or(z.literal('')),
   remarks:                z.string().max(2000).optional().or(z.literal('')),
   equipment_sent_after_repair: z.boolean().optional().default(false),
-  priority:               z.enum(['LOW', 'MEDIUM', 'HIGH']).optional().default('MEDIUM'),
   submit_now:             z.boolean().optional().default(false),
   tnc_accepted:           z.boolean().optional().default(false),
   tnc_version:            z.string().max(10).optional().default('v1'),
@@ -64,19 +62,10 @@ const baseObject = z.object({
 export const jobRequestDraftSchema = baseObject;
 
 /**
- * Use this schema for Submit Request. It adds the strict rules:
- *   • complaint_description ≥ 10 chars
- *   • tnc_accepted === true
- * Surfaces both as field-level issues so the FE can highlight them inline.
+ * Use this schema for Submit Request. It only adds the strict T&C rule;
+ * complaint_description is intentionally optional.
  */
 export const jobRequestSubmitSchema = baseObject.superRefine((v, ctx) => {
-  if (!v.complaint_description || v.complaint_description.trim().length < 10) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['complaint_description'],
-      message: 'Complaint description must be at least 10 characters before submitting',
-    });
-  }
   if (v.tnc_accepted !== true) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

@@ -34,6 +34,7 @@ import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { StatusPill } from '../../components/StatusPill.jsx';
 import { useJobCardList } from '../../lib/hooks/useJobCardList.js';
+import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 
 const STATUS_OPTIONS = [
   { value: 'ASSIGNED',        label: 'Assigned' },
@@ -95,6 +96,11 @@ export function JobCardList() {
       {
         header: 'Job Request ID',
         accessor: 'job_request_code',
+        format: (v) => v || <span className="text-ink-soft">—</span>,
+      },
+      {
+        header: 'Category / Type',
+        accessor: formatJobCategoryType,
         format: (v) => v || <span className="text-ink-soft">—</span>,
       },
       { header: 'Equipment', accessor: 'equipment_name', className: 'text-ink' },

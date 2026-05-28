@@ -48,7 +48,6 @@
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import {
-  Image as ImageIcon,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -65,7 +64,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
   const { user } = useAuth();
   if (!user) return null;
 
-  const items = visibleNavItems(user.permissions);
+  const items = visibleNavItems(user.permissions, user.role);
 
   return (
     <aside
@@ -81,9 +80,9 @@ export function Sidebar({ collapsed = false, onToggle }) {
     >
       {/* ── Header: logo + (conditionally) wordmark ─────────────── */}
       <div
-        className={clsx(
-          'border-b border-border flex items-center',
-          collapsed ? 'justify-center px-2 py-4' : 'px-5 py-4 gap-3',
+      className={clsx(
+        'border-b border-border flex items-center',
+          collapsed ? 'justify-center px-2 py-4' : 'px-5 py-4 gap-4',
         )}
       >
         <Logo />
@@ -187,37 +186,12 @@ export function Sidebar({ collapsed = false, onToggle }) {
 // in the accent color if the file is missing. The fallback is intentional —
 // it's a single-line refactor to swap in the real SVG when DS adds it.
 function Logo() {
-  // Vite resolves the URL at build time. If the file is absent the build
-  // fails loudly — but ProtectedRoute only renders Sidebar after auth, so
-  // we ALSO defensively handle the runtime "image broken" case.
-  let src = null;
-  try {
-    // eslint-disable-next-line global-require
-    src = new URL('../assets/isro-sac-logo.svg', import.meta.url).href;
-  } catch {
-    src = null;
-  }
-  if (!src) {
-    return (
-      <div className="h-9 w-9 rounded-md bg-accent/10 text-accent flex items-center justify-center">
-        <ImageIcon size={18} strokeWidth={1.5} aria-hidden="true" />
-      </div>
-    );
-  }
+  const src = new URL('../assets/isro-logo.svg', import.meta.url).href;
   return (
     <img
       src={src}
       alt="ISRO SAC"
-      className="h-9 w-9 rounded-md object-contain"
-      onError={(e) => {
-        e.currentTarget.replaceWith(
-          Object.assign(document.createElement('div'), {
-            className:
-              'h-9 w-9 rounded-md bg-accent/10 text-accent flex items-center justify-center',
-            innerHTML: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
-          }),
-        );
-      }}
+      className="h-12 w-12 rounded-md object-contain bg-white"
     />
   );
 }

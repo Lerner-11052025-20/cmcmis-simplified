@@ -17,6 +17,13 @@ async function getDivisions(_req, res, next) {
   } catch (e) { return next(e); }
 }
 
+async function getProjects(_req, res, next) {
+  try {
+    const items = await repo.listProjects();
+    return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
 async function getEquipmentSearch(req, res, next) {
   try {
     const q = String(req.query.q || '').slice(0, 120);
@@ -26,14 +33,31 @@ async function getEquipmentSearch(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+async function getEquipmentAccessories(req, res, next) {
+  try {
+    const eqmType = String(req.query.eqm_type || '').slice(0, 60);
+    const eqmId = Number(req.query.eqm_id);
+    if (!eqmType || !Number.isInteger(eqmId) || eqmId <= 0) {
+      return res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Invalid equipment reference', details: null },
+      });
+    }
+    const items = await repo.listEquipmentAccessories(eqmType, eqmId);
+    return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
 /**
  * GET /api/v1/lookups/engineers
  * Returns every active LAB_ENGINEER with workload counts. Sorted
  * ascending by active_card_count (least-loaded first).
  */
-async function getEngineers(_req, res, next) {
+async function getEngineers(req, res, next) {
   try {
-    const items = await repo.listEngineersWithWorkload();
+    const items = await repo.listEngineersWithWorkload({
+      role: req.user.role,
+      laneScopes: req.user.laneScopes || [],
+    });
     return res.json({ data: { items } });
   } catch (e) { return next(e); }
 }
@@ -57,4 +81,11 @@ async function getTaskLibrary(req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { getDivisions, getEquipmentSearch, getEngineers, getTaskLibrary };
+module.exports = {
+  getDivisions,
+  getProjects,
+  getEquipmentSearch,
+  getEquipmentAccessories,
+  getEngineers,
+  getTaskLibrary,
+};

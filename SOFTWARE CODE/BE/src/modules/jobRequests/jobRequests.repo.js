@@ -17,6 +17,7 @@
 'use strict';
 
 const pool = require('../../config/db');
+const { buildLaneWhere } = require('../../utils/lanes');
 
 // ───────────────────────────────────────────────────────────────────────
 //  Allow-lists (NEVER interpolate user input into SQL)
@@ -66,6 +67,11 @@ async function listJobRequests(params, scope) {
   if (!scope.canReadAll) {
     where.push('jr.JR_SUBMITTEDBYID = ?');
     args.push(scope.ownerEmployeeId);
+  }
+  if (Array.isArray(scope?.laneScopes) && scope.laneScopes.length > 0) {
+    const lane = buildLaneWhere('jr.JR_LANE_CODE', scope.laneScopes);
+    where.push(lane.sql);
+    args.push(...lane.args);
   }
 
   if (params.q) {
@@ -132,7 +138,9 @@ async function listJobRequests(params, scope) {
       jr.JR_JOBREQUESTNO                            AS jr_no,
       jr.JR_JOBREQUESTDATE                          AS submitted_at_legacy,
       jr.JR_CREATED_AT                              AS created_at,
+      jr.JR_JOB_CATEGORY                            AS job_category,
       jr.JR_JOB_TYPE                                AS job_type,
+      jr.JR_LANE_CODE                               AS lane_code,
       jr.JR_EQM_ID                                  AS equipment_id,
       jr.JR_EQM_TYPE                                AS equipment_type,
       jr.JR_EQM_NAME                                AS equipment_name,
@@ -223,7 +231,7 @@ async function insertJobRequest(conn, payload) {
        Email,
        JR_MVP_STATUS, JR_MVP_STATUS_AT,
        JR_PRIORITY,
-       JR_JOB_CATEGORY, JR_JOB_TYPE,
+       JR_JOB_CATEGORY, JR_JOB_TYPE, JR_LANE_CODE,
        JR_TNC_ACCEPTED_AT, JR_TNC_VERSION,
        JR_CREATED_AT, JR_UPDATED_AT
      ) VALUES (
@@ -242,7 +250,7 @@ async function insertJobRequest(conn, payload) {
        ?,
        ?, ?,
        ?,
-       ?, ?,
+       ?, ?, ?,
        ?, ?,
        NOW(6), NOW(6)
      )`,
@@ -276,6 +284,7 @@ async function insertJobRequest(conn, payload) {
       toDbPriority(payload.priority || 'MEDIUM'),
       payload.job_category || null,
       payload.job_type || null,
+      payload.lane_code || null,
       // T&C — non-null only when this insert is already a SUBMITTED record
       // (Save-as-Draft path leaves T&C null; Submit-now path sets it).
       payload.tnc_accepted_at || null,
@@ -299,6 +308,8 @@ async function findJrById(jrNo) {
        JR_PRIORITY             AS priority_db,
        JR_JOB_CATEGORY         AS job_category,
        JR_JOB_TYPE             AS job_type,
+       JR_LANE_CODE            AS lane_code,
+       JR_EQM_NAME             AS equipment_name,
        JR_COMPLAINTANDSYMPTOMS AS complaint_description,
        JR_TNC_ACCEPTED_AT      AS tnc_accepted_at,
        JR_TNC_VERSION          AS tnc_version
@@ -452,6 +463,7 @@ async function findByIdWithDetails(jrNo) {
        jr.JR_MVP_STATUS_AT           AS status_at,
        jr.JR_JOB_CATEGORY            AS job_category,
        jr.JR_JOB_TYPE                AS job_type,
+       jr.JR_LANE_CODE               AS lane_code,
        jr.JR_PRIORITY                AS priority_db,
        jr.JR_EQM_ID                  AS equipment_id,
        jr.JR_EQM_TYPE                AS equipment_type,
@@ -581,6 +593,8 @@ async function findForMutation(conn, jrNo) {
        JR_MVP_STATUS           AS status,
        JR_JOB_TYPE             AS job_type,
        JR_JOB_CATEGORY         AS job_category,
+       JR_LANE_CODE            AS lane_code,
+       JR_CREATED_AT           AS created_at,
        JR_EQM_TYPE             AS equipment_type,
        JR_EQM_ID               AS equipment_id,
        JR_EQM_NAME             AS equipment_name,
@@ -680,6 +694,7 @@ async function updateDraftFields(conn, jrNo, body) {
   const FIELD_MAP = {
     job_category:           ['JR_JOB_CATEGORY', null],
     job_type:               ['JR_JOB_TYPE',     25],
+    lane_code:              ['JR_LANE_CODE',    20],
     equipment_id:           ['JR_EQM_ID',       null],
     equipment_type:         ['JR_EQM_TYPE',     15],
     equipment_name:         ['JR_EQM_NAME',     200],

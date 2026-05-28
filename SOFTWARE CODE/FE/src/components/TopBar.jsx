@@ -56,6 +56,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../lib/auth-context.jsx';
+import { INQUIRY_TABS } from '../lib/schemas/inquirySchemas.js';
 import {
   useUnreadCount,
   useCanReadNotifications,
@@ -80,7 +81,7 @@ function initialsOf(source) {
  * @param {() => void} [props.onToggleSidebar]       Toggle handler from Layout.
  */
 export function TopBar({ collapsed = false, onToggleSidebar }) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
 
@@ -116,12 +117,28 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
     };
   }, [bellOpen]);
 
-  // Search submit — navigate to /inquiry?q=… (BE wiring in Phase 7).
+  function bestInquiryTabFor(term) {
+    const visible = INQUIRY_TABS.filter((t) => hasPermission(t.permission));
+    if (visible.length === 0) return null;
+    const lower = term.toLowerCase();
+    const preferred =
+      /^(eq|equipment|instrument)/i.test(lower) ? 'instruments'
+      : /^(jr|job request|request)/i.test(lower) ? 'job-cards'
+      : /vendor|make|manufacturer|supplier/i.test(lower) ? 'vendors'
+      : /product|type/i.test(lower) ? 'products'
+      : 'instruments';
+    return visible.find((t) => t.id === preferred)?.id || visible[0].id;
+  }
+
+  // Search submit — route into the first permitted Inquiry tab that best
+  // matches the query intent.
   function onSearchSubmit(e) {
     e.preventDefault();
     const term = q.trim();
     if (!term) return;
-    navigate('/inquiry?q=' + encodeURIComponent(term));
+    const tab = bestInquiryTabFor(term);
+    if (!tab) return;
+    navigate(`/inquiry?tab=${encodeURIComponent(tab)}&q=${encodeURIComponent(term)}`);
   }
 
   // ── Close-on-outside-click and close-on-escape ─────────────────────
@@ -194,7 +211,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
       </button>
 
       {/* ── Global search ───────────────────────────────────────── */}
-      <form onSubmit={onSearchSubmit} className="flex-1 max-w-3xl">
+      <form onSubmit={onSearchSubmit} className="flex-1 max-w-3xl mr-auto">
         <label htmlFor="topbar-search" className="sr-only">Global search</label>
         <div className="relative">
           <SearchIcon
@@ -215,7 +232,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
       </form>
 
       {/* ── Right cluster ───────────────────────────────────────── */}
-      <div className="flex items-center gap-4">
+      <div className="ml-auto flex shrink-0 items-center justify-end gap-5">
         {/* Phase 12 — live notifications bell. Hidden entirely for users
             without `notifications:read-own` (i.e. View-Only) so the
             UI never offers an action the BE would 403. */}
@@ -261,7 +278,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
               aria-expanded={menuOpen}
               aria-label={`Account menu for ${user.display_name || user.sub}`}
               className={clsxCond(
-                'flex items-center gap-2 pl-2 pr-1 py-1 rounded-md transition-colors',
+                'flex items-center gap-3 pl-2 pr-0 py-1 rounded-md transition-colors',
                 menuOpen
                   ? 'bg-base-elev'
                   : 'hover:bg-base-elev',
@@ -375,11 +392,27 @@ function rolePillStyle(role) {
       return { label: 'Lab InC', cls: 'bg-accent/10 text-accent' };
     case 'LAB_ENGINEER':
       return { label: 'Lab Eng', cls: 'bg-accent/10 text-accent' };
+    case 'TME_REPAIR_LAB_IN_CHARGE':
+      return { label: 'TME R InC', cls: 'bg-violet-100 text-violet-700' };
+    case 'TME_CAL_LAB_IN_CHARGE':
+      return { label: 'TME C InC', cls: 'bg-violet-100 text-violet-700' };
+    case 'FPE_REPAIR_LAB_IN_CHARGE':
+      return { label: 'FPE R InC', cls: 'bg-sky-100 text-sky-700' };
+    case 'FPE_CAL_LAB_IN_CHARGE':
+      return { label: 'FPE C InC', cls: 'bg-sky-100 text-sky-700' };
+    case 'TME_REPAIR_LAB_ENG':
+      return { label: 'TME R Eng', cls: 'bg-blue-100 text-blue-700' };
+    case 'TME_CAL_LAB_ENG':
+      return { label: 'TME C Eng', cls: 'bg-blue-100 text-blue-700' };
+    case 'FPE_REPAIR_LAB_ENG':
+      return { label: 'FPE R Eng', cls: 'bg-cyan-100 text-cyan-700' };
+    case 'FPE_CAL_LAB_ENG':
+      return { label: 'FPE C Eng', cls: 'bg-cyan-100 text-cyan-700' };
     case 'NORMAL_USER':
       // Tailwind built-in green — sidesteps any custom-palette assumption
       // and matches the reference image's "User" badge.
       return { label: 'User', cls: 'bg-green-100 text-green-700' };
-    case 'VIEW_ONLY_USER':
+    case 'VIEW_ONLY':
       return { label: 'View', cls: 'bg-gray-100 text-gray-700' };
     default:
       return { label: role || '—', cls: 'bg-gray-100 text-gray-700' };

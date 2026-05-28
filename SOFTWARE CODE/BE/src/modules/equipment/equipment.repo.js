@@ -48,9 +48,16 @@ async function listEquipment(params) {
   const args = [];
 
   if (q) {
-    where.push('(e.EQM_NAME LIKE ? OR e.EQM_MODELNO LIKE ? OR e.EQM_SRNO LIKE ? OR m.CMM_CONT_NAME LIKE ?)');
+    where.push(`(
+      e.EQM_NAME LIKE ?
+      OR e.EQM_MODELNO LIKE ?
+      OR m.CMM_CONT_NAME LIKE ?
+      OR CAST(e.EQM_ID AS CHAR) LIKE ?
+      OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
+      OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+    )`);
     const like = `%${q}%`;
-    args.push(like, like, like, like);
+    args.push(like, like, like, like, like, like);
   }
   if (type_id) {
     where.push('e.EQM_INST_TYPE = ?');
@@ -69,6 +76,15 @@ async function listEquipment(params) {
   // Allow-list sort/order; if invalid (cannot happen after zod) fall back.
   const sortSql = SORT_COLUMNS[sort] || SORT_COLUMNS.equipment_code;
   const orderSql = ORDER_DIRS[order] || 'ASC';
+  const searchRankSql = q
+    ? `CASE
+         WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
+         WHEN CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) = ? THEN 1
+         WHEN CONCAT(e.EQM_TYPE, '-', e.EQM_ID) = ? THEN 2
+         ELSE 3
+       END, `
+    : '';
+  const searchRankArgs = q ? [String(q).trim(), String(q).trim(), String(q).trim()] : [];
   // Always tie-break by the full PK to make pagination deterministic.
   const tieBreak = ', e.EQM_TYPE ASC, e.EQM_ID ASC';
 
@@ -94,7 +110,7 @@ async function listEquipment(params) {
     LEFT JOIN sections         s  ON s.section_id  = e.EQM_SECTION_ID
     LEFT JOIN cmms_section_mst ls ON ls.SM_ID      = e.EQM_DIVID
     ${whereSql}
-    ORDER BY ${sortSql} ${orderSql}${tieBreak}
+    ORDER BY ${searchRankSql}${sortSql} ${orderSql}${tieBreak}
     LIMIT ? OFFSET ?`;
 
   const countSql = `
@@ -105,11 +121,51 @@ async function listEquipment(params) {
 
   // Run both queries in parallel — same pool, independent connections.
   const [[rows], [countRows]] = await Promise.all([
-    pool.query(dataSql, [...args, page_size, offset]),
+    pool.query(dataSql, [...args, ...searchRankArgs, page_size, offset]),
     pool.query(countSql, args),
   ]);
 
   return { rows, total: countRows[0].n };
+}
+
+async function getEquipmentByCompositeId(eqmType, eqmId) {
+  const [rows] = await pool.query(
+    `SELECT
+       e.EQM_TYPE AS eqm_type,
+       e.EQM_ID AS eqm_id,
+       e.EQM_NAME AS name,
+       p.PROD_NAME AS type_name,
+       m.CMM_CONT_NAME AS make,
+       e.EQM_MFG_MODEL_NAME AS mfg_model_name,
+       e.EQM_MODELNO AS model_no,
+       e.EQM_SRNO AS serial_no,
+       e.EQM_OPTIONNDESC AS options_description,
+       e.EQM_PONO AS po_number,
+       e.EQM_PODATE AS po_date,
+       e.EQM_EQIPCOST AS cost,
+       e.EQM_COSTCURRENCY AS currency,
+       e.EQM_WRNTY_EXPIRY_DATE AS warranty_expiry_date,
+       e.EQM_CAL_DUE_DATE AS next_cal_due_date,
+       e.EQM_REMARKS AS remarks,
+       COALESCE(s.section_code, e.EQM_DIV_ABBR) AS division_code,
+       COALESCE(s.section_name, ls.SM_NAME, ls.SM_SHORTNAME, e.EQM_DIV_ABBR) AS location_name,
+       e.EQM_MVP_STATUS AS status,
+       e.EQM_MVP_STATUS_AT AS status_at,
+       e.EQM_CREATED_BY AS created_by,
+       e.EQM_CREATED_ON AS created_on,
+       e.EQM_UPDATED_BY AS updated_by,
+       e.EQM_UPDATED_ON AS updated_on
+     FROM cmms_eqip_mst e
+     LEFT JOIN cmms_cont_mst    m  ON m.CMM_CONT_ID = e.EQM_MFRID
+     LEFT JOIN cmms_product_mst p  ON p.PROD_ID     = e.EQM_INST_TYPE
+     LEFT JOIN sections         s  ON s.section_id  = e.EQM_SECTION_ID
+     LEFT JOIN cmms_section_mst ls ON ls.SM_ID      = e.EQM_DIVID
+     WHERE e.EQM_TYPE = ?
+       AND e.EQM_ID = ?
+     LIMIT 1`,
+    [eqmType, eqmId],
+  );
+  return rows[0] || null;
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -327,8 +383,24 @@ async function bulkMarkCalibrationDone(conn, actorEmpId) {
   return result.affectedRows;
 }
 
+async function verifyEquipment(conn, eqmType, eqmId, actorEmpId) {
+  const [result] = await conn.query(
+    `UPDATE cmms_eqip_mst
+        SET EQM_MVP_STATUS = 'ACTIVE',
+            EQM_MVP_STATUS_AT = NOW(6),
+            EQM_UPDATED_BY = ?,
+            EQM_UPDATED_ON = NOW(6)
+      WHERE EQM_TYPE = ?
+        AND EQM_ID = ?
+        AND EQM_MVP_STATUS = 'PENDING_VERIFICATION'`,
+    [actorEmpId, eqmType, eqmId],
+  );
+  return result.affectedRows;
+}
+
 module.exports = {
   listEquipment,
+  getEquipmentByCompositeId,
   listEquipmentTypes,
   listMakes,
   listDivisions,
@@ -339,5 +411,6 @@ module.exports = {
   writeAuditLog,
   // Phase 15 addition:
   bulkMarkCalibrationDone,
+  verifyEquipment,
   SORT_COLUMNS,
 };

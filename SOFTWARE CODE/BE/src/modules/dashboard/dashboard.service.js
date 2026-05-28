@@ -27,6 +27,20 @@ const { KEYS } = require('../../utils/kpiCache');
 // Single source of truth. Authorize middleware has already proven the
 // caller holds dashboard:view, so we trust req.user.role here.
 const PERSONAL_ROLES = new Set(['NORMAL_USER', 'VIEW_ONLY']);
+function normalizeActorLaneScopes(actor) {
+  return Array.isArray(actor?.laneScopes) ? [...actor.laneScopes].sort() : [];
+}
+
+function orgCacheKeyForLaneScopes(laneScopes) {
+  if (!Array.isArray(laneScopes) || laneScopes.length === 0) return KEYS.ORG;
+  return `${KEYS.ORG}:lanes:${laneScopes.join('|')}`;
+}
+
+function personalCacheKeyFor(actor) {
+  // Normal User now receives a smaller KPI set than VIEW_ONLY, so include
+  // the role in the personal cache key to avoid cross-role card leakage.
+  return `${KEYS.personal(actor.employeeId)}:role:${actor.role}`;
+}
 
 /**
  * @param {string} role  Canonical role_code from JWT claim
@@ -116,7 +130,9 @@ function formatPctDelta(current, previous, suffix) {
 //     href:      '/job-requests?status=SUBMITTED',
 //   }
 
-async function buildOrgCards() {
+async function buildOrgCards(laneScopes = []) {
+  // From: one shared org dashboard. To: same KPI layout, but JR/JC counts
+  // are narrowed to the actor's operational lane when their role is scoped.
   // Run all 8 KPI groups in parallel — independent queries, independent
   // pool connections. The pool max is ≥ 10; these are all COUNT-only
   // sub-50 ms queries so the batch finishes well under the 150 ms p50
@@ -131,11 +147,11 @@ async function buildOrgCards() {
     overdueCalibration,
     newEqmThisWeek,
   ] = await Promise.all([
-    repo.orgPendingJobs(),
-    repo.orgCompletedThisWeek(),
+    repo.orgPendingJobs(laneScopes),
+    repo.orgCompletedThisWeek(laneScopes),
     repo.orgTotalActiveEquipment(),
-    repo.orgInProgressJobs(),
-    repo.orgOpenJobCards(),
+    repo.orgInProgressJobs(laneScopes),
+    repo.orgOpenJobCards(laneScopes),
     repo.orgOverdueCalibrations(),
     repo.orgNewEquipmentThisWeek(),
   ]);
@@ -220,7 +236,104 @@ async function buildOrgCards() {
   ];
 }
 
-async function buildMyCards(employeeId) {
+async function buildMyCards(employeeId, role) {
+  if (role === 'NORMAL_USER') {
+    const [active, approvedQueued, completed] = await Promise.all([
+      repo.myActiveRequests(employeeId),
+      repo.myApprovedQueued(employeeId),
+      repo.myCompletedThisMonth(employeeId),
+    ]);
+
+    return [
+      {
+        id: 'active_requests',
+        label: 'Active Requests',
+        value: active.active,
+        value_kind: 'count',
+        subtitle: active.pendingApproval > 0
+          ? `${active.pendingApproval} pending approval`
+          : 'None pending approval',
+        icon: 'file-text',
+        accent: 'indigo',
+        href: '/job-requests?mine=1',
+      },
+      {
+        id: 'my_approved_queued',
+        label: 'Approved & Queued',
+        value: approvedQueued.total,
+        value_kind: 'count',
+        subtitle: approvedQueued.total > 0 ? 'Waiting for engineer to start' : 'No queued work',
+        icon: 'hourglass',
+        accent: 'violet',
+        href: '/job-requests?mine=1&status=ASSIGNED',
+      },
+      {
+        id: 'completed_this_month',
+        label: 'Completed This Month',
+        value: completed.thisMonth,
+        value_kind: 'count',
+        subtitle: formatPctDelta(completed.thisMonth, completed.lastMonth, 'last month'),
+        icon: 'check-circle',
+        accent: 'green',
+        href: '/job-requests?mine=1&status=VERIFIED_CLOSED&period=this_month',
+      },
+    ];
+  }
+
+  if (role === 'VIEW_ONLY') {
+    const [active, approvedQueued, completed, inProgress] = await Promise.all([
+      repo.myActiveRequests(employeeId),
+      repo.myApprovedQueued(employeeId),
+      repo.myCompletedThisMonth(employeeId),
+      repo.myInProgress(employeeId),
+    ]);
+
+    return [
+      {
+        id: 'active_requests',
+        label: 'Active Requests',
+        value: active.active,
+        value_kind: 'count',
+        subtitle: active.pendingApproval > 0
+          ? `${active.pendingApproval} pending approval`
+          : 'None pending approval',
+        icon: 'file-text',
+        accent: 'indigo',
+        href: '/job-requests?mine=1',
+      },
+      {
+        id: 'my_approved_queued',
+        label: 'Approved & Queued',
+        value: approvedQueued.total,
+        value_kind: 'count',
+        subtitle: approvedQueued.total > 0 ? 'Waiting for engineer to start' : 'No queued work',
+        icon: 'hourglass',
+        accent: 'violet',
+        href: '/job-requests?mine=1&status=ASSIGNED',
+      },
+      {
+        id: 'completed_this_month',
+        label: 'Completed This Month',
+        value: completed.thisMonth,
+        value_kind: 'count',
+        subtitle: formatPctDelta(completed.thisMonth, completed.lastMonth, 'last month'),
+        icon: 'check-circle',
+        accent: 'green',
+        href: '/job-requests?mine=1&status=VERIFIED_CLOSED&period=this_month',
+      },
+      {
+        id: 'in_progress',
+        label: 'In Progress',
+        value: inProgress.total,
+        value_kind: 'count',
+        subtitle: inProgress.total > 0 ? 'Being processed' : 'Nothing in progress',
+        icon: 'clock',
+        accent: 'amber',
+        href: '/job-requests?mine=1&status=IN_PROGRESS',
+      },
+    ];
+  }
+
   const [
     active,
     inProgress,
@@ -348,8 +461,9 @@ async function buildMyCards(employeeId) {
  */
 async function getKpis(actor) {
   const variant = variantForRole(actor.role);
+  const laneScopes = normalizeActorLaneScopes(actor);
   const cacheKey =
-    variant === 'org' ? KEYS.ORG : KEYS.personal(actor.employeeId);
+    variant === 'org' ? orgCacheKeyForLaneScopes(laneScopes) : personalCacheKeyFor(actor);
 
   // Cache lookup first — short TTL means even a "stale" hit is < 10 s.
   const hit = kpiCache.get(cacheKey);
@@ -366,9 +480,9 @@ async function getKpis(actor) {
   // Cache miss — compute cards + recent activity in parallel, then memoise.
   const [cards, recent_activity] = await Promise.all([
     variant === 'org'
-      ? buildOrgCards()
-      : buildMyCards(actor.employeeId),
-    repo.recentActivity(variant, actor.employeeId),
+      ? buildOrgCards(laneScopes)
+      : buildMyCards(actor.employeeId, actor.role),
+    repo.recentActivity(variant, actor.employeeId, laneScopes),
   ]);
 
   const payload = {

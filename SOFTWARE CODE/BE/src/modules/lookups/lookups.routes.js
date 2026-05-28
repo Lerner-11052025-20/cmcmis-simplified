@@ -30,10 +30,22 @@ router.get('/divisions',
   ctrl.getDivisions,
 );
 
+router.get('/projects',
+  authenticate,
+  authorizeAny('job_request:create', 'equipment:read-list'),
+  ctrl.getProjects,
+);
+
 router.get('/equipment/search',
   authenticate,
   authorizeAny('job_request:create', 'equipment:read-list'),
   ctrl.getEquipmentSearch,
+);
+
+router.get('/equipment/accessories',
+  authenticate,
+  authorizeAny('job_request:create', 'equipment:read-list'),
+  ctrl.getEquipmentAccessories,
 );
 
 // ── Phase 7 Slice 2 — Engineers lookup (Conversion modal dropdown) ─────

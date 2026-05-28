@@ -24,7 +24,14 @@ import {
 } from '../../../lib/api/jobCards.js';
 import { DOC_TYPE_OPTIONS, DOC_TYPE_LABELS } from '../../../lib/schemas/jobCardSchemas.js';
 
-const LIC_SA_ROLES = new Set(['LAB_IN_CHARGE', 'SUPER_ADMIN']);
+const LIC_SA_ROLES = new Set([
+  'LAB_IN_CHARGE',
+  'SUPER_ADMIN',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+]);
 const MAX_BYTES = 10 * 1024 * 1024;
 
 function formatBytes(b) {

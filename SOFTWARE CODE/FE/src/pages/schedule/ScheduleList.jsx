@@ -4,8 +4,7 @@
 // PHASE 13 — Schedule sub-module
 //
 // Image refs: list view shows columns
-//   CAL:  ID · Equipment · Priority · Scheduled Date · Status · Engineer · Edit
-//   PM:   ID · Equipment · Type     · Scheduled Date · Status · Engineer · Edit
+//   ID · Equipment · Type · Scheduled Date · Status · Engineer · Edit
 // ============================================================================
 
 import { useMemo } from 'react';
@@ -24,12 +23,6 @@ const STATUS_STYLES = {
   COMPLETED: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
   CANCELLED: 'bg-base-elev text-ink-soft border border-border',
 };
-const PRIORITY_STYLES = {
-  HIGH:   'text-danger font-semibold',
-  MEDIUM: 'text-amber-700 font-semibold',
-  LOW:    'text-emerald-700 font-semibold',
-};
-
 
 export function ScheduleList({ tab, onEdit }) {
   const { hasPermission } = useAuth();
@@ -57,21 +50,11 @@ export function ScheduleList({ tab, onEdit }) {
       { header: 'Equipment', accessor: 'equipment_label', className: 'text-ink' },
     ];
 
-    if (isCalibration) {
-      cols.push({
-        header: 'Priority',
-        accessor: 'priority',
-        format: (val) => (
-          <span className={PRIORITY_STYLES[val] || 'text-ink-soft'}>{val}</span>
-        ),
-      });
-    } else {
-      cols.push({
-        header: 'Type',
-        accessor: 'schedule_type',
-        format: () => 'Preventive Maintenance',
-      });
-    }
+    cols.push({
+      header: 'Type',
+      accessor: 'schedule_type',
+      format: (val) => val === 'CALIBRATION' ? 'Calibration' : 'Preventive Maintenance',
+    });
 
     cols.push(
       { header: 'Scheduled Date', accessor: 'scheduled_date' },

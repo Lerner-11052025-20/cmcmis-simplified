@@ -18,6 +18,7 @@ const { errors } = require('../../../middleware/errorHandler');
 
 // ── Ownership gate shared by all mutations on tasks ──
 function requireWriteAccess(jc, actor) {
+  jcService.assertCanAccessLane(jc, actor);
   if (jcService.isLegacyRow(jc)) {
     throw errors.conflict('Legacy job cards are read-only.');
   }
@@ -29,8 +30,10 @@ function requireWriteAccess(jc, actor) {
 }
 
 // ── List tasks ──────────────────────────────────────────────────────
-async function listTasks({ sectionJobNo }) {
-  // Read-only — anyone with job_card:read-detail (gated upstream) can list.
+async function listTasks({ sectionJobNo, actor }) {
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+  jcService.assertCanAccessLane(jc, actor);
   const rows = await repo.listTasksForJc(sectionJobNo);
   return rows.map((r) => ({
     id:            r.id,
@@ -54,6 +57,7 @@ async function addTask({ sectionJobNo, body, actor }) {
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
     status: jc.status,
+    lane_code: jc.lane_code,
   };
   requireWriteAccess(jcShape, actor);
 
@@ -102,6 +106,7 @@ async function toggleTask({ sectionJobNo, taskRowId, body, actor }) {
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
     status: jc.status,
+    lane_code: jc.lane_code,
   }, actor);
 
   await repo.setTaskCompletion(null, taskRowId, {
@@ -123,6 +128,7 @@ async function deleteTask({ sectionJobNo, taskRowId, actor }) {
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
     status: jc.status,
+    lane_code: jc.lane_code,
   }, actor);
 
   await repo.deleteTask(null, taskRowId);

@@ -8,7 +8,10 @@ const service = require('./taskChecklist.service');
 
 async function listTasks(req, res, next) {
   try {
-    const items = await service.listTasks({ sectionJobNo: req.params.id });
+    const items = await service.listTasks({
+      sectionJobNo: req.params.id,
+      actor: { role: req.user.role, laneScopes: req.user.laneScopes || [] },
+    });
     return res.json({ data: { items } });
   } catch (e) { return next(e); }
 }
@@ -22,6 +25,7 @@ async function postAddTask(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
     });
     return res.status(201).json({ data });
@@ -42,6 +46,7 @@ async function patchToggleTask(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
     });
     return res.json({ data });
@@ -61,6 +66,7 @@ async function deleteTask(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
     });
     return res.json({ data });

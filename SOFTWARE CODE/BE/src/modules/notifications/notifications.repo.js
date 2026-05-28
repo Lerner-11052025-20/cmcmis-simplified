@@ -83,7 +83,7 @@ async function listForUser(employeeId, opts = {}) {
     throw new Error('listForUser: employeeId is required');
   }
   const { unreadOnly = false, page = 1, page_size = 20 } = opts;
-  const where = ['recipient_employee_id = ?'];
+  const where = ['recipient_employee_id = ?', "event_type <> 'JC_TAB_UPDATED'"];
   const args  = [employeeId];
   if (unreadOnly) where.push('is_read = 0');
   const whereSql = `WHERE ${where.join(' AND ')}`;
@@ -103,7 +103,11 @@ async function listForUser(employeeId, opts = {}) {
   // unread-for-this-user count (used by the bell badge regardless of
   // whether the list is filtered).
   const countSql = `SELECT COUNT(*) AS n FROM notifications ${whereSql}`;
-  const unreadSql = `SELECT COUNT(*) AS n FROM notifications WHERE recipient_employee_id = ? AND is_read = 0`;
+  const unreadSql = `
+    SELECT COUNT(*) AS n FROM notifications
+     WHERE recipient_employee_id = ?
+       AND is_read = 0
+       AND event_type <> 'JC_TAB_UPDATED'`;
 
   const [[rows], [countRows], [unreadRows]] = await Promise.all([
     pool.query(dataSql, [...args, page_size, offset]),
@@ -130,7 +134,9 @@ async function countUnread(employeeId) {
   if (!employeeId) throw new Error('countUnread: employeeId is required');
   const [rows] = await pool.query(
     `SELECT COUNT(*) AS n FROM notifications
-       WHERE recipient_employee_id = ? AND is_read = 0`,
+       WHERE recipient_employee_id = ?
+         AND is_read = 0
+         AND event_type <> 'JC_TAB_UPDATED'`,
     [employeeId],
   );
   return Number(rows[0].n) || 0;

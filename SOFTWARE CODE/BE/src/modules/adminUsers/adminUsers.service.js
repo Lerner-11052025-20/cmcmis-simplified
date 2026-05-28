@@ -32,6 +32,7 @@ const repo = require('./adminUsers.repo');
 const sm = require('./adminUsers.stateMachine');
 const tokenVersionCache = require('../../utils/tokenVersionCache');
 const { errors } = require('../../middleware/errorHandler');
+const { normalizeLaneScopes } = require('../../utils/lanes');
 
 // ────────────────────────────────────────────────────────────────────
 //  LIST
@@ -49,6 +50,7 @@ async function listUsers(params) {
     division_code:   r.division_code,
     division_name:   r.division_name,
     role:            r.role,
+    lane_scopes:     normalizeLaneScopes(r.role, r.lane_scopes),
     is_active:       !!r.is_active,
     is_locked:       !!r.is_locked,
     last_login_at:   r.last_login_at ? dayjs(r.last_login_at).format('YYYY-MM-DD HH:mm') : null,
@@ -92,6 +94,7 @@ async function findUser(userId) {
     division_code:   row.division_code,
     division_name:   row.division_name,
     role:            row.role,
+    lane_scopes:     normalizeLaneScopes(row.role, row.lane_scopes),
     is_active:       !!row.is_active,
     is_locked:       !!row.is_locked,
     last_login_at:   row.last_login_at ? dayjs(row.last_login_at).format('YYYY-MM-DD HH:mm:ss') : null,

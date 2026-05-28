@@ -46,7 +46,14 @@ import { MarkCompleteTab }  from './tabs/MarkCompleteTab.jsx';
 import { ClosureTab }       from './tabs/ClosureTab.jsx';
 import { ReopenModal }      from './modals/ReopenModal.jsx';
 
-const LIC_SA_ROLES = new Set(['LAB_IN_CHARGE', 'SUPER_ADMIN']);
+const LIC_SA_ROLES = new Set([
+  'LAB_IN_CHARGE',
+  'SUPER_ADMIN',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+]);
 
 export function JobCardDetail() {
   const { id } = useParams();

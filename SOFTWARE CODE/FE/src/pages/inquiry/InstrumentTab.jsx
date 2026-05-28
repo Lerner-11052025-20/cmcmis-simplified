@@ -35,11 +35,15 @@ const COLUMNS = [
   { header: 'Name',         accessor: 'name',
     className: 'font-medium text-ink' },
   { header: 'Model No',     accessor: 'model_no',
-    format: (val) => val || <span className="text-ink-soft">—</span>,
-    className: 'font-mono text-xs text-ink' },
+    format: (val) => val
+      ? <span className="text-sm font-medium text-ink whitespace-nowrap">{val}</span>
+      : <span className="text-ink-soft">—</span>,
+    className: 'min-w-[130px] text-ink' },
   { header: 'Serial No',    accessor: 'serial_no',
-    format: (val) => val || <span className="text-ink-soft">—</span>,
-    className: 'font-mono text-xs text-ink' },
+    format: (val) => val
+      ? <span className="text-sm font-medium text-ink whitespace-nowrap">{val}</span>
+      : <span className="text-ink-soft">—</span>,
+    className: 'min-w-[130px] text-ink' },
   { header: 'Location',     accessor: 'location_name',
     className: 'text-ink-soft' },
   { header: 'Status',       accessor: 'status_label',

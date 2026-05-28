@@ -29,6 +29,7 @@
 'use strict';
 
 const pool = require('../../config/db');
+const { normalizeLaneScopes } = require('../../utils/lanes');
 
 /**
  * Fetch a user by employee_id.
@@ -96,28 +97,37 @@ async function findTokenVersionByUserId(userId) {
  *   role PK make this very cheap).
  *
  * @param {number} userId
- * @returns {Promise<{ role_code: string | null, permissions: string[] }>}
+ * @returns {Promise<{ role_code: string | null, permissions: string[], lane_scopes: string[] }>}
  */
 async function loadRoleAndPermissions(userId) {
   const [rows] = await pool.query(
-    `SELECT r.role_code, p.permission_code
+    `SELECT r.role_code, p.permission_code, lanes.lane_scopes
        FROM user_roles ur
        JOIN roles r            ON r.role_id       = ur.role_id
        JOIN role_permissions rp ON rp.role_id     = ur.role_id
        JOIN permissions p      ON p.permission_id = rp.permission_id
+       LEFT JOIN (
+         SELECT user_id, GROUP_CONCAT(lane_code ORDER BY lane_code) AS lane_scopes
+           FROM user_lane_scopes
+          GROUP BY user_id
+       ) lanes ON lanes.user_id = ur.user_id
       WHERE ur.user_id = ?`,
     [userId],
   );
 
   if (rows.length === 0) {
-    return { role_code: null, permissions: [] };
+    return { role_code: null, permissions: [], lane_scopes: [] };
   }
 
   // All rows share the same role_code (single role per user per BR-RBAC-02),
   // so reading it from rows[0] is correct.
+  const roleCode = rows[0].role_code;
   return {
-    role_code: rows[0].role_code,
+    role_code: roleCode,
     permissions: rows.map((r) => r.permission_code),
+    // From: permission-only JWT. To: permission + optional row-level lanes.
+    // Empty array means global/no lane restriction for the legacy roles.
+    lane_scopes: normalizeLaneScopes(roleCode, rows[0].lane_scopes),
   };
 }
 

@@ -14,6 +14,7 @@
 //       userId     : number,   // from JWT `uid`
 //       role       : string,   // from JWT `role`
 //       permissions: string[], // from JWT `permissions`
+//       laneScopes : string[], // optional row-level lanes for scoped roles
 //       tokenVersion: number,  // from JWT `tv` (Phase 7)
 //     }
 //   On failure: forwards an AppError(401) with one of these reason codes
@@ -125,6 +126,7 @@ async function authenticate(req, _res, next) {
     userId: payload.uid,
     role: payload.role,
     permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+    laneScopes: Array.isArray(payload.laneScopes) ? payload.laneScopes : [],
     tokenVersion: claimTv,
   };
 

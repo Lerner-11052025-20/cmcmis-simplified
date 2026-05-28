@@ -30,6 +30,15 @@
 'use strict';
 
 const pool = require('../../config/db');
+const { buildLaneWhere } = require('../../utils/lanes');
+
+function laneClause(columnSql, laneScopes, prefix = 'AND') {
+  if (!Array.isArray(laneScopes) || laneScopes.length === 0) {
+    return { sql: '', args: [] };
+  }
+  const lane = buildLaneWhere(columnSql, laneScopes);
+  return { sql: `${prefix} ${lane.sql}`, args: lane.args };
+}
 
 // ── ORG-variant KPIs ──────────────────────────────────────────────────
 
@@ -42,18 +51,23 @@ const pool = require('../../config/db');
  *
  * @returns {Promise<{ total: number, today: number }>}
  */
-async function orgPendingJobs() {
+async function orgPendingJobs(laneScopes = []) {
+  const lane = laneClause('JR_LANE_CODE', laneScopes);
   const [[totalRow], [todayRow]] = await Promise.all([
     pool.query(
       `SELECT COUNT(*) AS n
          FROM cmms_jobrequest_mst
-        WHERE JR_MVP_STATUS = 'SUBMITTED'`
+        WHERE JR_MVP_STATUS = 'SUBMITTED'
+          ${lane.sql}`,
+      lane.args
     ),
     pool.query(
       `SELECT COUNT(*) AS n
          FROM cmms_jobrequest_mst
         WHERE JR_MVP_STATUS = 'SUBMITTED'
-          AND JR_CREATED_AT >= (NOW(6) - INTERVAL 1 DAY)`
+          AND JR_CREATED_AT >= (NOW(6) - INTERVAL 1 DAY)
+          ${lane.sql}`,
+      lane.args
     ),
   ]);
   return {
@@ -98,7 +112,8 @@ async function orgCalibrationDue7d() {
  *
  * @returns {Promise<{ thisWeek: number, lastWeek: number }>}
  */
-async function orgCompletedThisWeek() {
+async function orgCompletedThisWeek(laneScopes = []) {
+  const lane = laneClause('JM_LANE_CODE', laneScopes);
   // Two queries — same shape, different window. Run in parallel.
   const [[thisRow], [lastRow]] = await Promise.all([
     pool.query(
@@ -106,7 +121,9 @@ async function orgCompletedThisWeek() {
          FROM cmms_jobcard_mst
         WHERE JM_MVP_STATUS IN ('COMPLETED','VERIFIED_CLOSED')
           AND COALESCE(JM_VERIFIED_ON, JM_JobEndDate)
-                >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)`
+                >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+          ${lane.sql}`,
+      lane.args
     ),
     pool.query(
       `SELECT COUNT(*) AS n
@@ -115,7 +132,9 @@ async function orgCompletedThisWeek() {
           AND COALESCE(JM_VERIFIED_ON, JM_JobEndDate)
                 >= DATE_SUB(CURDATE(), INTERVAL (WEEKDAY(CURDATE()) + 7) DAY)
           AND COALESCE(JM_VERIFIED_ON, JM_JobEndDate)
-                <  DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)`
+                <  DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+          ${lane.sql}`,
+      lane.args
     ),
   ]);
   return {
@@ -300,12 +319,15 @@ async function orgTotalActiveEquipment() {
  *
  * @returns {Promise<{ total: number }>}
  */
-async function orgInProgressJobs() {
+async function orgInProgressJobs(laneScopes = []) {
+  const lane = laneClause('JR_LANE_CODE', laneScopes);
   const [rows] = await pool.query(
     `SELECT COUNT(*) AS n
        FROM cmms_jobrequest_mst
       WHERE JR_MVP_STATUS = 'IN_PROGRESS'
-        AND JR_CANCELLED_AT IS NULL`
+        AND JR_CANCELLED_AT IS NULL
+        ${lane.sql}`,
+    lane.args
   );
   return { total: Number(rows[0].n) };
 }
@@ -317,11 +339,14 @@ async function orgInProgressJobs() {
  *
  * @returns {Promise<{ total: number }>}
  */
-async function orgOpenJobCards() {
+async function orgOpenJobCards(laneScopes = []) {
+  const lane = laneClause('JM_LANE_CODE', laneScopes);
   const [rows] = await pool.query(
     `SELECT COUNT(*) AS n
        FROM cmms_jobcard_mst
-      WHERE JM_MVP_STATUS NOT IN ('COMPLETED', 'VERIFIED_CLOSED')`
+      WHERE JM_MVP_STATUS NOT IN ('COMPLETED', 'VERIFIED_CLOSED')
+        ${lane.sql}`,
+    lane.args
   );
   return { total: Number(rows[0].n) };
 }
@@ -464,12 +489,14 @@ async function myApprovedQueued(employeeId) {
  *   equipment:    Array<Object>
  * }>}
  */
-async function recentActivity(variant, employeeId) {
+async function recentActivity(variant, employeeId, laneScopes = []) {
   // ── predicates ──────────────────────────────────────────────────────
   const jrScope  = variant === 'my' ? 'AND jr.JR_SUBMITTEDBYID = ?' : '';
   const jcScope  = variant === 'my' ? 'AND submitter.JR_SUBMITTEDBYID = ?' : '';
   const eqScope  = variant === 'my' ? 'AND e.EQM_CREATED_BY = ?' : '';
   const scopeArg = variant === 'my' ? [employeeId] : [];
+  const jrLane   = variant === 'org' ? laneClause('jr.JR_LANE_CODE', laneScopes) : { sql: '', args: [] };
+  const jcLane   = variant === 'org' ? laneClause('jc.JM_LANE_CODE', laneScopes) : { sql: '', args: [] };
 
   // Run all three in parallel — independent reads.
   const [[jrRows], [jcRows], [eqRows]] = await Promise.all([
@@ -479,15 +506,17 @@ async function recentActivity(variant, employeeId) {
           jr.JR_JOBREQUESTNO    AS jr_no,
           jr.JR_EQM_NAME        AS equipment_name,
           jr.JR_MVP_STATUS      AS status,
+          jr.JR_LANE_CODE       AS lane_code,
           jr.JR_SUBMITTEDBYNAME AS actor_name,
           jr.JR_SUBMITTEDBYID   AS actor_id,
-          jr.JR_CREATED_AT      AS time_at
+          COALESCE(jr.JR_MVP_STATUS_AT, jr.JR_UPDATED_AT, jr.JR_CREATED_AT) AS time_at
          FROM cmms_jobrequest_mst jr
         WHERE jr.JR_CANCELLED_AT IS NULL
           ${jrScope}
-        ORDER BY jr.JR_CREATED_AT DESC
+          ${jrLane.sql}
+        ORDER BY COALESCE(jr.JR_MVP_STATUS_AT, jr.JR_UPDATED_AT, jr.JR_CREATED_AT) DESC
         LIMIT 7`,
-      scopeArg
+      [...scopeArg, ...jrLane.args]
     ),
 
     // Recent Job Card updates (join to JR for submitter scope + engineer name)
@@ -497,6 +526,7 @@ async function recentActivity(variant, employeeId) {
           jc.JM_JobCardNO       AS jc_no,
           e.EQM_NAME            AS equipment_name,
           jc.JM_MVP_STATUS      AS status,
+          jc.JM_LANE_CODE       AS lane_code,
           eng.EMM_NAME          AS engineer_name,
           jc.JM_UPDATED_ON      AS time_at
          FROM cmms_jobcard_mst jc
@@ -506,9 +536,10 @@ async function recentActivity(variant, employeeId) {
          LEFT JOIN cmms_emp_mst        eng       ON eng.EMM_ID  = submitter.JR_ASSIGNED_ENGINEER
         WHERE 1=1
           ${jcScope}
+          ${jcLane.sql}
         ORDER BY jc.JM_UPDATED_ON DESC
         LIMIT 7`,
-      scopeArg
+      [...scopeArg, ...jcLane.args]
     ),
 
     // Recent Equipment registrations

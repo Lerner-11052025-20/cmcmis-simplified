@@ -15,7 +15,6 @@ import { api } from '../api-client.js';
  * @param {string} [params.q]
  * @param {string} [params.type]           CALIBRATION | REPAIR | REGISTRATION
  * @param {string} [params.status]
- * @param {string} [params.priority]       LOW | MEDIUM | HIGH
  * @param {number} [params.division_id]
  * @param {string} [params.date_from]
  * @param {string} [params.date_to]

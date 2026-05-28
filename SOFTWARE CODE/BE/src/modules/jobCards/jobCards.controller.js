@@ -13,7 +13,7 @@ const service = require('./jobCards.service');
 // ── Phase 6 ─────────────────────────────────────────────────────────
 async function list(req, res, next) {
   try {
-    const result = await service.listJobCards(req.query);
+    const result = await service.listJobCards(req.query, req.scope);
     return res.json({ data: result });
   } catch (e) { return next(e); }
 }
@@ -21,14 +21,14 @@ async function list(req, res, next) {
 // ── Phase 9: Detail + History ───────────────────────────────────────
 async function getDetail(req, res, next) {
   try {
-    const data = await service.getJobCardDetail({ sectionJobNo: req.params.id });
+    const data = await service.getJobCardDetail({ sectionJobNo: req.params.id, scope: req.scope });
     return res.json({ data });
   } catch (e) { return next(e); }
 }
 
 async function getHistory(req, res, next) {
   try {
-    const items = await service.getJobCardHistory({ sectionJobNo: req.params.id });
+    const items = await service.getJobCardHistory({ sectionJobNo: req.params.id, scope: req.scope });
     return res.json({ data: { items } });
   } catch (e) { return next(e); }
 }
@@ -44,6 +44,7 @@ async function patchTab(req, res, next) {
         role:        req.user.role,
         userId:      req.user.userId,
         permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
       },
     });
     return res.json({ data });
@@ -62,6 +63,7 @@ function makeTransitionHandler(serviceFn) {
           role:        req.user.role,
           userId:      req.user.userId,
           permissions: req.user.permissions,
+          laneScopes:  req.user.laneScopes || [],
         },
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'] || '',

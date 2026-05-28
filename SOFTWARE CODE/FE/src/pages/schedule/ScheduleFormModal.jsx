@@ -29,7 +29,6 @@ import { api } from '../../lib/api-client.js';
 
 // ── Constants ────────────────────────────────────────────────────────────
 const TYPES        = ['PREVENTIVE_MAINTENANCE', 'CALIBRATION'];
-const PRIORITIES   = ['LOW', 'MEDIUM', 'HIGH'];
 const RECURRENCES  = ['NONE', 'MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY'];
 const TRANSITIONS  = ['PLANNED', 'SCHEDULED', 'DUE', 'COMPLETED', 'CANCELLED'];
 
@@ -47,7 +46,6 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
     equipment_id:    schedule?.equipment_id    || '',
     equipment_label: schedule?.equipment_label || '',
     scheduled_date:  schedule?.scheduled_date  || todayIso(),
-    priority:        schedule?.priority        || 'MEDIUM',
     assigned_engineer_employee_id: schedule?.assigned_engineer_employee_id || '',
     recurrence:      schedule?.recurrence      || 'NONE',
     status:          schedule?.status          || 'PLANNED',
@@ -99,7 +97,6 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
           equipment_id:    form.equipment_id,
           equipment_label: form.equipment_label || undefined,
           scheduled_date:  form.scheduled_date,
-          priority:        form.priority,
           assigned_engineer_employee_id: form.assigned_engineer_employee_id || null,
           recurrence:      form.recurrence,
           notes:           form.notes || undefined,
@@ -121,7 +118,6 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
           equipment_id:    form.equipment_id,
           equipment_label: form.equipment_label || undefined,
           scheduled_date:  form.scheduled_date,
-          priority:        form.priority,
           assigned_engineer_employee_id: form.assigned_engineer_employee_id || null,
           recurrence:      form.recurrence,
           notes:           form.notes || undefined,
@@ -211,16 +207,9 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
             <Input value={form.equipment_label} onChange={onField('equipment_label')} placeholder="Auto-filled from selection" />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Scheduled Date">
-              <Input type="date" value={form.scheduled_date} onChange={onField('scheduled_date')} />
-            </Field>
-            <Field label="Priority">
-              <Select value={form.priority} onChange={onField('priority')}>
-                {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-              </Select>
-            </Field>
-          </div>
+          <Field label="Scheduled Date">
+            <Input type="date" value={form.scheduled_date} onChange={onField('scheduled_date')} />
+          </Field>
 
           <Field label="Assigned Engineer (employee_id)">
             {engineers.length > 0 ? (

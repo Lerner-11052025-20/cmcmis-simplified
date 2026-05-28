@@ -29,7 +29,7 @@
 const pool = require('../../config/db');
 
 // ── In-process micro-cache ────────────────────────────────────────────
-//   Map<permissionCode, { employees: string[], at: number }>
+//   Map<permissionCode|permissionCode::lane, { employees: string[], at: number }>
 const TTL_MS = 60 * 1000;
 const cache  = new Map();
 
@@ -42,8 +42,9 @@ const cache  = new Map();
  * @param {string} permissionCode  e.g. 'job_request:approve'
  * @returns {Promise<string[]>}    Array of VARCHAR(7) employee_ids
  */
-async function getActiveEmployeesWithPermission(permissionCode) {
-  const cached = cache.get(permissionCode);
+async function getActiveEmployeesWithPermission(permissionCode, laneCode = null) {
+  const cacheKey = laneCode ? `${permissionCode}::${laneCode}` : permissionCode;
+  const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.at < TTL_MS) {
     return cached.employees;
   }
@@ -52,15 +53,22 @@ async function getActiveEmployeesWithPermission(permissionCode) {
     `SELECT DISTINCT u.employee_id
        FROM users u
        JOIN user_roles ur     ON ur.user_id       = u.user_id
+       JOIN roles r           ON r.role_id        = ur.role_id
        JOIN role_permissions rp ON rp.role_id     = ur.role_id
        JOIN permissions p     ON p.permission_id = rp.permission_id
+       LEFT JOIN user_lane_scopes uls ON uls.user_id = u.user_id
       WHERE p.permission_code = ?
         AND u.is_active       = 1
-        AND u.employee_id     IS NOT NULL`,
-    [permissionCode],
+        AND u.employee_id     IS NOT NULL
+        AND (
+          ? IS NULL
+          OR r.role_code IN ('SUPER_ADMIN', 'LAB_IN_CHARGE', 'LAB_ENGINEER')
+          OR uls.lane_code = ?
+        )`,
+    [permissionCode, laneCode, laneCode],
   );
   const employees = rows.map((r) => r.employee_id);
-  cache.set(permissionCode, { employees, at: Date.now() });
+  cache.set(cacheKey, { employees, at: Date.now() });
   return employees;
 }
 
@@ -76,8 +84,8 @@ async function getActiveEmployeesWithPermission(permissionCode) {
  *
  * @returns {Promise<string[]>}
  */
-async function getManagerialRecipients() {
-  return getActiveEmployeesWithPermission('job_request:approve');
+async function getManagerialRecipients(laneCode = null) {
+  return getActiveEmployeesWithPermission('job_request:approve', laneCode);
 }
 
 

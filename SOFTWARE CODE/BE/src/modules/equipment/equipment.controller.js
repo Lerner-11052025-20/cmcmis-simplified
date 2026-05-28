@@ -17,6 +17,13 @@ async function getList(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+async function getDetail(req, res, next) {
+  try {
+    const result = await service.getEquipmentDetail(req.params.id);
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
 async function postCreate(req, res, next) {
   try {
     const result = await service.createEquipment({
@@ -79,4 +86,18 @@ async function postBulkCalibrationDone(req, res, next) {
   } catch (e) { return next(e); }
 }
 
-module.exports = { getList, postCreate, getTypes, getMakes, getDivisions, postBulkCalibrationDone };
+async function postVerify(req, res, next) {
+  try {
+    const result = await service.verifyEquipment({
+      id: req.params.id,
+      actor: {
+        employeeId: req.user.employeeId,
+        role:       req.user.role,
+        userId:     req.user.userId,
+      },
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
+module.exports = { getList, getDetail, postCreate, getTypes, getMakes, getDivisions, postBulkCalibrationDone, postVerify };

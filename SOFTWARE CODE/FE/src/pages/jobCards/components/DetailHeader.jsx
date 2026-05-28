@@ -2,7 +2,7 @@
 // pages/jobCards/components/DetailHeader.jsx
 // ----------------------------------------------------------------------------
 // Top strip of the JC detail page: back-link, JC code + Section JobNo,
-// equipment summary, status pill + priority pill, Download buttons.
+// equipment summary, status pill, Download buttons.
 //
 // PHASE 11 UPDATE
 //   The "Download Report" button (Certificate, PDF #1) is now WIRED.
@@ -24,7 +24,6 @@ import { ArrowLeft, FileDown, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { StatusPill } from '../../../components/StatusPill.jsx';
-import { PriorityLabel } from '../../../components/PriorityLabel.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { useAuth } from '../../../lib/auth-context.jsx';
 import {
@@ -116,9 +115,6 @@ export function DetailHeader({ jc }) {
 
         <div className="flex flex-col items-end gap-1.5">
           <StatusPill status={jc.status} />
-          <div className="text-xs text-ink-soft">
-            Priority: <PriorityLabel priority={jc.priority} />
-          </div>
 
           {/* ── PDF download buttons ─────────────────────────── */}
           <div className="flex items-center gap-2">

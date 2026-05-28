@@ -7,7 +7,7 @@
 // from auth-context — the UI never renders a link the user cannot follow.
 //
 // PHASE 5 update — 9 nav items (matches the redesigned ISRO SAC shell):
-//   1. Dashboard      — every role except VIEW_ONLY_USER
+//   1. Dashboard      — every role except VIEW_ONLY
 //   2. Job Requests   — every role
 //   3. Job Cards      — every role (read-list permission)
 //   4. Equipment      — every role
@@ -45,6 +45,7 @@ import {
   Settings,
   Users,
   IdCard,
+  BadgeCheck,
   RefreshCw,
   ScrollText,
 } from 'lucide-react';
@@ -63,7 +64,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'Job Requests', to: '/job-requests', icon: FileText,       requires: 'job_request:read-own' },
   // Phase 7 Slice 2 — Conversion is the LIC + SA workspace where pending
   // requests get turned into Job Cards. Gated on the approve permission,
-  // which only LAB_IN_CHARGE and SUPER_ADMIN hold (per Phase 3 role grants).
+  // which LAB_IN_CHARGE, scoped lab in-charge roles, and SUPER_ADMIN hold.
   { label: 'Conversion',   to: '/conversion',   icon: RefreshCw,      requires: 'job_request:approve' },
   { label: 'Job Cards',    to: '/job-cards',    icon: ClipboardList,  requires: 'job_card:read-list' },
   { label: 'Equipment',    to: '/equipment',    icon: Wrench,         requires: 'equipment:read-list' },
@@ -83,6 +84,7 @@ export const ALL_NAV_ITEMS = [
   // Slice 2 may collapse into a collapsible group with Audit Log etc.
   { label: 'Admin · Users',     to: '/admin/users',     icon: Users,    requires: 'user:read-list' },
   { label: 'Admin · Employees', to: '/admin/employees', icon: IdCard,   requires: 'master:employees:manage' },
+  { label: 'Admin · Equipment Verification', to: '/admin/equipment-verification', icon: BadgeCheck, requires: 'equipment:verify' },
   // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only.
   // Gated on the new `audit:read-list` (mig 600); legacy `audit_log:read`
   // (mig 006) is left in place for any historical reference but is no
@@ -90,14 +92,37 @@ export const ALL_NAV_ITEMS = [
   { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
 ];
 
+const NORMAL_USER_NAV_LABELS = new Set([
+  'Dashboard',
+  'Job Requests',
+  'Equipment',
+  'Inquiry',
+]);
+
+const VIEW_ONLY_HIDDEN_NAV_LABELS = new Set([
+  'Schedule',
+  'Procurement',
+]);
+
+const GLOBAL_HIDDEN_NAV_LABELS = new Set([
+  'Procurement',
+]);
+
 /**
  * Returns the subset of nav items the given permissions array unlocks.
  *
  * @param {string[] | undefined | null} permissions
+ * @param {string | undefined | null} role
  * @returns {NavItem[]}
  */
-export function visibleNavItems(permissions) {
+export function visibleNavItems(permissions, role) {
   if (!Array.isArray(permissions) || permissions.length === 0) return [];
   const owned = new Set(permissions);
-  return ALL_NAV_ITEMS.filter((item) => owned.has(item.requires));
+  return ALL_NAV_ITEMS.filter((item) => {
+    if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
+    if (!owned.has(item.requires)) return false;
+    if (role === 'NORMAL_USER') return NORMAL_USER_NAV_LABELS.has(item.label);
+    if (role === 'VIEW_ONLY') return !VIEW_ONLY_HIDDEN_NAV_LABELS.has(item.label);
+    return true;
+  });
 }

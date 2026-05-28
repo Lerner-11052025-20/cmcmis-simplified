@@ -84,6 +84,26 @@ function formatEquipmentCode(eqmType, eqmId) {
   return `EQ-${prefix}-${String(eqmId).padStart(4, '0')}`;
 }
 
+function parseCompositeId(id) {
+  const raw = String(id || '').trim();
+  const displayMatch = raw.match(/^EQ-([A-Z]{3})-(\d+)$/i);
+  if (displayMatch) return { eqmType: displayMatch[1], eqmId: Number(displayMatch[2]) };
+  const match = raw.match(/^(.+)-(\d+)$/);
+  if (match) return { eqmType: match[1], eqmId: Number(match[2]) };
+  throw errors.badRequest('Invalid equipment id');
+}
+
+async function getEquipmentDetail(id) {
+  const { eqmType, eqmId } = parseCompositeId(id);
+  const row = await repo.getEquipmentByCompositeId(eqmType, eqmId);
+  if (!row) throw errors.notFound('Equipment not found');
+  return {
+    equipment_id: `${row.eqm_type}-${row.eqm_id}`,
+    equipment_code: formatEquipmentCode(row.eqm_type, row.eqm_id),
+    ...row,
+  };
+}
+
 // ────────────────────────────────────────────────────────────────────────
 //  HELPERS (for FE dropdowns)
 // ────────────────────────────────────────────────────────────────────────
@@ -214,7 +234,7 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
     //     unaffected until verification; bust anyway — TTL is 10 s and
     //     idempotent invalidate is free).
     //   • Personal "Due for Calibration" for the registrar.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
     kpiCache.invalidate(KPI_KEYS.personal(actor.employeeId));
 
     return {
@@ -262,9 +282,28 @@ async function bulkMarkCalibrationDone({ actor, ipAddress, userAgent }) {
     await conn.commit();
 
     // Bust the org KPI cache — equipment counts / statuses have changed.
-    kpiCache.invalidate(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
 
     return { updated_count: updatedCount };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+async function verifyEquipment({ id, actor }) {
+  const { eqmType, eqmId } = parseCompositeId(id);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const affected = await repo.verifyEquipment(conn, eqmType, eqmId, actor.employeeId);
+    if (!affected) throw errors.conflict('Equipment is not pending verification or was not found');
+    await conn.commit();
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.PERSONAL_PREFIX);
+    return { equipment_id: `${eqmType}-${eqmId}`, status: 'ACTIVE' };
   } catch (err) {
     try { await conn.rollback(); } catch { /* ignore */ }
     throw err;
@@ -278,8 +317,10 @@ module.exports = {
   listTypes,
   listMakes,
   listDivisions,
+  getEquipmentDetail,
   createEquipment,
   formatEquipmentCode,
   // Phase 15 addition:
   bulkMarkCalibrationDone,
+  verifyEquipment,
 };

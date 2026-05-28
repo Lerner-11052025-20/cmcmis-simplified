@@ -13,7 +13,7 @@
 //   [🔍 Search by Job ID, Equipment, or Submitted By…]    [⚙ Filter]
 //
 //   ┌─────────────────────────────────────────────────────────────────┐
-//   │ Job ID  Equipment  Division  Submitted By  Date  Priority  Status  Actions │
+//   │ Job ID  Equipment  Division  Submitted By  Date  Status  Actions │
 //   │ ...                                                             │
 //   └─────────────────────────────────────────────────────────────────┘
 //
@@ -32,7 +32,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search as SearchIcon, Filter as FilterIcon } from 'lucide-react';
 
 import { Input } from '../../components/ui/Input.jsx';
-import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 
 import { ConversionTabs, CONVERSION_TABS } from './components/ConversionTabs.jsx';
@@ -54,7 +53,6 @@ export function Conversion() {
   const [page, setPage] = useState(1);
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
-  const [priority, setPriority] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo]     = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -71,7 +69,7 @@ export function Conversion() {
   }, [qInput]);
 
   // Reset pagination when tab or filter changes.
-  useEffect(() => { setPage(1); }, [activeTab, priority, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [activeTab, dateFrom, dateTo]);
 
   // ── Data: active tab + sibling tabs (for badge counts) ──────────
   // We need a count for each of the three tabs even though the user
@@ -82,28 +80,25 @@ export function Conversion() {
     jobType: 'CALIBRATION', page: activeTab === 'CALIBRATION' ? page : 1,
     pageSize: PAGE_SIZE,
     q: activeTab === 'CALIBRATION' ? q : undefined,
-    priority: activeTab === 'CALIBRATION' ? priority : undefined,
     dateFrom: activeTab === 'CALIBRATION' ? dateFrom : undefined,
     dateTo:   activeTab === 'CALIBRATION' ? dateTo   : undefined,
-  }), [activeTab, page, q, priority, dateFrom, dateTo]);
+  }), [activeTab, page, q, dateFrom, dateTo]);
 
   const repairParams = useMemo(() => ({
     jobType: 'REPAIR', page: activeTab === 'REPAIR' ? page : 1,
     pageSize: PAGE_SIZE,
     q: activeTab === 'REPAIR' ? q : undefined,
-    priority: activeTab === 'REPAIR' ? priority : undefined,
     dateFrom: activeTab === 'REPAIR' ? dateFrom : undefined,
     dateTo:   activeTab === 'REPAIR' ? dateTo   : undefined,
-  }), [activeTab, page, q, priority, dateFrom, dateTo]);
+  }), [activeTab, page, q, dateFrom, dateTo]);
 
   const registrationParams = useMemo(() => ({
     jobType: 'REGISTRATION', page: activeTab === 'REGISTRATION' ? page : 1,
     pageSize: PAGE_SIZE,
     q: activeTab === 'REGISTRATION' ? q : undefined,
-    priority: activeTab === 'REGISTRATION' ? priority : undefined,
     dateFrom: activeTab === 'REGISTRATION' ? dateFrom : undefined,
     dateTo:   activeTab === 'REGISTRATION' ? dateTo   : undefined,
-  }), [activeTab, page, q, priority, dateFrom, dateTo]);
+  }), [activeTab, page, q, dateFrom, dateTo]);
 
   const cal = useConversionList(calibrationParams);
   const rep = useConversionList(repairParams);
@@ -186,20 +181,7 @@ export function Conversion() {
         </div>
         {filtersOpen ? (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 border-t border-border pt-3">
-            <div className="md:col-span-4">
-              <label htmlFor="conv-pri" className="block text-xs font-medium text-ink mb-1">Priority</label>
-              <Select
-                id="conv-pri"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-              >
-                <option value="">Any priority</option>
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
-              </Select>
-            </div>
-            <div className="md:col-span-4">
+            <div className="md:col-span-6">
               <label htmlFor="conv-df" className="block text-xs font-medium text-ink mb-1">Date from</label>
               <Input
                 id="conv-df"
@@ -208,7 +190,7 @@ export function Conversion() {
                 onChange={(e) => setDateFrom(e.target.value)}
               />
             </div>
-            <div className="md:col-span-4">
+            <div className="md:col-span-6">
               <label htmlFor="conv-dt" className="block text-xs font-medium text-ink mb-1">Date to</label>
               <Input
                 id="conv-dt"

@@ -16,10 +16,11 @@
 'use strict';
 
 const { z } = require('zod');
+const { ALL_ROLE_CODES } = require('../../utils/lanes');
 
 // ── Atoms ────────────────────────────────────────────────────────────
 const roleCodeEnum = z.enum([
-  'SUPER_ADMIN', 'LAB_IN_CHARGE', 'LAB_ENGINEER', 'NORMAL_USER', 'VIEW_ONLY',
+  ...ALL_ROLE_CODES,
 ]);
 
 const pageSizeEnum = z.coerce.number().int().refine(

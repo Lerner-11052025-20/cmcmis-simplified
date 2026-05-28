@@ -15,7 +15,7 @@
 //        only job_category, job_type, equipment_name (≥2), division_id
 //        are required. Drafts intentionally accept partial work.
 //   • Submit Request uses jobRequestSubmitSchema (STRICT):
-//        adds complaint_description ≥ 10 chars + tnc_accepted === true.
+//        adds tnc_accepted === true; complaint_description is optional.
 //   The BE jobRequests.validators enforces the same two-tier rule based
 //   on submit_now=true|false (defence in depth — R10).
 //
@@ -43,7 +43,12 @@ import { Checkbox } from '../../components/ui/Checkbox.jsx';
 import { FormField } from '../../components/ui/FormField.jsx';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { createJobRequest } from '../../lib/api/jobRequests.js';
-import { fetchDivisions, searchEquipment } from '../../lib/api/lookups.js';
+import {
+  fetchDivisions,
+  fetchProjects,
+  fetchEquipmentAccessories,
+  searchEquipment,
+} from '../../lib/api/lookups.js';
 import { invalidateJobRequestCache } from '../../lib/hooks/useJobRequestList.js';
 import {
   jobRequestDraftSchema,
@@ -59,15 +64,23 @@ const JOB_CATEGORIES = [
 const JOB_TYPES = [
   { value: 'CALIBRATION',  label: 'Calibration' },
   { value: 'REPAIR',       label: 'Repair' },
-  { value: 'REGISTRATION', label: 'Registration' },
 ];
-const EQUIPMENT_TYPE_OPTIONS = ['Instrument', 'Equipment', 'System', 'Component', 'Other'];
+const EQUIPMENT_TYPE_OPTIONS = ['Instrument', 'Equipment'];
 const ACCESSORY_TYPE_OPTIONS = ['Probe', 'Cable', 'Adapter', 'Carrying Case', 'Power Supply', 'Manual', 'Other'];
-const PRIORITIES = [
-  { value: 'LOW',    label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH',   label: 'High' },
-];
+
+function normalizeEquipmentType(value) {
+  return String(value || '').toLowerCase() === 'equipment' ? 'Equipment' : 'Instrument';
+}
+
+function accessoryTypeFromDb(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  const match = ACCESSORY_TYPE_OPTIONS.find((item) => item.toLowerCase() === normalized);
+  return match || 'Other';
+}
+
+function equipmentIdDisplay(opt) {
+  return opt?.eqm_id ? String(opt.eqm_id) : '';
+}
 
 export function JobRequestNew() {
   const { user } = useAuth();
@@ -75,14 +88,14 @@ export function JobRequestNew() {
 
   // ── Section-1 + 2 + 3 + 4 form state (single flat object) ─────────
   const [form, setForm] = useState({
-    job_category: '',
-    job_type: '',
+    job_category: JOB_CATEGORIES[0].value,
+    job_type: JOB_TYPES[0].value,
     equipment_id: null,
     equipment_name: '',
     make: '',
     model_no: '',
     serial_no: '',
-    equipment_type: '',
+    equipment_type: EQUIPMENT_TYPE_OPTIONS[0],
     options_description: '',
     lab_phone: '',
     room_phone: '',
@@ -92,12 +105,11 @@ export function JobRequestNew() {
     complaint_description: '',
     remarks: '',
     equipment_sent_after_repair: false,
-    priority: 'MEDIUM',
     accessories: [],
   });
 
   // ── Section-5 T&C state — six independent booleans ────────────────
-  const [tnc, setTnc] = useState(() => TERMS.map(() => false));
+  const [tnc, setTnc] = useState(() => TERMS.map(() => true));
   const tncAcceptedCount = tnc.filter(Boolean).length;
   const allTncAccepted = tncAcceptedCount === TERMS.length;
 
@@ -106,12 +118,19 @@ export function JobRequestNew() {
   const [formError, setFormError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // ── Divisions dropdown — fetched once on mount ────────────────────
+  // ── Division + Project dropdowns — fetched once on mount ──────────
   const [divisions, setDivisions] = useState([]);
+  const [projects, setProjects] = useState([]);
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchDivisions(ctrl.signal)
-      .then(setDivisions)
+    Promise.all([
+      fetchDivisions(ctrl.signal),
+      fetchProjects(ctrl.signal),
+    ])
+      .then(([divisionItems, projectItems]) => {
+        setDivisions(divisionItems);
+        setProjects(projectItems);
+      })
       .catch(() => { /* dropdown stays empty; field shows placeholder */ });
     return () => ctrl.abort();
   }, []);
@@ -135,9 +154,11 @@ export function JobRequestNew() {
   // ── Equipment ID typeahead state ─────────────────────────────────
   const [eqOpts, setEqOpts] = useState([]);
   const [eqOpen, setEqOpen] = useState(false);
+  const [equipmentSearchText, setEquipmentSearchText] = useState('');
   const eqDebRef = useRef(null);
   function onEquipmentQueryChange(value) {
-    update('equipment_name', value);
+    setEquipmentSearchText(value);
+    update('equipment_id', null);
     if (eqDebRef.current) clearTimeout(eqDebRef.current);
     if (!value || value.length < 2) { setEqOpts([]); return; }
     eqDebRef.current = setTimeout(async () => {
@@ -150,7 +171,7 @@ export function JobRequestNew() {
       }
     }, 300);
   }
-  function pickEquipment(opt) {
+  async function pickEquipment(opt) {
     setForm((f) => ({
       ...f,
       equipment_id: opt.eqm_id,
@@ -158,9 +179,25 @@ export function JobRequestNew() {
       make: opt.make || '',
       model_no: opt.model_no || '',
       serial_no: opt.serial_no || '',
-      equipment_type: opt.eqm_type || '',
+      equipment_type: normalizeEquipmentType(opt.eqm_type),
+      accessories: [],
     }));
+    setEquipmentSearchText(equipmentIdDisplay(opt));
     setEqOpen(false);
+    try {
+      const rows = await fetchEquipmentAccessories(opt.eqm_type, opt.eqm_id);
+      if (!rows?.length) return;
+      setForm((f) => ({
+        ...f,
+        accessories: rows.slice(0, 20).map((row) => ({
+          type: accessoryTypeFromDb(row.type),
+          name: row.name || row.model_no || `Accessory ${row.id}`,
+          serial_no: row.serial_no || '',
+        })),
+      }));
+    } catch {
+      // Keep the static accessory dropdown usable even if the legacy lookup fails.
+    }
   }
 
   // ── Update helper ────────────────────────────────────────────────
@@ -216,7 +253,6 @@ export function JobRequestNew() {
     complaint_description: form.complaint_description.trim(),
     remarks: form.remarks.trim(),
     equipment_sent_after_repair: !!form.equipment_sent_after_repair,
-    priority: form.priority,
     tnc_version: TNC_VERSION,
   }), [form]);
 
@@ -250,7 +286,6 @@ export function JobRequestNew() {
     complaint_description:  'Complaint Description',
     tnc_accepted:           'Terms & Conditions',
     accessories:            'Accessories',
-    priority:               'Priority',
   };
 
   // Convert a zod ZodError into a { fieldName -> message } map for the
@@ -270,7 +305,7 @@ export function JobRequestNew() {
   function buildErrorSummary(fieldMap) {
     const ORDER = [
       'job_category', 'job_type', 'equipment_name', 'division_id',
-      'complaint_description', 'tnc_accepted', 'accessories', 'priority',
+      'complaint_description', 'tnc_accepted', 'accessories',
     ];
     const seen = new Set();
     const out = [];
@@ -374,7 +409,7 @@ export function JobRequestNew() {
         </button>
         <h1 className="text-2xl font-semibold text-ink mt-2">New Job Request</h1>
         <p className="text-sm text-ink-soft mt-1">
-          Submit a new calibration, repair, or registration request
+          Submit a new calibration or repair request
         </p>
       </div>
 
@@ -398,7 +433,6 @@ export function JobRequestNew() {
               onChange={(e) => update('job_category', e.target.value)}
               aria-required="true"
             >
-              <option value="">Select category</option>
               {JOB_CATEGORIES.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -410,7 +444,6 @@ export function JobRequestNew() {
               onChange={(e) => update('job_type', e.target.value)}
               aria-required="true"
             >
-              <option value="">Select type</option>
               {JOB_TYPES.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -427,7 +460,7 @@ export function JobRequestNew() {
             <div className="relative">
               <Input
                 placeholder="Search or enter equipment ID"
-                value={form.equipment_name}
+                value={equipmentSearchText}
                 onChange={(e) => onEquipmentQueryChange(e.target.value)}
                 onFocus={() => eqOpts.length && setEqOpen(true)}
                 onBlur={() => setTimeout(() => setEqOpen(false), 150)}
@@ -483,23 +516,11 @@ export function JobRequestNew() {
               value={form.equipment_type}
               onChange={(e) => update('equipment_type', e.target.value)}
             >
-              <option value="">Select type</option>
               {EQUIPMENT_TYPE_OPTIONS.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </Select>
           </FormField>
-          <div className="md:col-span-2">
-            <FormField label="Options / Description" error={fieldErrors.options_description}>
-              <textarea
-                rows={3}
-                className="w-full rounded-md border border-border bg-base-elev/30 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-                value={form.options_description}
-                onChange={(e) => update('options_description', e.target.value)}
-                placeholder="Enter additional options or description"
-              />
-            </FormField>
-          </div>
         </div>
       </section>
 
@@ -618,7 +639,9 @@ export function JobRequestNew() {
             >
               <option value="">Select division</option>
               {divisions.map((d) => (
-                <option key={d.id} value={d.id}>{d.code} — {d.name}</option>
+                <option key={d.id} value={d.id}>
+                  {d.id} --- {d.code} --- {d.name}
+                </option>
               ))}
             </Select>
           </FormField>
@@ -630,41 +653,24 @@ export function JobRequestNew() {
             />
           </FormField>
           <FormField label="Project">
-            <Input
+            <Select
               value={form.project_name}
               onChange={(e) => update('project_name', e.target.value)}
-              placeholder="Enter project name"
-            />
-          </FormField>
-          <FormField label="Priority">
-            <Select
-              value={form.priority}
-              onChange={(e) => update('priority', e.target.value)}
             >
-              {PRIORITIES.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              <option value="">Select project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
               ))}
             </Select>
           </FormField>
           <div className="md:col-span-2">
-            <FormField label="Complaint Description" required error={fieldErrors.complaint_description}>
+            <FormField label="Complaint Description" error={fieldErrors.complaint_description}>
               <textarea
                 rows={4}
                 className="w-full rounded-md border border-border bg-base-elev/30 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
                 value={form.complaint_description}
                 onChange={(e) => update('complaint_description', e.target.value)}
-                placeholder="Describe the issue or requirements in detail (min 10 characters)"
-              />
-            </FormField>
-          </div>
-          <div className="md:col-span-2">
-            <FormField label="Remarks">
-              <textarea
-                rows={2}
-                className="w-full rounded-md border border-border bg-base-elev/30 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-                value={form.remarks}
-                onChange={(e) => update('remarks', e.target.value)}
-                placeholder="Additional remarks or notes"
+                placeholder="Describe the issue or requirements in detail"
               />
             </FormField>
           </div>

@@ -12,7 +12,7 @@
 //   └────────────────────────────────────────────────────────────────────┘
 //
 //   ┌────────────────────────────────────────────────────────────────────┐
-//   │ Job ID  Equipment  Type  Division  Submitted By  Date  Priority  Status │
+//   │ Job ID  Equipment  Type  Division  Submitted By  Date  Status │
 //   │ ...                                                                │
 //   └────────────────────────────────────────────────────────────────────┘
 //
@@ -25,8 +25,7 @@
 //   4. Division     → division_code
 //   5. Submitted By → submitted_by_name
 //   6. Date         → submitted_at || created_at, YYYY-MM-DD (BE already formats)
-//   7. Priority     → coloured PriorityLabel
-//   8. Status       → StatusPill
+//   7. Status       → StatusPill
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -39,10 +38,10 @@ import { Select } from '../../components/ui/Select.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
 import { StatusPill } from '../../components/StatusPill.jsx';
-import { PriorityLabel } from '../../components/PriorityLabel.jsx';
 import { useJobRequestList } from '../../lib/hooks/useJobRequestList.js';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { bulkVerifyAllJobRequests } from '../../lib/api/jobRequests.js';
+import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 
 // ── Filter dropdown option sets (locked to backend enums) ──────────────
 const TYPE_OPTIONS = [
@@ -62,12 +61,6 @@ const STATUS_OPTIONS = [
 ];
 
 const DEFAULT_PAGE_SIZE = 25;
-
-const JOB_TYPE_DISPLAY = {
-  CALIBRATION: 'Calibration',
-  REPAIR: 'Repair',
-  REGISTRATION: 'Registration',
-};
 
 export function JobRequestList() {
   const { hasPermission } = useAuth();
@@ -161,9 +154,9 @@ export function JobRequestList() {
       },
       { header: 'Equipment', accessor: 'equipment_name', className: 'text-ink' },
       {
-        header: 'Type',
-        accessor: 'job_type',
-        format: (v) => JOB_TYPE_DISPLAY[v] || (v ? v.toLowerCase() : '—'),
+        header: 'Category / Type',
+        accessor: formatJobCategoryType,
+        format: (v) => v || <span className="text-ink-soft">—</span>,
       },
       { header: 'Division', accessor: 'division_code', className: 'text-ink uppercase text-xs' },
       { header: 'Submitted By', accessor: 'submitted_by_name' },
@@ -171,11 +164,6 @@ export function JobRequestList() {
         header: 'Date',
         accessor: (row) => row.submitted_at || row.created_at,
         format: (v) => v || <span className="text-ink-soft">—</span>,
-      },
-      {
-        header: 'Priority',
-        accessor: 'priority',
-        format: (v) => <PriorityLabel priority={v} />,
       },
       {
         header: 'Status',

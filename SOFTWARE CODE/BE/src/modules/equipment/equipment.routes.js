@@ -73,14 +73,15 @@ router.post('/bulk-cal-done',
 );
 
 // ── Phase-6 stubs (lock the URL surface + permission gates now) ───────
+router.get('/:id',
+  authenticate, authorize('equipment:read-detail'), ctrl.getDetail);
+
 const PHASE6 = (_req, _res, next) => next(errors.notFound('Ships in Phase 6'));
 
-router.get('/:id',
-  authenticate, authorize('equipment:read-detail'), PHASE6);
 router.patch('/:id',
   authenticate, authorize('equipment:update'),      PHASE6);
 router.post('/:id/verify',
-  authenticate, authorize('equipment:verify'),      PHASE6);
+  authenticate, authorize('equipment:verify'),      ctrl.postVerify);
 router.post('/:id/condemn',
   authenticate, authorize('equipment:condemn'),     PHASE6);
 router.delete('/:id',

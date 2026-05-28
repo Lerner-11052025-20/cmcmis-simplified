@@ -5,7 +5,7 @@
 // Data Correction). Each tab is a JR list filtered to
 //   - status = 'SUBMITTED'
 //   - job_type = (matches the tab)
-// Sorted by priority DESC then created_at DESC (highest priority first).
+// Sorted by newest request first.
 //
 // We reuse the same backend list endpoint (`GET /job-requests`) so this
 // hook is just a thin wrapper that supplies the right canonical params.
@@ -25,19 +25,17 @@ const POLL_MS = 30 * 1000;
  * @param {number} [params.page]
  * @param {number} [params.pageSize]
  * @param {string} [params.q]
- * @param {'LOW'|'MEDIUM'|'HIGH'} [params.priority]
  * @param {string} [params.dateFrom]
  * @param {string} [params.dateTo]
  */
-export function useConversionList({ jobType, page = 1, pageSize = 25, q, priority, dateFrom, dateTo }) {
+export function useConversionList({ jobType, page = 1, pageSize = 25, q, dateFrom, dateTo }) {
   const params = {
     page,
     page_size: pageSize,
     type: jobType,
     status: 'SUBMITTED',
-    sort: '-priority',
+    sort: '-created_at',
     ...(q ? { q } : {}),
-    ...(priority ? { priority } : {}),
     ...(dateFrom ? { date_from: dateFrom } : {}),
     ...(dateTo ? { date_to: dateTo } : {}),
   };

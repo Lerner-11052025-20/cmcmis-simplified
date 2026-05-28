@@ -18,6 +18,7 @@
 'use strict';
 
 const pool = require('../../config/db');
+const { defaultLaneForRole } = require('../../utils/lanes');
 
 // Whitelisted ORDER BY targets. NEVER interpolate user input into SQL.
 const SORT_MAP = {
@@ -69,6 +70,11 @@ async function listUsers(params) {
     FROM users u
     LEFT JOIN user_roles      ur ON ur.user_id = u.user_id
     LEFT JOIN roles           r  ON r.role_id  = ur.role_id
+    LEFT JOIN (
+      SELECT user_id, GROUP_CONCAT(lane_code ORDER BY lane_code) AS lane_scopes
+        FROM user_lane_scopes
+       GROUP BY user_id
+    ) lanes ON lanes.user_id = u.user_id
     LEFT JOIN cmms_emp_mst    e  ON e.EMM_ID   = u.employee_id
     LEFT JOIN cmms_section_mst sec ON sec.SM_ID = e.EMM_DEPT
   `;
@@ -84,6 +90,7 @@ async function listUsers(params) {
       sec.SM_SHORTNAME                         AS division_code,
       sec.SM_NAME                              AS division_name,
       r.role_code                              AS role,
+      lanes.lane_scopes                        AS lane_scopes,
       u.is_active                              AS is_active,
       u.is_locked                              AS is_locked,
       u.last_login_at                          AS last_login_at,
@@ -120,6 +127,7 @@ async function findUserById(userId) {
        sec.SM_SHORTNAME                         AS division_code,
        sec.SM_NAME                              AS division_name,
        r.role_code                              AS role,
+       lanes.lane_scopes                        AS lane_scopes,
        u.is_active                              AS is_active,
        u.is_locked                              AS is_locked,
        u.last_login_at                          AS last_login_at,
@@ -130,6 +138,11 @@ async function findUserById(userId) {
      FROM users u
      LEFT JOIN user_roles       ur ON ur.user_id = u.user_id
      LEFT JOIN roles            r  ON r.role_id  = ur.role_id
+     LEFT JOIN (
+       SELECT user_id, GROUP_CONCAT(lane_code ORDER BY lane_code) AS lane_scopes
+         FROM user_lane_scopes
+        GROUP BY user_id
+     ) lanes ON lanes.user_id = u.user_id
      LEFT JOIN cmms_emp_mst     e  ON e.EMM_ID   = u.employee_id
      LEFT JOIN cmms_section_mst sec ON sec.SM_ID = e.EMM_DEPT
      WHERE u.user_id = ?
@@ -151,6 +164,22 @@ async function countActiveSuperAdmins() {
       WHERE r.role_code = 'SUPER_ADMIN' AND u.is_active = 1`,
   );
   return rows[0].n;
+}
+
+async function syncUserLaneScopes(conn, userId, roleCode, actorEmployeeId) {
+  await conn.query('DELETE FROM user_lane_scopes WHERE user_id = ?', [userId]);
+
+  const laneCode = defaultLaneForRole(roleCode);
+  if (!laneCode) return;
+
+  // From: one global role implied all rows. To: scoped roles receive a
+  // durable lane row that auth tokens and queries can use for row filters.
+  await conn.query(
+    `INSERT INTO user_lane_scopes (user_id, lane_code, assigned_at, assigned_by)
+     VALUES (?, ?, NOW(6), ?)
+     ON DUPLICATE KEY UPDATE assigned_at = NOW(6), assigned_by = VALUES(assigned_by)`,
+    [userId, laneCode, actorEmployeeId],
+  );
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -186,6 +215,8 @@ async function changeUserRole(conn, userId, newRoleCode, actorEmployeeId) {
       [userId, newRoleId, actorEmployeeId],
     );
   }
+
+  await syncUserLaneScopes(conn, userId, newRoleCode, actorEmployeeId);
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -334,6 +365,8 @@ async function insertUser(conn, payload) {
      VALUES (?, ?, NOW(6), ?)`,
     [newUserId, roleRows[0].role_id, payload.actor_employee_id],
   );
+
+  await syncUserLaneScopes(conn, newUserId, payload.role_code, payload.actor_employee_id);
 
   return newUserId;
 }

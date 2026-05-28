@@ -33,6 +33,7 @@ const dateString = z
 const commonChartQuery = z.object({
   months,
   divisionId: positiveInt.optional(),
+  laneCode: z.enum(['TME_CAL', 'TME_REPAIR', 'FPE_CAL', 'FPE_REPAIR']).optional(),
   dateFrom:   dateString,
   dateTo:     dateString,
 }).strict();
