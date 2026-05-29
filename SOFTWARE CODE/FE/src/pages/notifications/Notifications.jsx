@@ -100,7 +100,7 @@ export function Notifications() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-4xl font-sans">
+      <div className="space-y-6 max-w-4xl mx-auto font-sans">
         {/* ── Page Header ───────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
           <div>
