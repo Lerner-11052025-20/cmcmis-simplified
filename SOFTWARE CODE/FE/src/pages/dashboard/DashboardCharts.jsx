@@ -2,13 +2,13 @@
 // src/pages/dashboard/DashboardCharts.jsx  —  RBAC Role-Based Dynamic Charts
 // ----------------------------------------------------------------------------
 // Layout:
-//   Donut (Metrics RBAC) & Horizontal Progress Chart side-by-side in a
-//   balanced 2-column linear space.
+//   1. Donut (Metrics RBAC) & Horizontal Progress Chart side-by-side.
+//   2. Active Session Security Credentials Full-Length Table.
 // ============================================================================
 
 import React from 'react';
 import { useAuth } from '../../lib/auth-context.jsx';
-import { PieChart, Activity } from 'lucide-react';
+import { PieChart, Activity, Lock } from 'lucide-react';
 import clsx from 'clsx';
 
 // ── 13 Roles RBACs configurations map with goals ────────────────────────
@@ -249,6 +249,82 @@ const ROLE_CHART_CONFIGS = {
   }
 };
 
+// ── Master checklist of human-friendly descriptions for permissions ────
+const ALL_SYSTEM_PERMISSIONS = {
+  'dashboard:view': { category: 'core', module: 'System Dashboard', label: 'View general dashboard KPI telemetry & recap metrics' },
+  'job_request:read-own': { category: 'core', module: 'Job Requests Workspace', label: 'Create, edit, and lookup standard laboratory Job Requests' },
+  'job_request:approve': { category: 'core', module: 'Job Requests Approval', label: 'Approve, decline, and convert Job Requests into active Job Cards' },
+  'job_card:read-list': { category: 'core', module: 'Job Cards Logs', label: 'Lookup, inspect, and update active Laboratory Job Cards' },
+  'equipment:read-list': { category: 'lab', module: 'Equipment Inventory', label: 'View active instrumentation and laboratory equipment lists' },
+  'schedule:read-list': { category: 'lab', module: 'Calibration Scheduling', label: 'View and configure calendar calibration time-slots' },
+  'procurement:read-list': { category: 'lab', module: 'Procurement Pipeline', label: 'View active purchase orders, quotations, and vendors list' },
+  'inquiry:search-instruments': { category: 'lab', module: 'Telemetry Inquiries', label: 'Perform real-time inquiries on products, makes, and models' },
+  'analytics:view': { category: 'reports', module: 'Analytics Dashboard', label: 'Access comprehensive multi-metric analytical visual panels' },
+  'reports:view-analytics': { category: 'reports', module: 'Reports Workspace', label: 'Generate technical documents and compile PDF activity logs' },
+  'user:read-list': { category: 'admin', module: 'User Accounts Master', label: 'Manage portal user logins, auth settings, and profile maps' },
+  'master:employees:manage': { category: 'admin', module: 'Employees Master', label: 'Configure employee telemetry files, department roles, and designations' },
+  'equipment:verify': { category: 'admin', module: 'Equipment Verification', label: 'Verify, sign-off, and close completed calibration loops' },
+  'audit:read-list': { category: 'admin', module: 'System Audit Logs', label: 'Inspect cryptographic server audit trails and system activity logs' }
+};
+
+// ── 4 Grouping metadata for security credentials ──────────────────────
+const PERM_GROUPS = {
+  core: { title: "Core Operations", dotColor: "bg-indigo-500" },
+  lab: { title: "Laboratory Modules", dotColor: "bg-sky-500" },
+  reports: { title: "Analytics & Reports", dotColor: "bg-violet-500" },
+  admin: { title: "System Controls", dotColor: "bg-amber-500" }
+};
+
+function classifyPermission(permCode) {
+  const code = permCode.toLowerCase();
+  if (code.startsWith('dashboard') || code.startsWith('job_request') || code.startsWith('job_card') || code.startsWith('conversion')) {
+    return 'core';
+  }
+  if (code.startsWith('equipment') || code.startsWith('schedule') || code.startsWith('procurement') || code.startsWith('inquiry') || code.startsWith('master:instrument')) {
+    return 'lab';
+  }
+  if (code.startsWith('analytics') || code.startsWith('reports')) {
+    return 'reports';
+  }
+  if (code.startsWith('user') || code.startsWith('master') || code.startsWith('audit') || code.startsWith('permission')) {
+    return 'admin';
+  }
+  return 'core';
+}
+
+function formatPermission(permCode) {
+  const parts = permCode.split(':');
+  let moduleName = parts[0] || '';
+  let actionName = parts[1] || '';
+  
+  if (parts.length > 2) {
+    moduleName = parts.slice(0, -1).join(' ');
+    actionName = parts[parts.length - 1];
+  }
+  
+  moduleName = moduleName.replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+    
+  actionName = actionName.replace(/-/g, ' ')
+    .toUpperCase();
+    
+  return { moduleName, actionName };
+}
+
+function getPermissionDetails(p) {
+  if (ALL_SYSTEM_PERMISSIONS[p]) {
+    return ALL_SYSTEM_PERMISSIONS[p];
+  }
+  const { moduleName, actionName } = formatPermission(p);
+  const category = classifyPermission(p);
+  return {
+    category,
+    module: `${moduleName} Module`,
+    label: `Authorized capability to execute ${actionName.toLowerCase()} transactions inside employee ${moduleName.toLowerCase()} workspace.`
+  };
+}
+
 // ── Donut Segment Circumference Logic ─────────────────────────────────
 function DonutChart({ config }) {
   const radius = 15.915;
@@ -374,6 +450,122 @@ function ChartCard({ title, icon: Icon, colorClass, borderClass, children }) {
   );
 }
 
+// ── Active Session Security Credentials Full-Length Table ─────────────
+function UserPermissionsPanel() {
+  const { user } = useAuth();
+  if (!user || !user.permissions) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/50 p-6 flex flex-col shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg transition-all duration-300 font-sans">
+      {/* Panel Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 select-none mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center border shadow-[0_1px_2px_rgba(0,0,0,0.01)] bg-indigo-50/50 border-indigo-100/50 text-indigo-600">
+            <Lock size={16} strokeWidth={2} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-ink tracking-tight font-sans">Active Session Security Credentials</h3>
+            <p className="text-[11px] text-ink-soft/70 font-semibold mt-0.5 font-sans">
+              Role Authorized: <span className="text-indigo-600 font-bold">{user.role}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 shrink-0">
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+          </span>
+          <span className="text-[11px] font-bold text-ink-soft/75 tracking-normal font-sans">
+            Credentials Active
+          </span>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 mb-5" />
+
+      {/* Spacious Full-Width Table */}
+      <div className="overflow-x-auto w-full no-scrollbar rounded-xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.01)]">
+        <table className="w-full text-left border-collapse font-sans">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200/80 text-[13px] font-bold text-slate-600 select-none font-sans">
+              <th className="px-5 py-4 w-16"># ID</th>
+              <th className="px-5 py-4 w-44 font-semibold text-slate-600">Security Domain</th>
+              <th className="px-5 py-4 w-52 font-semibold text-slate-600">Authorized Module</th>
+              <th className="px-5 py-4 w-52 font-semibold text-slate-600">Cryptographic Key</th>
+              <th className="px-5 py-4 font-semibold text-slate-600">Capability Description</th>
+              <th className="px-5 py-4 w-36 text-center font-semibold text-slate-600">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/60 font-sans">
+            {user.permissions.map((perm, idx) => {
+              const details = getPermissionDetails(perm);
+              const groupMeta = PERM_GROUPS[details.category] || PERM_GROUPS.core;
+              const isEven = idx % 2 === 0;
+
+              return (
+                <tr
+                  key={perm}
+                  className={clsx(
+                    'transition-all duration-200 text-[13px] font-sans group/row',
+                    isEven ? 'bg-slate-50/40 hover:bg-slate-100/50' : 'bg-white hover:bg-slate-50/50'
+                  )}
+                >
+                  {/* # ID */}
+                  <td className="px-5 py-4 text-slate-400 font-bold select-none tabular-nums font-sans">
+                    #{String(idx + 1).padStart(2, '0')}
+                  </td>
+
+                  {/* Security Domain */}
+                  <td className="px-5 py-4 select-none">
+                    <span className={clsx(
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold border font-sans',
+                      details.category === 'core' ? 'bg-indigo-50 border-indigo-100/70 text-indigo-700' :
+                      details.category === 'lab' ? 'bg-sky-50 border-sky-100/70 text-sky-700' :
+                      details.category === 'reports' ? 'bg-violet-50 border-violet-100/70 text-violet-700' :
+                      'bg-amber-50 border-amber-100/70 text-amber-700'
+                    )}>
+                      <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", groupMeta.dotColor)} />
+                      {groupMeta.title}
+                    </span>
+                  </td>
+
+                  {/* Authorized Module */}
+                  <td className="px-5 py-4 font-semibold text-slate-800 transition-colors group-hover/row:text-accent font-sans">
+                    {details.module}
+                  </td>
+
+                  {/* Cryptographic Key */}
+                  <td className="px-5 py-4 select-all font-sans">
+                    <span className="inline-flex items-center px-3 py-1 rounded-md bg-slate-100/80 border border-slate-200/80 text-slate-700 font-medium text-[13px] font-sans">
+                      {perm}
+                    </span>
+                  </td>
+
+                  {/* Capability Description */}
+                  <td className="px-5 py-4 text-slate-600 font-medium font-sans leading-relaxed">
+                    {details.label}
+                  </td>
+
+                  {/* Authorization Status */}
+                  <td className="px-5 py-4 text-center select-none font-sans">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-100/70 text-emerald-700 font-sans shadow-sm">
+                      <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+                      </span>
+                      Authorized
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Public Orchestrator ────────────────────────────────────────────────
 export function DashboardCharts() {
   const { user } = useAuth();
@@ -382,7 +574,7 @@ export function DashboardCharts() {
   const config = ROLE_CHART_CONFIGS[user.role] || ROLE_CHART_CONFIGS.GUEST;
   
   return (
-    <section aria-label="Dynamic Role-Based Telemetry Charts" className="space-y-4 font-sans">
+    <section aria-label="Dynamic Role-Based Telemetry Charts" className="space-y-6 font-sans">
       {/* heading banner */}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-bold text-ink font-sans tracking-tight">
@@ -393,7 +585,7 @@ export function DashboardCharts() {
         </h2>
       </div>
 
-      {/* Linear Space: Donut (Metrics RBAC) & Horizontal Progress Chart side-by-side */}
+      {/* Row 1: Donut (Metrics RBAC) & Horizontal Progress Chart side-by-side inside md:grid-cols-2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Donut Chart (Metrics RBAC) */}
         <ChartCard
@@ -415,6 +607,9 @@ export function DashboardCharts() {
           <HorizontalProgressBarChart config={config} />
         </ChartCard>
       </div>
+
+      {/* Row 2: Active Session Security Credentials Panel */}
+      <UserPermissionsPanel />
     </section>
   );
 }
