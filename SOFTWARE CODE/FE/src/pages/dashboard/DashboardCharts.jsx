@@ -451,14 +451,61 @@ function ChartCard({ title, icon: Icon, colorClass, borderClass, children }) {
 }
 
 // ── Active Session Security Credentials Full-Length Table ─────────────
-function UserPermissionsPanel() {
-  const { user } = useAuth();
-  if (!user || !user.permissions) return null;
+// ── Copy Button Component ─────────────────────────────────────────────
+function CopyButton({ text }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/50 p-6 flex flex-col shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg transition-all duration-300 font-sans">
+    <button
+      onClick={handleCopy}
+      className="ml-2 inline-flex items-center justify-center p-1 rounded hover:bg-slate-200/80 text-slate-400 hover:text-slate-600 transition-all focus:outline-none"
+      title="Copy key to clipboard"
+    >
+      {copied ? (
+        <svg className="h-3.5 w-3.5 text-emerald-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+// ── Active Session Security Credentials Full-Length Table ─────────────
+function UserPermissionsPanel() {
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  if (!user || !user.permissions) return null;
+
+  const filteredPermissions = user.permissions.filter(perm => {
+    const details = getPermissionDetails(perm);
+    const groupMeta = PERM_GROUPS[details.category] || PERM_GROUPS.core;
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+    return (
+      perm.toLowerCase().includes(query) ||
+      details.module.toLowerCase().includes(query) ||
+      details.label.toLowerCase().includes(query) ||
+      groupMeta.title.toLowerCase().includes(query)
+    );
+  });
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/50 p-6 flex flex-col shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-[0_20px_25px_-5px_rgba(79,93,255,0.04)] hover:border-indigo-100/80 transition-all duration-300 font-sans">
       {/* Panel Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 select-none mb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 select-none mb-4">
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-lg flex items-center justify-center border shadow-[0_1px_2px_rgba(0,0,0,0.01)] bg-indigo-50/50 border-indigo-100/50 text-indigo-600">
             <Lock size={16} strokeWidth={2} />
@@ -470,14 +517,49 @@ function UserPermissionsPanel() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 shrink-0">
-          <span className="relative flex h-1.5 w-1.5 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
-          </span>
-          <span className="text-[11px] font-bold text-ink-soft/75 tracking-normal font-sans">
-            Credentials Active
-          </span>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+          {/* Inline Search Bar */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search credentials..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-60 px-3 py-1.5 pl-8 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-sans bg-slate-50/50 hover:bg-slate-50"
+            />
+            <svg
+              className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 font-bold text-xs"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 shrink-0">
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+            </span>
+            <span className="text-[11px] font-bold text-ink-soft/75 tracking-normal font-sans">
+              Credentials Active
+            </span>
+          </div>
         </div>
       </div>
 
@@ -497,68 +579,79 @@ function UserPermissionsPanel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/60 font-sans">
-            {user.permissions.map((perm, idx) => {
-              const details = getPermissionDetails(perm);
-              const groupMeta = PERM_GROUPS[details.category] || PERM_GROUPS.core;
-              const isEven = idx % 2 === 0;
+            {filteredPermissions.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-12 text-center text-slate-400 font-medium text-[13px] font-sans">
+                  No matching credentials found for "{searchQuery}"
+                </td>
+              </tr>
+            ) : (
+              filteredPermissions.map((perm, idx) => {
+                const details = getPermissionDetails(perm);
+                const groupMeta = PERM_GROUPS[details.category] || PERM_GROUPS.core;
+                const isEven = idx % 2 === 0;
 
-              return (
-                <tr
-                  key={perm}
-                  className={clsx(
-                    'transition-all duration-200 text-[13px] font-sans group/row',
-                    isEven ? 'bg-slate-50/40 hover:bg-slate-100/50' : 'bg-white hover:bg-slate-50/50'
-                  )}
-                >
-                  {/* # ID */}
-                  <td className="px-5 py-4 text-slate-400 font-bold select-none tabular-nums font-sans">
-                    #{String(idx + 1).padStart(2, '0')}
-                  </td>
+                return (
+                  <tr
+                    key={perm}
+                    className={clsx(
+                      'transition-all duration-200 text-[13px] font-sans group/row',
+                      isEven ? 'bg-slate-50/40 hover:bg-slate-100/50' : 'bg-white hover:bg-slate-50/50'
+                    )}
+                  >
+                    {/* # ID */}
+                    <td className="px-5 py-4 text-slate-400 font-bold select-none tabular-nums font-sans">
+                      #{String(idx + 1).padStart(2, '0')}
+                    </td>
 
-                  {/* Security Domain */}
-                  <td className="px-5 py-4 select-none">
-                    <span className={clsx(
-                      'inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold border font-sans',
-                      details.category === 'core' ? 'bg-indigo-50 border-indigo-100/70 text-indigo-700' :
-                      details.category === 'lab' ? 'bg-sky-50 border-sky-100/70 text-sky-700' :
-                      details.category === 'reports' ? 'bg-violet-50 border-violet-100/70 text-violet-700' :
-                      'bg-amber-50 border-amber-100/70 text-amber-700'
-                    )}>
-                      <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", groupMeta.dotColor)} />
-                      {groupMeta.title}
-                    </span>
-                  </td>
-
-                  {/* Authorized Module */}
-                  <td className="px-5 py-4 font-semibold text-slate-800 transition-colors group-hover/row:text-accent font-sans">
-                    {details.module}
-                  </td>
-
-                  {/* Cryptographic Key */}
-                  <td className="px-5 py-4 select-all font-sans">
-                    <span className="inline-flex items-center px-3 py-1 rounded-md bg-slate-100/80 border border-slate-200/80 text-slate-700 font-medium text-[13px] font-sans">
-                      {perm}
-                    </span>
-                  </td>
-
-                  {/* Capability Description */}
-                  <td className="px-5 py-4 text-slate-600 font-medium font-sans leading-relaxed">
-                    {details.label}
-                  </td>
-
-                  {/* Authorization Status */}
-                  <td className="px-5 py-4 text-center select-none font-sans">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-100/70 text-emerald-700 font-sans shadow-sm">
-                      <span className="relative flex h-1.5 w-1.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+                    {/* Security Domain */}
+                    <td className="px-5 py-4 select-none">
+                      <span className={clsx(
+                        'inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold border font-sans',
+                        details.category === 'core' ? 'bg-indigo-50 border-indigo-100/70 text-indigo-700' :
+                        details.category === 'lab' ? 'bg-sky-50 border-sky-100/70 text-sky-700' :
+                        details.category === 'reports' ? 'bg-violet-50 border-violet-100/70 text-violet-700' :
+                        'bg-amber-50 border-amber-100/70 text-amber-700'
+                      )}>
+                        <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", groupMeta.dotColor)} />
+                        {groupMeta.title}
                       </span>
-                      Authorized
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+
+                    {/* Authorized Module */}
+                    <td className="px-5 py-4 font-semibold text-slate-800 transition-colors group-hover/row:text-accent font-sans">
+                      {details.module}
+                    </td>
+
+                    {/* Cryptographic Key */}
+                    <td className="px-5 py-4 select-all font-sans">
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-md bg-slate-100/80 border border-slate-200/80 text-slate-700 font-medium text-[13px] font-sans">
+                          {perm}
+                        </span>
+                        <CopyButton text={perm} />
+                      </div>
+                    </td>
+
+                    {/* Capability Description */}
+                    <td className="px-5 py-4 text-slate-600 font-medium font-sans leading-relaxed">
+                      {details.label}
+                    </td>
+
+                    {/* Authorization Status */}
+                    <td className="px-5 py-4 text-center select-none font-sans">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-100/70 text-emerald-700 font-sans shadow-sm">
+                        <span className="relative flex h-1.5 w-1.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+                        </span>
+                        Authorized
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
