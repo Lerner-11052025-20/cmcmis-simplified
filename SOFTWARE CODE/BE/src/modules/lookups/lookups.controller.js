@@ -81,6 +81,16 @@ async function getTaskLibrary(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+async function getCalibrationPeople(req, res, next) {
+  try {
+    const items = await repo.listCalibrationPeople({
+      role: req.user.role,
+      laneScopes: req.user.laneScopes || [],
+    });
+    return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
 module.exports = {
   getDivisions,
   getProjects,
@@ -88,4 +98,5 @@ module.exports = {
   getEquipmentAccessories,
   getEngineers,
   getTaskLibrary,
+  getCalibrationPeople,
 };

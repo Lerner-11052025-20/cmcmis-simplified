@@ -65,12 +65,14 @@ const ALLOWED_MIMETYPES = new Set([
   'application/pdf',
   'image/jpeg',
   'image/png',
+  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // .docx
+  'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        // .xlsx
 ]);
 
 // Extension allow-list as a sanity belt-and-braces check.
-const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.docx', '.xlsx']);
+const ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png']);
 
 // ── Multer storage engine ───────────────────────────────────────────
 /**
@@ -194,7 +196,7 @@ function translateMulterError(err) {
   }
   if (err.message === 'DOC_TYPE_NOT_ALLOWED') {
     const e = errors.badRequest(
-      'File type not allowed. Accepted: PDF, JPEG, PNG, DOCX, XLSX.',
+      'File type not allowed. Accepted: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG.',
       { field: 'file' },
     );
     e.code = 'DOC_TYPE_NOT_ALLOWED';

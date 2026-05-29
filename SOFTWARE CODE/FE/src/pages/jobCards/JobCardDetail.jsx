@@ -30,7 +30,7 @@ import { invalidateJobCardDocuments } from '../../lib/hooks/useJobCardDocuments.
 import { startWorkJobCard } from '../../lib/api/jobCards.js';
 
 import { DetailHeader } from './components/DetailHeader.jsx';
-import { DetailTabBar, ALL_TABS } from './components/DetailTabBar.jsx';
+import { DetailTabBar, CALIBRATION_TABS } from './components/DetailTabBar.jsx';
 
 // Tab components — all collocated in this folder.
 import {
@@ -44,6 +44,15 @@ import { TaskChecklistTab } from './tabs/TaskChecklistTab.jsx';
 import { DocumentsTab }     from './tabs/DocumentsTab.jsx';
 import { MarkCompleteTab }  from './tabs/MarkCompleteTab.jsx';
 import { ClosureTab }       from './tabs/ClosureTab.jsx';
+import {
+  CalibrationAdjustmentsTab,
+  CalibrationDocumentsTab,
+  CalibrationEquipmentUsedTab,
+  CalibrationJobCardDetailsTab,
+  CalibrationJobClosingTab,
+  CalibrationRemarksTab,
+  CalibrationStatusTab,
+} from './tabs/CalibrationWorkflowTabs.jsx';
 import { ReopenModal }      from './modals/ReopenModal.jsx';
 
 const LIC_SA_ROLES = new Set([
@@ -69,6 +78,9 @@ export function JobCardDetail() {
   const isOwnEngineer = !!(jc?.assigned_engineer?.employee_id
     && jc.assigned_engineer.employee_id === user?.sub);
   const isLegacy = !!jc?._flags?.is_legacy;
+  const isCalibrationWorkflow = jc?.work_type === 'CALIBRATION'
+    || jc?.workflow_type === 'CALIBRATION_STANDARD'
+    || jc?.workflow_type === 'CALIBRATION_PRECISION';
 
   // Write access summary — used by every tab + the action bar.
   const canWrite = !isLegacy && (isOwnEngineer || isLicSa)
@@ -91,6 +103,18 @@ export function JobCardDetail() {
 
   // ── Tab visibility (D-9.1 conditional tabs) ─────────────────────────
   const visibleKeys = useMemo(() => {
+    if (isCalibrationWorkflow) {
+      return new Set([
+        'tasks',
+        'cal-job-details',
+        'cal-status',
+        'cal-equipment-used',
+        'cal-adjustments',
+        'cal-remarks',
+        'documents',
+        'job-closing',
+      ]);
+    }
     const keys = new Set([
       'plug-in', 'submitted-recv', 'job-card-details',
       'maintenance', 'equipments-used', 'awaiting',
@@ -100,11 +124,12 @@ export function JobCardDetail() {
     if (canMarkComplete) keys.add('mark-complete');
     if (canVerifyClose) keys.add('closure');
     return keys;
-  }, [canMarkComplete, canVerifyClose]);
+  }, [canMarkComplete, canVerifyClose, isCalibrationWorkflow]);
 
   // Active tab from URL (?tab=...) or default to first allowed.
   const requestedTab = searchParams.get('tab');
-  const activeTab = visibleKeys.has(requestedTab) ? requestedTab : 'plug-in';
+  const defaultTab = isCalibrationWorkflow ? 'tasks' : 'plug-in';
+  const activeTab = visibleKeys.has(requestedTab) ? requestedTab : defaultTab;
 
   function changeTab(key) {
     const sp = new URLSearchParams(searchParams);
@@ -177,6 +202,7 @@ export function JobCardDetail() {
   // at that moment). Resolve the right gate per-tab here.
   let activeTabCanWrite = canWrite;
   if (activeTab === 'closure')       activeTabCanWrite = canVerifyClose;
+  if (activeTab === 'job-closing')   activeTabCanWrite = jc?.status === 'COMPLETED' ? canVerifyClose : canMarkComplete;
   // Mark Complete works correctly with the shared canWrite (it only
   // renders when status='IN_PROGRESS', when canWrite IS true), but we
   // make the resolution explicit for symmetry + future-proofing.
@@ -204,7 +230,17 @@ export function JobCardDetail() {
     case 'documents':       body = <DocumentsTab {...tabProps} />; break;
     case 'mark-complete':   body = <MarkCompleteTab {...tabProps} />; break;
     case 'closure':         body = <ClosureTab {...tabProps} />; break;
+    case 'cal-job-details': body = <CalibrationJobCardDetailsTab {...tabProps} />; break;
+    case 'cal-status':      body = <CalibrationStatusTab {...tabProps} />; break;
+    case 'cal-equipment-used': body = <CalibrationEquipmentUsedTab {...tabProps} />; break;
+    case 'cal-adjustments': body = <CalibrationAdjustmentsTab {...tabProps} />; break;
+    case 'cal-remarks':     body = <CalibrationRemarksTab {...tabProps} />; break;
+    case 'job-closing':     body = <CalibrationJobClosingTab {...tabProps} />; break;
     default:                body = <PlugInAccessoriesTab {...tabProps} />;
+  }
+
+  if (isCalibrationWorkflow && activeTab === 'documents') {
+    body = <CalibrationDocumentsTab {...tabProps} />;
   }
 
   return (
@@ -236,12 +272,13 @@ export function JobCardDetail() {
         </div>
       ) : null}
 
-      {/* Tab bar */}
-      <DetailTabBar
-        active={activeTab}
-        onChange={changeTab}
-        visibleKeys={visibleKeys}
-      />
+      {!isCalibrationWorkflow ? (
+        <DetailTabBar
+          active={activeTab}
+          onChange={changeTab}
+          visibleKeys={visibleKeys}
+        />
+      ) : null}
 
       {/* Action bar — visible above the active tab when an actionable
           transition is available. Engineer's "Start Work" lives here for
@@ -272,9 +309,25 @@ export function JobCardDetail() {
       ) : null}
 
       {/* Active tab body */}
-      <div className="bg-white border border-border rounded-lg p-4">
-        {body}
-      </div>
+      {isCalibrationWorkflow ? (
+        <div className="bg-white border border-border rounded-lg overflow-hidden">
+          <div className="px-3 pt-3">
+            <DetailTabBar
+              active={activeTab}
+              onChange={changeTab}
+              visibleKeys={visibleKeys}
+              tabs={CALIBRATION_TABS}
+            />
+          </div>
+          <div className="p-4">
+            {body}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-border rounded-lg p-4">
+          {body}
+        </div>
+      )}
 
       {/* Reopen modal */}
       {reopenOpen ? (

@@ -43,6 +43,7 @@ const documentsRouter     = require('./documents/documents.routes');
 // taskChecklist sub-module — mergeParams:true so :id flows down.
 const maintenanceRouter   = require('./maintenance/maintenance.routes');
 const sparesRouter        = require('./spares/spares.routes');
+const calibrationRouter   = require('./calibration/calibration.routes');
 
 const router = express.Router();
 
@@ -118,6 +119,7 @@ router.use('/:id/tasks',             taskChecklistRouter);
 router.use('/:id/documents',         documentsRouter);
 router.use('/:id/maintenance-rows',  maintenanceRouter);
 router.use('/:id/spares-rows',       sparesRouter);
+router.use('/:id/calibration',       calibrationRouter);
 
 // ── PDF stub — ships in Phase 11 ─────────────────────────────────────
 router.get('/:id/pdf',

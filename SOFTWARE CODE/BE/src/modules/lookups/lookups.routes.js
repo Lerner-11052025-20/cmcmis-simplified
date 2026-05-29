@@ -66,4 +66,10 @@ router.get('/task-library',
   ctrl.getTaskLibrary,
 );
 
+router.get('/calibration-people',
+  authenticate,
+  authorize('job_card:read-detail'),
+  ctrl.getCalibrationPeople,
+);
+
 module.exports = router;

@@ -124,11 +124,11 @@ export function DocumentsTab({ jc, canWrite, invalidateAll }) {
             </Select>
           </div>
           <div className="md:col-span-2">
-            <label htmlFor="jc-doc-file" className="block text-xs font-medium text-ink mb-1">Pick a file (PDF, JPEG, PNG, DOCX, XLSX · max 10 MB)</label>
+            <label htmlFor="jc-doc-file" className="block text-xs font-medium text-ink mb-1">Pick a file (PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG - max 10 MB)</label>
             <input
               id="jc-doc-file"
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               disabled={!canWrite || uploading}
               className="block w-full text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-accent file:text-white file:px-3 file:py-1.5 file:cursor-pointer hover:file:bg-accent-hover disabled:opacity-50"

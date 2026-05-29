@@ -206,6 +206,57 @@ export async function deleteSpareRow(id, rowId) {
 // occasionally needs to read them. For now they're consumed only from
 // the JR detail page's edit/cancel modals.
 
+// Dedicated calibration workflow multi-row CRUD.
+export async function fetchCalibrationEquipmentRows(id, signal) {
+  const r = await api.get(`/job-cards/${encodeURIComponent(id)}/calibration/equipment-rows`, { signal });
+  return r.data.data.items;
+}
+
+export async function addCalibrationEquipmentRow(id, body = {}) {
+  const r = await api.post(`/job-cards/${encodeURIComponent(id)}/calibration/equipment-rows`, body);
+  return r.data.data;
+}
+
+export async function patchCalibrationEquipmentRow(id, rowId, body) {
+  const r = await api.patch(
+    `/job-cards/${encodeURIComponent(id)}/calibration/equipment-rows/${encodeURIComponent(rowId)}`,
+    body,
+  );
+  return r.data.data;
+}
+
+export async function deleteCalibrationEquipmentRow(id, rowId) {
+  const r = await api.delete(
+    `/job-cards/${encodeURIComponent(id)}/calibration/equipment-rows/${encodeURIComponent(rowId)}`,
+  );
+  return r.data.data;
+}
+
+export async function fetchCalibrationAdjustmentRows(id, signal) {
+  const r = await api.get(`/job-cards/${encodeURIComponent(id)}/calibration/adjustment-rows`, { signal });
+  return r.data.data.items;
+}
+
+export async function addCalibrationAdjustmentRow(id, body = {}) {
+  const r = await api.post(`/job-cards/${encodeURIComponent(id)}/calibration/adjustment-rows`, body);
+  return r.data.data;
+}
+
+export async function patchCalibrationAdjustmentRow(id, rowId, body) {
+  const r = await api.patch(
+    `/job-cards/${encodeURIComponent(id)}/calibration/adjustment-rows/${encodeURIComponent(rowId)}`,
+    body,
+  );
+  return r.data.data;
+}
+
+export async function deleteCalibrationAdjustmentRow(id, rowId) {
+  const r = await api.delete(
+    `/job-cards/${encodeURIComponent(id)}/calibration/adjustment-rows/${encodeURIComponent(rowId)}`,
+  );
+  return r.data.data;
+}
+
 /**
  * Downloads the job cards list as a PDF for a specified ID range.
  * Uses axios responseType: 'blob' to properly handle binary PDF stream.

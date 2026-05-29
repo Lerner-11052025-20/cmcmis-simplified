@@ -188,6 +188,26 @@ function shapeDetail(row) {
     invoice_recd_on:               ymd(row.invoice_recd_on),
     observations_text:             row.observations_text,
     job_status_display:            row.job_status_display,
+    /* Dedicated calibration workflow */
+    cal_job_started_date:           ymd(row.cal_job_started_date),
+    cal_job_completed_date:         ymd(row.cal_job_completed_date),
+    cal_calibration_status:         row.cal_calibration_status,
+    cal_temperature_c:              row.cal_temperature_c,
+    cal_relative_humidity:          row.cal_relative_humidity,
+    cal_ref_no:                     row.cal_ref_no,
+    cal_due_date:                   ymd(row.cal_due_date),
+    calibrated_by_employee_id:      row.calibrated_by_employee_id,
+    calibrated_by_name:             row.calibrated_by_name,
+    cal_equipment_received_status:  row.cal_equipment_received_status,
+    cal_repair_carried_out_by:      row.cal_repair_carried_out_by,
+    cal_sent_to_lab_date:           ymd(row.cal_sent_to_lab_date),
+    cal_received_from_lab_date:     ymd(row.cal_received_from_lab_date),
+    cal_adjustment_status:          row.cal_adjustment_status,
+    cal_limited_reason:             row.cal_limited_reason,
+    cal_remarks:                    row.cal_remarks,
+    cal_incharge_employee_id:       row.cal_incharge_employee_id,
+    cal_incharge_name:              row.cal_incharge_name,
+    cal_incharge_date:              ymd(row.cal_incharge_date),
     /* completion */
     completion_summary:            row.completion_summary,
     actual_completion_date:        ymd(row.actual_completion_date),
@@ -462,19 +482,25 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
     if (g.tasks_total > 0 && g.tasks_pending > 0) {
       failed.push({ gate: 'tasks', message: `${g.tasks_pending} of ${g.tasks_total} tasks still pending` });
     }
-    // Gate 2: observations recorded (≥1 row OR text ≥20 chars).
-    if (g.observations_count === 0 && g.observations_text_length < 20) {
-      failed.push({ gate: 'observations', message: 'Record at least one observation row OR write ≥20 chars in the observations textarea' });
-    }
-    // Gate 3: cal-cert generated (only for calibration workflows).
     const isCalibration = (jc.workflow_type === 'CALIBRATION_STANDARD'
-                       || jc.workflow_type === 'CALIBRATION_PRECISION');
-    if (isCalibration && g.cal_cert_count === 0) {
-      failed.push({ gate: 'cal_cert', message: 'Calibration certificate must be uploaded with doc_type=CALIBRATION_CERT' });
+                       || jc.workflow_type === 'CALIBRATION_PRECISION'
+                       || jc.work_type === 'CALIBRATION');
+    const calibrationObservationOk = isCalibration && (
+      g.has_calibration_status
+      || g.calibration_adjustment_count > 0
+      || g.cal_remarks_length > 0
+    );
+    if (!calibrationObservationOk && g.observations_count === 0 && g.observations_text_length < 20) {
+      failed.push({
+        gate: 'observations',
+        message: isCalibration
+          ? 'Fill Calibration Status, Adjustment Details, or Remarks before job closing'
+          : 'Record at least one observation row OR write >=20 chars in the observations textarea',
+      });
     }
-    // Gate 4: at least one required-tier doc.
-    if (g.required_doc_count === 0) {
-      failed.push({ gate: 'required_doc', message: 'At least one required document must be uploaded' });
+    // Gate 3: at least one active supporting document.
+    if (g.active_doc_count === 0) {
+      failed.push({ gate: 'required_doc', message: 'At least one document must be uploaded before job closing' });
     }
 
     if (failed.length > 0) {

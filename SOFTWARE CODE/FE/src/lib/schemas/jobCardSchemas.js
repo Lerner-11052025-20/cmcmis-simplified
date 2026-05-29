@@ -29,6 +29,26 @@ export const DOC_TYPE_OPTIONS = [
   'VENDOR_INVOICE', 'REQUIRED', 'OTHER',
 ];
 
+export const CALIBRATION_STATUS_OPTIONS = [
+  'VALID_CAL',
+  'LIMITED_CAL',
+  'PARTIAL_CAL',
+  'NO_CAL',
+];
+export const EQUIPMENT_RECEIVED_STATUS_OPTIONS = [
+  'OK',
+  'NOT_OK',
+  'DAMAGED',
+  'NOT_WORKING',
+  'ACCESSORIES_MISSING',
+];
+export const CALIBRATION_ADJUSTMENT_OPTIONS = [
+  'ADJUSTMENT_DONE',
+  'NO_ADJUSTMENT',
+  'LIMITED_ADJUSTMENT',
+  'NOT_APPLICABLE',
+];
+
 // Friendly labels for the UI.
 export const JOB_TYPE_LABELS = {
   IN_HOUSE: 'In-house Job',
@@ -62,6 +82,25 @@ export const DOC_TYPE_LABELS = {
   VENDOR_INVOICE:      'Vendor Invoice',
   REQUIRED:            'Required Document',
   OTHER:               'Other',
+};
+export const CALIBRATION_STATUS_LABELS = {
+  VALID_CAL:   'Valid Cal (V)',
+  LIMITED_CAL: 'Limited Cal (L)',
+  PARTIAL_CAL: 'Partial Cal (P)',
+  NO_CAL:      'No Cal (N)',
+};
+export const EQUIPMENT_RECEIVED_STATUS_LABELS = {
+  OK:                  'OK / Working',
+  NOT_OK:              'Not OK',
+  DAMAGED:             'Damaged',
+  NOT_WORKING:         'Not Working',
+  ACCESSORIES_MISSING: 'Accessories Missing',
+};
+export const CALIBRATION_ADJUSTMENT_LABELS = {
+  ADJUSTMENT_DONE:    'Adjustment Done',
+  NO_ADJUSTMENT:      'No Adjustment',
+  LIMITED_ADJUSTMENT: 'Limited Adjustment',
+  NOT_APPLICABLE:     'Not Applicable',
 };
 
 const isoDateOrEmpty     = z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/).optional();
@@ -113,6 +152,23 @@ export const jobCardPatchTabSchema = z.object({
   invoice_recd_on:               isoDateOrEmpty,
   observations_text:             z.string().max(8000).optional().or(z.literal('')),
   job_status_display:            z.enum(JOB_STATUS_DISPLAY_OPTIONS).optional(),
+  cal_job_started_date:           isoDateOrEmpty,
+  cal_job_completed_date:         isoDateOrEmpty,
+  cal_calibration_status:         z.string().max(80).optional().or(z.literal('')),
+  cal_temperature_c:              z.string().max(80).optional().or(z.literal('')),
+  cal_relative_humidity:          z.string().max(80).optional().or(z.literal('')),
+  cal_ref_no:                     z.string().max(120).optional().or(z.literal('')),
+  cal_due_date:                   isoDateOrEmpty,
+  calibrated_by_employee_id:      z.string().max(7).optional().or(z.literal('')),
+  cal_equipment_received_status:  z.string().max(120).optional().or(z.literal('')),
+  cal_repair_carried_out_by:      z.string().max(255).optional().or(z.literal('')),
+  cal_sent_to_lab_date:           isoDateOrEmpty,
+  cal_received_from_lab_date:     isoDateOrEmpty,
+  cal_adjustment_status:          z.string().max(80).optional().or(z.literal('')),
+  cal_limited_reason:             z.string().max(8000).optional().or(z.literal('')),
+  cal_remarks:                    z.string().max(8000).optional().or(z.literal('')),
+  cal_incharge_employee_id:       z.string().max(7).optional().or(z.literal('')),
+  cal_incharge_date:              isoDateOrEmpty,
 });
 
 // ── Mark Complete ───────────────────────────────────────────────────

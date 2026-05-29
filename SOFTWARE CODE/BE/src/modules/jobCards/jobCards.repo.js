@@ -357,6 +357,15 @@ const PHASE9_TAB_COLUMNS = [
   'invoice_no', 'invoice_recd_on',
   // Observations
   'observations_text', 'job_status_display',
+  // Dedicated calibration workflow (TME/FPE calibration)
+  'cal_job_started_date', 'cal_job_completed_date',
+  'cal_calibration_status', 'cal_temperature_c',
+  'cal_relative_humidity', 'cal_ref_no', 'cal_due_date',
+  'calibrated_by_employee_id',
+  'cal_equipment_received_status', 'cal_repair_carried_out_by',
+  'cal_sent_to_lab_date', 'cal_received_from_lab_date',
+  'cal_adjustment_status', 'cal_limited_reason',
+  'cal_remarks', 'cal_incharge_employee_id', 'cal_incharge_date',
 ];
 
 // ───────────────────────────────────────────────────────────────────────
@@ -416,6 +425,14 @@ async function findByIdWithDetails(sectionJobNo) {
        jc.cost_of_component, jc.labour_charges,
        jc.invoice_no, jc.invoice_recd_on,
        jc.observations_text, jc.job_status_display,
+       jc.cal_job_started_date, jc.cal_job_completed_date,
+       jc.cal_calibration_status, jc.cal_temperature_c,
+       jc.cal_relative_humidity, jc.cal_ref_no, jc.cal_due_date,
+       jc.calibrated_by_employee_id,
+       jc.cal_equipment_received_status, jc.cal_repair_carried_out_by,
+       jc.cal_sent_to_lab_date, jc.cal_received_from_lab_date,
+       jc.cal_adjustment_status, jc.cal_limited_reason,
+       jc.cal_remarks, jc.cal_incharge_employee_id, jc.cal_incharge_date,
        jc.completion_summary, jc.actual_completion_date, jc.total_hours_spent,
        jc.marked_complete_by_employee_id, jc.marked_complete_at,
        jc.reviewed_by, jc.review_date, jc.review_comments,
@@ -439,15 +456,19 @@ async function findByIdWithDetails(sectionJobNo) {
        /* completion / closure / reopen actor names */
        emp_mc.EMM_NAME                  AS marked_complete_by_name,
        emp_vc.EMM_NAME                  AS verified_closed_by_name,
-       emp_ro.EMM_NAME                  AS last_reopened_by_name
+       emp_ro.EMM_NAME                  AS last_reopened_by_name,
+       emp_cal.EMM_NAME                 AS calibrated_by_name,
+       emp_ci.EMM_NAME                  AS cal_incharge_name
      FROM cmms_jobcard_mst jc
      LEFT JOIN cmms_eqip_mst       e        ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
      LEFT JOIN cmms_emp_mst        emp_eng  ON emp_eng.EMM_ID = jc.JM_ASSIGNED_ENGINEER
      LEFT JOIN cmms_jobrequest_mst jr       ON jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
      LEFT JOIN cmms_section_mst    sm       ON sm.SM_ID = jr.JR_DIVISION
-     LEFT JOIN cmms_emp_mst        emp_mc   ON emp_mc.EMM_ID = jc.marked_complete_by_employee_id
-     LEFT JOIN cmms_emp_mst        emp_vc   ON emp_vc.EMM_ID = jc.verified_closed_by_employee_id
-     LEFT JOIN cmms_emp_mst        emp_ro   ON emp_ro.EMM_ID = jc.last_reopened_by_employee_id
+    LEFT JOIN cmms_emp_mst        emp_mc   ON emp_mc.EMM_ID = jc.marked_complete_by_employee_id
+    LEFT JOIN cmms_emp_mst        emp_vc   ON emp_vc.EMM_ID = jc.verified_closed_by_employee_id
+    LEFT JOIN cmms_emp_mst        emp_ro   ON emp_ro.EMM_ID = jc.last_reopened_by_employee_id
+    LEFT JOIN cmms_emp_mst        emp_cal  ON emp_cal.EMM_ID = jc.calibrated_by_employee_id
+    LEFT JOIN cmms_emp_mst        emp_ci   ON emp_ci.EMM_ID = jc.cal_incharge_employee_id
      WHERE jc.JM_SectionJobNo = ?
      LIMIT 1`,
     [sectionJobNo],
@@ -487,11 +508,14 @@ async function findForMutation(conn, sectionJobNo) {
        JM_MVP_STATUS                    AS status,
        JM_ASSIGNED_ENGINEER             AS assigned_engineer_employee_id,
        JM_WORKFLOW_TYPE                 AS workflow_type,
+       JM_JOB_TYPE                      AS work_type,
        JM_PARENT_JR_NO                  AS parent_jr_no,
        JM_LANE_CODE                     AS lane_code,
        JM_EQM_TYPE                      AS equipment_type,
        JM_EQM_ID                        AS equipment_id,
        observations_text,
+       cal_calibration_status,
+       cal_remarks,
        reopen_count
      FROM cmms_jobcard_mst
      WHERE JM_SectionJobNo = ?
@@ -687,8 +711,9 @@ async function appendStatusHistory(conn, sectionJobNo, fromStatus, toStatus, act
  *
  *   tasks_pending_count    must be 0 (or tasks_total=0)
  *   observations_count     must be ≥1 OR observations_text length ≥20
- *   cal_cert_count         must be ≥1 IFF workflow_type is CALIBRATION_*
- *   required_doc_count     must be ≥1
+ *   active_doc_count       must be >=1
+ *   calibration fields     can satisfy the work-observation gate for the
+ *                          dedicated calibration workflow.
  *
  * @param {import('mysql2/promise').PoolConnection} conn
  * @param {string} sectionJobNo
@@ -707,23 +732,23 @@ async function gatherCompletionGates(conn, sectionJobNo) {
     [sectionJobNo],
   );
   const [[obsText]] = await conn.query(
-    `SELECT CHAR_LENGTH(COALESCE(observations_text, '')) AS len
+    `SELECT
+            CHAR_LENGTH(COALESCE(observations_text, '')) AS len,
+            CHAR_LENGTH(COALESCE(cal_remarks, '')) AS cal_remarks_len,
+            CASE WHEN COALESCE(cal_calibration_status, '') <> '' THEN 1 ELSE 0 END AS has_cal_status
        FROM cmms_jobcard_mst WHERE JM_SectionJobNo = ?`,
     [sectionJobNo],
   );
-  const [[calCert]] = await conn.query(
+  const [[calAdjustments]] = await conn.query(
     `SELECT COUNT(*) AS n
-       FROM jc_documents
-      WHERE jc_section_no = ?
-        AND doc_type = 'CALIBRATION_CERT'
-        AND deleted_at IS NULL`,
+       FROM jc_calibration_adjustments
+      WHERE jc_section_no = ?`,
     [sectionJobNo],
   );
-  const [[reqDocs]] = await conn.query(
+  const [[docs]] = await conn.query(
     `SELECT COUNT(*) AS n
        FROM jc_documents
       WHERE jc_section_no = ?
-        AND doc_type IN ('REQUIRED','INSPECTION_REPORT','CALIBRATION_CERT')
         AND deleted_at IS NULL`,
     [sectionJobNo],
   );
@@ -732,8 +757,11 @@ async function gatherCompletionGates(conn, sectionJobNo) {
     tasks_pending: Number(tasks.pending || 0),
     observations_count: Number(obs.n || 0),
     observations_text_length: Number(obsText.len || 0),
-    cal_cert_count: Number(calCert.n || 0),
-    required_doc_count: Number(reqDocs.n || 0),
+    cal_remarks_length: Number(obsText.cal_remarks_len || 0),
+    has_calibration_status: Number(obsText.has_cal_status || 0) === 1,
+    calibration_adjustment_count: Number(calAdjustments.n || 0),
+    active_doc_count: Number(docs.n || 0),
+    required_doc_count: Number(docs.n || 0),
   };
 }
 

@@ -23,14 +23,25 @@ export const ALL_TABS = [
   { key: 'closure',         label: 'Closure' },              // conditional
 ];
 
+export const CALIBRATION_TABS = [
+  { key: 'tasks', label: 'Task Checklist' },
+  { key: 'cal-job-details', label: 'Job Card Details' },
+  { key: 'cal-status', label: 'Calibration Status' },
+  { key: 'cal-equipment-used', label: 'Equipment Used Details' },
+  { key: 'cal-adjustments', label: 'Adjustments Details' },
+  { key: 'cal-remarks', label: 'Remarks' },
+  { key: 'documents', label: 'Documents' },
+  { key: 'job-closing', label: 'Job Closing' },
+];
+
 /**
  * @param {Object} props
  * @param {string} props.active
  * @param {(key: string) => void} props.onChange
  * @param {Set<string>} props.visibleKeys     Subset of ALL_TABS.keys allowed for this JC + user.
  */
-export function DetailTabBar({ active, onChange, visibleKeys }) {
-  const tabs = ALL_TABS.filter((t) => visibleKeys.has(t.key));
+export function DetailTabBar({ active, onChange, visibleKeys, tabs: tabsProp = ALL_TABS }) {
+  const tabs = tabsProp.filter((t) => visibleKeys.has(t.key));
   return (
     <div
       role="tablist"

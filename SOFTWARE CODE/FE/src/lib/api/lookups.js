@@ -79,3 +79,8 @@ export async function fetchTaskLibrary(category = null, signal) {
   const r = await api.get('/lookups/task-library', { params, signal });
   return r.data.data.items;
 }
+
+export async function fetchCalibrationPeople(signal) {
+  const r = await api.get('/lookups/calibration-people', { signal });
+  return r.data.data.items;
+}

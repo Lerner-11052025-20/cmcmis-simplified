@@ -274,6 +274,51 @@ async function listTaskLibrary(category) {
   return rows;
 }
 
+async function listCalibrationPeople(actor = null) {
+  const where = [
+    `r.role_code IN (
+      'LAB_ENGINEER',
+      'LAB_IN_CHARGE',
+      'SUPER_ADMIN',
+      'TME_REPAIR_LAB_ENG',
+      'TME_CAL_LAB_ENG',
+      'FPE_REPAIR_LAB_ENG',
+      'FPE_CAL_LAB_ENG',
+      'TME_REPAIR_LAB_IN_CHARGE',
+      'TME_CAL_LAB_IN_CHARGE',
+      'FPE_REPAIR_LAB_IN_CHARGE',
+      'FPE_CAL_LAB_IN_CHARGE'
+    )`,
+    'u.is_active = 1',
+    'u.is_locked = 0',
+  ];
+  const args = [];
+  if (Array.isArray(actor?.laneScopes) && actor.laneScopes.length > 0) {
+    const lane = buildLaneWhere('uls.lane_code', actor.laneScopes);
+    where.push(lane.sql);
+    args.push(...lane.args);
+  }
+
+  const [rows] = await pool.query(
+    `SELECT
+       u.employee_id AS employee_id,
+       COALESCE(e.EMM_NAME, u.employee_id) AS full_name,
+       r.role_code AS role,
+       GROUP_CONCAT(DISTINCT uls.lane_code ORDER BY uls.lane_code) AS lane_scopes
+     FROM users u
+     JOIN user_roles ur ON ur.user_id = u.user_id
+     JOIN roles r ON r.role_id = ur.role_id
+     LEFT JOIN user_lane_scopes uls ON uls.user_id = u.user_id
+     LEFT JOIN cmms_emp_mst e ON e.EMM_ID = u.employee_id
+     WHERE ${where.join(' AND ')}
+     GROUP BY u.employee_id, e.EMM_NAME, r.role_code
+     ORDER BY full_name ASC, u.employee_id ASC
+     LIMIT 1000`,
+    args,
+  );
+  return rows.map((r) => ({ ...r, lane_scopes: normalizeLaneScopes(r.role, r.lane_scopes) }));
+}
+
 module.exports = {
   listDivisions,
   listProjects,
@@ -284,4 +329,5 @@ module.exports = {
   findEngineerByEmployeeId,
   // Phase 9 additions:
   listTaskLibrary,
+  listCalibrationPeople,
 };

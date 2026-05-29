@@ -65,6 +65,8 @@ const jobStatusDisplayEnum = z.enum([
   'AWAITING_FOR_VENDOR','AWAITING_FOR_SPARES','IN_PROGRESS_NORMAL','HOLD','RESUMED',
 ]);
 
+const shortTextOrEmpty = (max = 255) => z.string().max(max).optional().or(z.literal(''));
+
 const moneyOrEmpty = z.union([
   z.number().nonnegative(),
   z.coerce.number().nonnegative(),
@@ -117,6 +119,24 @@ const patchTabSchema = z.object({
   // Observations
   observations_text:             z.string().max(8000).optional().or(z.literal('')),
   job_status_display:            jobStatusDisplayEnum.optional(),
+  // Dedicated calibration workflow (TME/FPE calibration only)
+  cal_job_started_date:           isoDateOrEmpty,
+  cal_job_completed_date:         isoDateOrEmpty,
+  cal_calibration_status:         shortTextOrEmpty(80),
+  cal_temperature_c:              shortTextOrEmpty(80),
+  cal_relative_humidity:          shortTextOrEmpty(80),
+  cal_ref_no:                     shortTextOrEmpty(120),
+  cal_due_date:                   isoDateOrEmpty,
+  calibrated_by_employee_id:      shortTextOrEmpty(7),
+  cal_equipment_received_status:  shortTextOrEmpty(120),
+  cal_repair_carried_out_by:      shortTextOrEmpty(255),
+  cal_sent_to_lab_date:           isoDateOrEmpty,
+  cal_received_from_lab_date:     isoDateOrEmpty,
+  cal_adjustment_status:          shortTextOrEmpty(80),
+  cal_limited_reason:             z.string().max(8000).optional().or(z.literal('')),
+  cal_remarks:                    z.string().max(8000).optional().or(z.literal('')),
+  cal_incharge_employee_id:       shortTextOrEmpty(7),
+  cal_incharge_date:              isoDateOrEmpty,
 }).strict();
 
 // ============================================================================
@@ -210,6 +230,19 @@ const observationRowSchema = z.object({
   notes:        z.string().max(8000).optional().or(z.literal('')),
 }).strict();
 
+const calibrationEquipmentRowSchema = z.object({
+  equipment_id:   z.string().max(100).optional().or(z.literal('')),
+  equipment_name: z.string().max(255).optional().or(z.literal('')),
+}).strict();
+
+const calibrationAdjustmentRowSchema = z.object({
+  parameter_name:        z.string().max(255).optional().or(z.literal('')),
+  test_value:            z.string().max(255).optional().or(z.literal('')),
+  specifications_limits: z.string().max(8000).optional().or(z.literal('')),
+  observation_before:    z.string().max(8000).optional().or(z.literal('')),
+  observation_after:     z.string().max(8000).optional().or(z.literal('')),
+}).strict();
+
 module.exports = {
   // Phase 6 Slice 1:
   listQuerySchema,
@@ -227,4 +260,6 @@ module.exports = {
   maintenanceRowSchema,
   spareRowSchema,
   observationRowSchema,
+  calibrationEquipmentRowSchema,
+  calibrationAdjustmentRowSchema,
 };
