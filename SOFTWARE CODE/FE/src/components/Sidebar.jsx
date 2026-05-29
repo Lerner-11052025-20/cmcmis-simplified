@@ -183,7 +183,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
                   <div className="px-4 pt-3 pb-1.5 flex items-center gap-2 select-none">
                     {/* Small technical highlight dot */}
                     <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
-                    <span className="text-[11px] font-bold text-slate-500 tracking-wide font-sans">
+                    <span className="text-[12px] font-bold text-slate-500 tracking-wide font-sans">
                       {GROUPS_META[groupKey].title}
                     </span>
                     {/* Fine light highlighter line */}
@@ -207,7 +207,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
                         title={item.label}
                         className={({ isActive }) =>
                           clsx(
-                            'group relative flex items-center rounded-xl text-xs transition-all duration-200 font-medium border border-transparent',
+                            'group relative flex items-center rounded-xl text-[13px] transition-all duration-200 font-medium border border-transparent',
                             collapsed
                               ? 'justify-center h-10 w-11 mx-auto'
                               : 'gap-3 px-3 py-2.5 mx-2',
