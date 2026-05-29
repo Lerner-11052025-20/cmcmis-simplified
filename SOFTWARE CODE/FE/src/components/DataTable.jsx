@@ -87,11 +87,12 @@ export function DataTable({
                 <tr
                   key={row[keyField]}
                   className={clsx(
-                    'border-b border-slate-100/70 last:border-b-0 transition-all duration-200 group',
+                    'border-b border-slate-100/70 last:border-b-0 transition-all duration-200 group cursor-pointer',
+                    'border-l-[3px] border-l-transparent hover:border-l-accent',
                     rowIndex % 2 === 0
                       ? 'bg-white'
                       : 'bg-slate-50/60',
-                    'hover:bg-indigo-50/40',
+                    'hover:bg-indigo-50 hover:shadow-[inset_0_0_0_1px_rgba(79,93,255,0.08)]',
                   )}
                 >
                   {/* Row number */}
