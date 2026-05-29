@@ -42,8 +42,9 @@ import { Forbidden } from '../pages/Forbidden.jsx';
  * @param {Object} props
  * @param {React.ReactNode} props.children
  * @param {string} [props.requiredPermission] Permission code that must be held.
+ * @param {string|string[]} [props.requiredRole] Role code or codes that may enter.
  */
-export function ProtectedRoute({ children, requiredPermission }) {
+export function ProtectedRoute({ children, requiredPermission, requiredRole }) {
   const { user, loading, hasPermission } = useAuth();
   const location = useLocation();
 
@@ -64,6 +65,14 @@ export function ProtectedRoute({ children, requiredPermission }) {
   // ── 3. Permission check (optional) ───────────────────────────────────
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Forbidden requiredPermission={requiredPermission} />;
+  }
+
+  const allowedRoles = Array.isArray(requiredRole)
+    ? requiredRole
+    : (requiredRole ? [requiredRole] : []);
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    return <Forbidden requiredPermission={`${allowedRoles.join(' or ')} role`} />;
   }
 
   // ── 4. All good — render the protected element ───────────────────────

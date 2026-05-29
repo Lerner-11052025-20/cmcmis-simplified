@@ -279,7 +279,7 @@ export function App() {
           <Route
             path="/admin/equipment-verification"
             element={
-              <ProtectedRoute requiredPermission="equipment:verify">
+              <ProtectedRoute requiredPermission="equipment:verify" requiredRole="SUPER_ADMIN">
                 <Layout><EquipmentVerification /></Layout>
               </ProtectedRoute>
             }

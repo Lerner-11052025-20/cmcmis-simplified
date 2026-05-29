@@ -108,6 +108,10 @@ const GLOBAL_HIDDEN_NAV_LABELS = new Set([
   'Procurement',
 ]);
 
+const SUPER_ADMIN_ONLY_NAV_LABELS = new Set([
+  'Admin · Equipment Verification',
+]);
+
 /**
  * Returns the subset of nav items the given permissions array unlocks.
  *
@@ -120,6 +124,7 @@ export function visibleNavItems(permissions, role) {
   const owned = new Set(permissions);
   return ALL_NAV_ITEMS.filter((item) => {
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
+    if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (!owned.has(item.requires)) return false;
     if (role === 'NORMAL_USER') return NORMAL_USER_NAV_LABELS.has(item.label);
     if (role === 'VIEW_ONLY') return !VIEW_ONLY_HIDDEN_NAV_LABELS.has(item.label);

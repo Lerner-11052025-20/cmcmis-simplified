@@ -41,7 +41,7 @@
 //     icon depending on state (PanelLeftClose / PanelLeftOpen).
 //
 // PERMISSION FILTERING (BR-RBAC-03):
-//   visibleNavItems(user.permissions) is the only gate the FE applies.
+//   visibleNavItems(user.permissions, user.role) is the only gate the FE applies.
 //   The BE enforces the same gates on every route regardless.
 // ============================================================================
 

@@ -42,6 +42,22 @@ const ctrl = require('./equipment.controller');
 
 const router = express.Router();
 
+function requireSuperAdmin(req, _res, next) {
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    req.log?.warn?.(
+      {
+        employeeId: req.user?.employeeId,
+        role: req.user?.role,
+        path: req.originalUrl,
+      },
+      'Equipment verification denied: SUPER_ADMIN role required',
+    );
+    return next(errors.forbidden('SUPER_ADMIN access required'));
+  }
+
+  return next();
+}
+
 // ── Helpers MUST come before /:id to win the match race ───────────────
 router.get('/types', authenticate, authorize('equipment:read-list'), ctrl.getTypes);
 router.get('/makes', authenticate, authorize('equipment:read-list'), ctrl.getMakes);
@@ -83,7 +99,7 @@ const PHASE6 = (_req, _res, next) => next(errors.notFound('Ships in Phase 6'));
 router.patch('/:id',
   authenticate, authorize('equipment:update'),      PHASE6);
 router.post('/:id/verify',
-  authenticate, authorize('equipment:verify'),      ctrl.postVerify);
+  authenticate, authorize('equipment:verify'),      requireSuperAdmin, ctrl.postVerify);
 router.post('/:id/condemn',
   authenticate, authorize('equipment:condemn'),     PHASE6);
 router.delete('/:id',
