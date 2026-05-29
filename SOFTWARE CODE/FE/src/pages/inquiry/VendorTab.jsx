@@ -5,7 +5,7 @@
 // hook handles debounce + cancel; this file is mostly presentation.
 // ============================================================================
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useInquirySearch } from '../../lib/hooks/useInquirySearch.js';
 import { fetchInquiryVendors } from '../../lib/api/inquiry.js';
 import { DataTable } from '../../components/DataTable.jsx';
@@ -35,8 +35,9 @@ const COLUMNS = [
  * @param {number}                     props.page
  * @param {(p: number)=>void}          props.onPageChange
  * @param {number}                     props.pageSize
+ * @param {(meta: { total: number, loading: boolean }) => void} props.onDataLoaded
  */
-export function VendorTab({ q, onQChange, type, onTypeChange, page, onPageChange, pageSize }) {
+export function VendorTab({ q, onQChange, type, onTypeChange, page, onPageChange, pageSize, onDataLoaded }) {
   // The params object is what `useInquirySearch` keys its effect on —
   // a `useMemo` on the JSON-stringified form would re-key unnecessarily.
   // The hook does its own JSON.stringify dedupe.
@@ -46,6 +47,12 @@ export function VendorTab({ q, onQChange, type, onTypeChange, page, onPageChange
   const items = data?.items ?? [];
   const total = data?.pagination?.total_items ?? 0;
   const totalPages = data?.pagination?.total_pages ?? 1;
+
+  useEffect(() => {
+    if (onDataLoaded) {
+      onDataLoaded({ total, loading });
+    }
+  }, [total, loading, onDataLoaded]);
 
   const emptyMessage = useMemo(() => {
     if (loading) return 'Searching…';

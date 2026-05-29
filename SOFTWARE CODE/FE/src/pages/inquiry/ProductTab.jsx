@@ -10,7 +10,7 @@
 // `equipment_count` as the most useful adjacent fact.
 // ============================================================================
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useInquirySearch } from '../../lib/hooks/useInquirySearch.js';
 import { fetchInquiryProducts } from '../../lib/api/inquiry.js';
 import { DataTable } from '../../components/DataTable.jsx';
@@ -31,13 +31,19 @@ const COLUMNS = [
     className: 'text-ink-soft' },
 ];
 
-export function ProductTab({ q, onQChange, page, onPageChange, pageSize }) {
+export function ProductTab({ q, onQChange, page, onPageChange, pageSize, onDataLoaded }) {
   const params = { q, page, page_size: pageSize };
   const { data, error, loading } = useInquirySearch(fetchInquiryProducts, params);
 
   const items = data?.items ?? [];
   const total = data?.pagination?.total_items ?? 0;
   const totalPages = data?.pagination?.total_pages ?? 1;
+
+  useEffect(() => {
+    if (onDataLoaded) {
+      onDataLoaded({ total, loading });
+    }
+  }, [total, loading, onDataLoaded]);
 
   const emptyMessage = useMemo(() => {
     if (loading) return 'Searching…';

@@ -5,7 +5,7 @@
 // BE-supplied `status_label` + `status_accent` drive the pill colour.
 // ============================================================================
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import clsx from 'clsx';
 import { useInquirySearch } from '../../lib/hooks/useInquirySearch.js';
 import { fetchInquiryInstruments } from '../../lib/api/inquiry.js';
@@ -50,13 +50,19 @@ const COLUMNS = [
     format: (_, r) => <StatusBadge label={r.status_label} accent={r.status_accent} /> },
 ];
 
-export function InstrumentTab({ q, onQChange, page, onPageChange, pageSize }) {
+export function InstrumentTab({ q, onQChange, page, onPageChange, pageSize, onDataLoaded }) {
   const params = { q, page, page_size: pageSize };
   const { data, error, loading } = useInquirySearch(fetchInquiryInstruments, params);
 
   const items = data?.items ?? [];
   const total = data?.pagination?.total_items ?? 0;
   const totalPages = data?.pagination?.total_pages ?? 1;
+
+  useEffect(() => {
+    if (onDataLoaded) {
+      onDataLoaded({ total, loading });
+    }
+  }, [total, loading, onDataLoaded]);
 
   const emptyMessage = useMemo(() => {
     if (loading) return 'Searching…';
