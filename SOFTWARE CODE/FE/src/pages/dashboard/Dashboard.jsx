@@ -23,6 +23,7 @@ import { DashboardHeader } from './DashboardHeader.jsx';
 import { QuickActions } from './QuickActions.jsx';
 import { KpiGrid } from './KpiGrid.jsx';
 import { QuickRecap } from './QuickRecap.jsx';
+import { DashboardCharts } from './DashboardCharts.jsx';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -70,6 +71,9 @@ export function Dashboard() {
           data={data?.recent_activity || null}
           loading={loading && !data}
         />
+
+        {/* Dynamic RBAC Role-Based Charts (Pie, Bar, and Wavy curves) */}
+        <DashboardCharts />
       </div>
     </Layout>
   );
