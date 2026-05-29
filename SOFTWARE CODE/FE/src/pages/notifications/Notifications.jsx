@@ -162,41 +162,62 @@ export function Notifications() {
           </div>
         </div>
 
-        {/* ── Dynamic Grouped List ──────────────────────────────── */}
-        <div className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white divide-y divide-slate-100">
-          {loading ? (
-            <div className="px-6 py-16 text-center text-xs font-bold text-ink-soft flex items-center justify-center gap-2.5">
-              <svg className="animate-spin h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Retrieving Notifications...
+        {/* ── Dynamic Grouped List with Spaced Out Cards ──────────────────────────────── */}
+        {loading ? (
+          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-16 text-center text-xs font-bold text-ink-soft flex items-center justify-center gap-2.5 font-sans">
+            <svg className="animate-spin h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Retrieving Notifications...
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-12 text-center text-xs font-bold text-danger font-sans">
+            {error.response?.data?.error?.message || error.message || 'Failed to load notifications.'}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-20 text-center font-sans">
+            <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-ink-soft/45 border border-slate-100 mb-4">
+              <Bell size={22} strokeWidth={1.5} aria-hidden="true" />
             </div>
-          ) : error ? (
-            <div className="px-6 py-12 text-center text-xs font-bold text-danger">
-              {error.response?.data?.error?.message || error.message || 'Failed to load notifications.'}
+            <div className="text-xs font-bold text-ink-soft">
+              {unreadOnly ? 'No unread notifications to review.' : 'Your inbox is empty.'}
             </div>
-          ) : rows.length === 0 ? (
-            <div className="px-6 py-20 text-center">
-              <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-ink-soft/45 border border-slate-100 mb-4">
-                <Bell size={22} strokeWidth={1.5} aria-hidden="true" />
-              </div>
-              <div className="text-xs font-bold text-ink-soft">
-                {unreadOnly ? 'No unread notifications to review.' : 'Your inbox is empty.'}
-              </div>
-            </div>
-          ) : (
-            rows.map((n, idx) => {
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rows.map((n, idx) => {
               const isEven = idx % 2 === 0;
               const cat = getNotificationCategory(n);
               const Icon = cat.type === 'job_request' ? FileText :
                            cat.type === 'job_card' ? ClipboardList :
                            cat.type === 'equipment' ? Wrench : Bell;
 
-              // Color contrast background for even/odd rows + unread distinguishes
-              const rowBg = n.is_read
-                ? (isEven ? 'bg-slate-50/60 hover:bg-slate-100/40' : 'bg-white hover:bg-slate-50/50')
-                : (isEven ? 'bg-sky-50/40 hover:bg-sky-100/30' : 'bg-sky-50/15 hover:bg-sky-50/40');
+              // High contrast alternating backgrounds for read/unread entries
+              let rowBg = '';
+              if (n.is_read) {
+                rowBg = isEven 
+                  ? 'bg-slate-100/90 hover:bg-slate-200/60' 
+                  : 'bg-white hover:bg-slate-100/50';
+              } else {
+                if (cat.type === 'job_request') {
+                  rowBg = isEven 
+                    ? 'bg-sky-100/70 hover:bg-sky-200/60' 
+                    : 'bg-sky-50/40 hover:bg-sky-100/40';
+                } else if (cat.type === 'job_card') {
+                  rowBg = isEven 
+                    ? 'bg-violet-100/70 hover:bg-violet-200/60' 
+                    : 'bg-violet-50/40 hover:bg-violet-100/40';
+                } else if (cat.type === 'equipment') {
+                  rowBg = isEven 
+                    ? 'bg-emerald-100/70 hover:bg-emerald-200/60' 
+                    : 'bg-emerald-50/40 hover:bg-emerald-100/40';
+                } else {
+                  rowBg = isEven 
+                    ? 'bg-amber-100/70 hover:bg-amber-200/60' 
+                    : 'bg-amber-50/40 hover:bg-amber-100/40';
+                }
+              }
 
               return (
                 <button
@@ -204,32 +225,50 @@ export function Notifications() {
                   type="button"
                   onClick={() => activate(n)}
                   className={clsx(
-                    'group relative w-full text-left px-5 py-4 flex items-start gap-4 transition-all duration-200 border-l-[3px]',
+                    'group relative w-full text-left px-6 py-5 flex items-start gap-4 transition-all duration-200 border border-slate-200/80 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.002] border-l-[5px] font-sans antialiased',
                     rowBg,
-                    n.is_read ? 'border-transparent' : 'border-sky-500'
+                    n.is_read ? 'border-l-transparent' : (
+                      cat.type === 'job_request' ? 'border-l-sky-500' :
+                      cat.type === 'job_card' ? 'border-l-violet-500' :
+                      cat.type === 'equipment' ? 'border-l-emerald-500' : 'border-l-amber-500'
+                    )
                   )}
                 >
-                  {/* Category icon with color light contrast */}
-                  <div className={clsx(
-                    'h-8 w-8 rounded-lg shrink-0 flex items-center justify-center transition-all',
-                    cat.iconBg
-                  )}>
-                    <Icon size={15} strokeWidth={2} />
+                  {/* Category icon with color light contrast + pulsing status indicator dot */}
+                  <div className="relative shrink-0">
+                    <div className={clsx(
+                      'h-9 w-9 rounded-lg flex items-center justify-center transition-all',
+                      cat.iconBg
+                    )}>
+                      <Icon size={16} strokeWidth={2} />
+                    </div>
+                    {!n.is_read && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className={clsx(
+                          'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
+                          cat.indicatorColor
+                        )}></span>
+                        <span className={clsx(
+                          'relative inline-flex rounded-full h-2.5 w-2.5',
+                          cat.indicatorColor
+                        )}></span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Unified font-sans typography */}
                       <span className={clsx(
-                        'text-xs tracking-tight',
-                        n.is_read ? 'text-ink-soft/90' : 'text-ink font-bold',
+                        'text-sm tracking-tight font-sans',
+                        n.is_read ? 'text-ink-soft/90 font-medium' : 'text-ink font-bold',
                       )}>
                         {n.title}
                       </span>
                       
                       {/* Category Pill Tag */}
                       <span className={clsx(
-                        'px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider',
+                        'px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-sans border',
                         cat.colorClass
                       )}>
                         {cat.label}
@@ -237,29 +276,29 @@ export function Notifications() {
                     </div>
 
                     {n.body ? (
-                      <div className="text-xs text-ink-soft/85 mt-1 leading-relaxed font-medium">
+                      <div className="text-xs text-ink-soft/85 mt-1.5 leading-relaxed font-medium font-sans">
                         {n.body}
                       </div>
                     ) : null}
 
-                    {/* Metadata telemetry details */}
-                    <div className="flex items-center gap-2.5 text-[10px] text-ink-soft/50 font-bold mt-2">
+                    {/* Metadata telemetry details - strictly font-sans */}
+                    <div className="flex items-center gap-2.5 text-[11px] text-ink-soft/50 font-bold mt-2.5 font-sans">
                       <span>{dayjs(n.created_at).format('YYYY-MM-DD HH:mm')}</span>
                       <span>·</span>
                       <span>{dayjs(n.created_at).fromNow()}</span>
                       {n.actor_employee_id ? (
                         <>
                           <span>·</span>
-                          <span className="text-sky-600/70">by {n.actor_employee_id}</span>
+                          <span className="text-sky-600/80 font-semibold">by {n.actor_employee_id}</span>
                         </>
                       ) : null}
                     </div>
                   </div>
                 </button>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
 
         {/* ── Pagination controls ───────────────────────────────── */}
         {total > PAGE_SIZE ? (
