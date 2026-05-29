@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const CREDIT_TEXT = 'Crafted By --- Deep (Developer) & Moksh (Designer)';
+const CREDIT_TEXT = 'System Enhancement Taken Up By Deep & Moksh';
 const FLOATING_MARK = 'data-cmcmis-credit-floating';
 
 function createFloatingCredit() {
