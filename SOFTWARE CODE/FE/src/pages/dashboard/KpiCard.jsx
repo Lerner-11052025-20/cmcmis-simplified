@@ -20,7 +20,6 @@ import {
   Wrench,
   Plus,
   HelpCircle,
-  // New icons for Phase-15 KPI expansion
   Box,
   Activity,
   ClipboardList,
@@ -33,18 +32,17 @@ import {
 import clsx from 'clsx';
 
 // ── Tailwind class map per accent token from the BE ──────────────────
-// One source of truth; if the BE adds a new accent, only this file changes.
+// Custom ambient glows, clean indicators, and top border accents
 const ACCENT_CLASSES = {
-  amber:   { bg: 'bg-amber-50',   text: 'text-amber-600',   ring: 'ring-amber-100' },
-  red:     { bg: 'bg-red-50',     text: 'text-red-600',     ring: 'ring-red-100' },
-  green:   { bg: 'bg-green-50',   text: 'text-green-600',   ring: 'ring-green-100' },
-  blue:    { bg: 'bg-blue-50',    text: 'text-blue-600',    ring: 'ring-blue-100' },
-  indigo:  { bg: 'bg-indigo-50',  text: 'text-indigo-600',  ring: 'ring-indigo-100' },
-  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', ring: 'ring-emerald-100' },
-  slate:   { bg: 'bg-slate-50',   text: 'text-slate-600',   ring: 'ring-slate-100' },
-  // Phase-15 additions
-  orange:  { bg: 'bg-orange-50',  text: 'text-orange-600',  ring: 'ring-orange-100' },
-  violet:  { bg: 'bg-violet-50',  text: 'text-violet-600',  ring: 'ring-violet-100' },
+  amber:   { bg: 'bg-amber-50/60',   text: 'text-amber-600',   ring: 'ring-amber-100',   topBorder: 'border-t-amber-500/80',   glow: 'hover:shadow-amber-500/5 hover:border-amber-200/60', indicator: 'bg-amber-500' },
+  red:     { bg: 'bg-red-50/60',     text: 'text-red-600',     ring: 'ring-red-100',     topBorder: 'border-t-red-500/80',     glow: 'hover:shadow-red-500/5 hover:border-red-200/60',   indicator: 'bg-red-500' },
+  green:   { bg: 'bg-green-50/60',   text: 'text-green-600',   ring: 'ring-green-100',   topBorder: 'border-t-green-500/80',   glow: 'hover:shadow-green-500/5 hover:border-green-200/60', indicator: 'bg-green-500' },
+  blue:    { bg: 'bg-blue-50/60',    text: 'text-blue-600',    ring: 'ring-blue-100',    topBorder: 'border-t-sky-500/80',     glow: 'hover:shadow-sky-500/5 hover:border-sky-200/60',   indicator: 'bg-sky-500' },
+  indigo:  { bg: 'bg-indigo-50/60',  text: 'text-indigo-600',  ring: 'ring-indigo-100',  topBorder: 'border-t-indigo-500/80',  glow: 'hover:shadow-indigo-500/5 hover:border-indigo-200/60', indicator: 'bg-indigo-500' },
+  emerald: { bg: 'bg-emerald-50/60', text: 'text-emerald-600', ring: 'ring-emerald-100', topBorder: 'border-t-emerald-500/80', glow: 'hover:shadow-emerald-500/5 hover:border-emerald-200/60', indicator: 'bg-emerald-500' },
+  slate:   { bg: 'bg-slate-50/60',   text: 'text-slate-600',   ring: 'ring-slate-100',   topBorder: 'border-t-slate-400/80',   glow: 'hover:shadow-slate-400/5 hover:border-slate-300/60',  indicator: 'bg-slate-400' },
+  orange:  { bg: 'bg-orange-50/60',  text: 'text-orange-600',  ring: 'ring-orange-100',  topBorder: 'border-t-orange-500/80',  glow: 'hover:shadow-orange-500/5 hover:border-orange-200/60', indicator: 'bg-orange-500' },
+  violet:  { bg: 'bg-violet-50/60',  text: 'text-violet-600',  ring: 'ring-violet-100',  topBorder: 'border-t-violet-500/80',  glow: 'hover:shadow-violet-500/5 hover:border-violet-200/60', indicator: 'bg-violet-500' },
 };
 
 const ICONS = {
@@ -55,7 +53,6 @@ const ICONS = {
   'file-text':      FileText,
   wrench:           Wrench,
   plus:             Plus,
-  // Phase-15 new icons
   box:              Box,
   activity:         Activity,
   'clipboard-list': ClipboardList,
@@ -78,11 +75,11 @@ export function KpiCard({ card, loading = false }) {
   // Skeleton variant — keeps the layout stable while data is loading.
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5 animate-pulse">
-        <div className={clsx('w-10 h-10 rounded-xl', accent.bg)} />
-        <div className="mt-4 h-7 w-16 bg-base-elev rounded" />
-        <div className="mt-2 h-3 w-32 bg-base-elev rounded" />
-        <div className="mt-1 h-3 w-24 bg-base-elev rounded" />
+      <div className="bg-white rounded-2xl border border-slate-200/40 border-t-[4px] border-t-slate-200 p-5 animate-pulse flex flex-col font-sans">
+        <div className="w-11 h-11 rounded-2xl bg-slate-100/80" />
+        <div className="mt-5 h-8 w-16 bg-slate-100 rounded" />
+        <div className="mt-3 h-3 w-28 bg-slate-100 rounded" />
+        <div className="mt-2.5 h-2.5 w-32 bg-slate-100 rounded" />
       </div>
     );
   }
@@ -94,24 +91,31 @@ export function KpiCard({ card, loading = false }) {
     <Link
       to={card.href || '#'}
       className={clsx(
-        // No hard border — soft shadow gives depth without sharp edges
-        'block bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.06)] p-5',
-        'hover:shadow-[0_6px_28px_rgba(0,0,0,0.11)] hover:-translate-y-0.5 transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
+        'group block bg-white rounded-2xl border border-slate-200/50 p-5 border-t-[4px] transition-all duration-300 shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg font-sans antialiased',
+        accent.topBorder,
+        accent.glow,
+        'hover:-translate-y-1',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40'
       )}
       aria-label={`${card.label}: ${valueDisplay}. ${card.subtitle}`}
     >
-      <div className={clsx('inline-flex items-center justify-center w-10 h-10 rounded-xl', accent.bg)}>
-        <Icon size={20} strokeWidth={1.75} className={accent.text} />
+      <div className="flex items-center justify-between">
+        <div className={clsx('inline-flex items-center justify-center w-11 h-11 rounded-2xl border border-slate-100/60 shadow-[0_1px_2px_rgba(0,0,0,0.01)] transition-all duration-300 group-hover:scale-105', accent.bg)}>
+          <Icon size={21} strokeWidth={1.75} className={accent.text} />
+        </div>
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-200 group-hover:bg-accent transition-colors duration-300" />
       </div>
 
-      <div className="mt-4 text-2xl font-semibold text-ink leading-none">
+      <div className="mt-5 text-3xl font-extrabold tracking-tight text-ink font-sans leading-none transition-colors duration-300 group-hover:text-accent">
         {valueDisplay}
       </div>
-      <div className="mt-2 text-sm font-medium text-ink">
+      
+      <div className="mt-3 text-[11px] font-bold text-ink-soft uppercase tracking-wider font-sans">
         {card.label}
       </div>
-      <div className="mt-0.5 text-xs text-ink-soft">
+      
+      <div className="mt-1.5 text-xs text-ink-soft/70 font-medium font-sans flex items-center gap-1.5 leading-relaxed">
+        <span className={clsx("h-1 w-1 rounded-full shrink-0 opacity-70", accent.indicator)} />
         {card.subtitle}
       </div>
     </Link>
