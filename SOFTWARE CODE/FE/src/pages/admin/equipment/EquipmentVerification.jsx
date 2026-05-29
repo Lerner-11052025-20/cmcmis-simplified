@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Clock, Box } from 'lucide-react';
 import clsx from 'clsx';
+import { Button } from '../../../components/ui/Button.jsx';
+import { DataTable } from '../../../components/DataTable.jsx';
+import { useEquipmentList } from '../../../lib/hooks/useEquipmentList.js';
+import { verifyEquipment, rejectEquipment } from '../../../lib/api/equipment.js';
 
 // ── Custom Local KPI Card ─────────────────────────────────────────────
 function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
@@ -55,10 +59,6 @@ function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
     </div>
   );
 }
-import { Button } from '../../../components/ui/Button.jsx';
-import { DataTable } from '../../../components/DataTable.jsx';
-import { useEquipmentList } from '../../../lib/hooks/useEquipmentList.js';
-import { verifyEquipment, rejectEquipment } from '../../../lib/api/equipment.js';
 
 export function EquipmentVerification() {
   const [refreshSeed, setRefreshSeed] = useState(0);
