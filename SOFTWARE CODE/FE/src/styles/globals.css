@@ -120,3 +120,12 @@
   background-size: 20px 20px;
 }
 
+/* Hide scrollbars globally but retain scrolling functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
