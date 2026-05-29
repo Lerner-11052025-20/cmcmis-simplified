@@ -1,27 +1,5 @@
 // ============================================================================
-// src/pages/reports/ReportFilters.jsx  —  Global filter bar
-// ----------------------------------------------------------------------------
-// PHASE 10 — Reports & Analytics
-//
-// Renders the panel shown in the attached UI:
-//
-//     ┌─ Report Filters ─────────────────────────────────────────────┐
-//     │ Date From   Date To    Division          Status              │
-//     │ [____]      [____]     [All Divisions ▾] [All Statuses ▾]    │
-//     │ [Apply Filters]   [Reset]                                    │
-//     └──────────────────────────────────────────────────────────────┘
-//
-// PROPS
-//   • value           — current { dateFrom, dateTo, divisionId, status }
-//   • onChange(next)  — applies filters; parent forwards into useReport
-//   • statusEnum      — array of allowed status strings (per-report);
-//                        when undefined the Status column is hidden
-//   • disabled        — disables the panel during fetches (optional)
-//
-// Filters are LOCAL until "Apply" is pressed — pressing Reset clears
-// everything AND fires onChange immediately. This mirrors the attached
-// UI mock and gives users the chance to compose a filter set without
-// triggering a fetch on every keystroke.
+// src/pages/reports/ReportFilters.jsx  —  Premium filter panel
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -31,13 +9,10 @@ import { Filter, RotateCcw } from 'lucide-react';
 import { fetchDivisions } from '../../lib/api/lookups.js';
 
 export function ReportFilters({ value, onChange, statusEnum, disabled }) {
-  // Local copy of the filter object — we only push it upstream on Apply.
   const [local, setLocal] = useState(value);
 
-  // Keep local in sync if the parent ever resets the filters externally.
   useEffect(() => { setLocal(value); }, [value]);
 
-  // Divisions dropdown — cached forever (semi-static lookup).
   const divQ = useQuery({
     queryKey: ['lookups', 'divisions'],
     queryFn: ({ signal }) => fetchDivisions(signal),
@@ -57,40 +32,42 @@ export function ReportFilters({ value, onChange, statusEnum, disabled }) {
     onChange?.(empty);
   }
 
+  const inputCls = 'w-full rounded-lg border border-slate-200/80 bg-white px-3 py-2.5 text-[13px] text-slate-700 font-sans focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40 transition-all duration-200 placeholder:text-slate-300';
+
   return (
-    <div className="rounded-lg border border-border bg-base-elev p-4">
-      <h3 className="text-sm font-semibold text-ink">Report Filters</h3>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="rounded-xl border border-slate-200/60 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <h3 className="text-[13px] font-semibold text-slate-700 font-sans">Report Filters</h3>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Date From */}
-        <label className="text-xs text-ink-soft">
-          <span className="block mb-1">Date From</span>
+        <label className="space-y-1.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-sans">Date From</span>
           <input
             type="date"
             value={local.dateFrom || ''}
             disabled={disabled}
             onChange={(e) => set('dateFrom', e.target.value)}
-            className="w-full rounded-md border border-border bg-base px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+            className={inputCls}
           />
         </label>
         {/* Date To */}
-        <label className="text-xs text-ink-soft">
-          <span className="block mb-1">Date To</span>
+        <label className="space-y-1.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-sans">Date To</span>
           <input
             type="date"
             value={local.dateTo || ''}
             disabled={disabled}
             onChange={(e) => set('dateTo', e.target.value)}
-            className="w-full rounded-md border border-border bg-base px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+            className={inputCls}
           />
         </label>
         {/* Division */}
-        <label className="text-xs text-ink-soft">
-          <span className="block mb-1">Division</span>
+        <label className="space-y-1.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-sans">Division</span>
           <select
             value={local.divisionId || ''}
             disabled={disabled || divQ.isLoading}
             onChange={(e) => set('divisionId', e.target.value ? Number(e.target.value) : '')}
-            className="w-full rounded-md border border-border bg-base px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+            className={inputCls}
           >
             <option value="">All Divisions</option>
             {(divQ.data || []).map((d) => (
@@ -100,14 +77,14 @@ export function ReportFilters({ value, onChange, statusEnum, disabled }) {
             ))}
           </select>
         </label>
-        {/* Status (per-report; some reports don't have one) */}
-        <label className="text-xs text-ink-soft">
-          <span className="block mb-1">Status</span>
+        {/* Status */}
+        <label className="space-y-1.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-sans">Status</span>
           <select
             value={local.status || ''}
             disabled={disabled || !statusEnum}
             onChange={(e) => set('status', e.target.value)}
-            className="w-full rounded-md border border-border bg-base px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
+            className={inputCls + ' disabled:opacity-50'}
           >
             <option value="">All Statuses</option>
             {(statusEnum || []).map((s) => (
@@ -122,18 +99,18 @@ export function ReportFilters({ value, onChange, statusEnum, disabled }) {
           type="button"
           onClick={apply}
           disabled={disabled}
-          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white font-sans hover:bg-accent-hover shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50 transition-all duration-200"
         >
-          <Filter size={16} strokeWidth={1.5} aria-hidden="true" />
+          <Filter size={15} strokeWidth={1.75} aria-hidden="true" />
           Apply Filters
         </button>
         <button
           type="button"
           onClick={reset}
           disabled={disabled}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-base px-4 py-2 text-sm text-ink hover:bg-base-elev focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200/80 bg-white px-4 py-2.5 text-[13px] font-medium text-slate-600 font-sans hover:bg-slate-50 hover:border-slate-300/80 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50 transition-all duration-200"
         >
-          <RotateCcw size={16} strokeWidth={1.5} aria-hidden="true" />
+          <RotateCcw size={15} strokeWidth={1.75} aria-hidden="true" />
           Reset
         </button>
       </div>

@@ -1,33 +1,8 @@
 // ============================================================================
 // src/pages/reports/ReportsLanding.jsx  —  /reports page orchestrator
 // ----------------------------------------------------------------------------
-// PHASE 10 — Reports & Analytics
-//
-// Page layout (mirrors the attached UI):
-//
-//   ┌──────────────────────────────────────────────────────────────┐
-//   │ Reports                                                      │
-//   │ Generate and export various system reports.                  │
-//   ├──────────────────────────────────────────────────────────────┤
-//   │ ▢ Calibration Due  ▢ Pending Jobs  ▢ Equipment Utilization   │
-//   │ ▢ Engineer Summary ▢ Job Card Summary ▢ Job Request Summary  │
-//   ├──────────────────────────────────────────────────────────────┤
-//   │ Report Filters [Date From][Date To][Division ▾][Status ▾]    │
-//   │              [Apply] [Reset]                                 │
-//   ├──────────────────────────────────────────────────────────────┤
-//   │ Summary tiles (per active report)                            │
-//   │ Detailed table (per active report)                           │
-//   ├──────────────────────────────────────────────────────────────┤
-//   │ Analytics Grid — 8 charts (G1..G8)                           │
-//   ├──────────────────────────────────────────────────────────────┤
-//   │ Export panel — Export as PDF · Export as Excel · Print       │
-//   └──────────────────────────────────────────────────────────────┘
-//
-// State held here:
-//   • activeKey   — which report card is open (defaults to the first
-//                    report the user has permission for)
-//   • filters     — { dateFrom, dateTo, divisionId, status }
-//   • page        — current table page (resets to 1 on filter change)
+// PHASE 10 — Reports & Analytics — Redesigned with premium layout,
+// KPI summary tiles, modern data table, project-standard Inter font.
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react';
@@ -42,32 +17,23 @@ import { ReportFilters } from './ReportFilters.jsx';
 import { SummaryTiles } from './SummaryTiles.jsx';
 import { ReportTable } from './ReportTable.jsx';
 import { ExportPanel } from './ExportPanel.jsx';
-// Phase 11 Slice 3 — analytics charts moved to the dedicated /analytics page.
-// The Reports page is now strictly the report-table + filter + export surface.
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 export function ReportsLanding() {
   const { user } = useAuth();
   const owned = useMemo(() => new Set(user?.permissions || []), [user]);
 
-  // First report card the user can actually open. If they hold none,
-  // activeKey stays null and we render the "no permission" state.
   const firstReport = REPORTS.find((r) => owned.has(r.requires));
   const [activeKey, setActiveKey] = useState(firstReport?.key || null);
 
-  // Filters are shared across the active report AND all analytics charts.
-  // The analytics charts only consume divisionId + dateFrom/dateTo; status
-  // is per-report and is ignored by charts.
   const [filters, setFilters] = useState({
     dateFrom: '', dateTo: '', divisionId: '', status: '',
   });
   const [page, setPage] = useState(1);
 
-  // Reset paging when filters or active report change.
   useEffect(() => { setPage(1); }, [filters, activeKey]);
 
-  // ── Build params for the active report ──────────────────────────────
   const cfg = activeKey ? reportByKey(activeKey) : null;
   const params = useMemo(() => ({
     dateFrom:   filters.dateFrom   || undefined,
@@ -78,30 +44,26 @@ export function ReportsLanding() {
     page_size:  PAGE_SIZE,
   }), [filters, page]);
 
-  // ── Fire the report query ──────────────────────────────────────────
   const reportQ = useReport(activeKey, params, {
     enabled: Boolean(activeKey),
     keepPreviousData: true,
   });
 
-  // Phase 11 Slice 3 — analytics chart grid moved to /analytics. The Reports
-  // page no longer hosts the chart grid; users get the spacious redesigned
-  // dashboard at /analytics instead.
-
   return (
     <Layout>
       <div className="space-y-6">
+        {/* ── Page header ── */}
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Reports</h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            Generate and export various system reports.
+          <h1 className="text-2xl font-semibold text-slate-800 font-sans tracking-tight">Reports</h1>
+          <p className="mt-1 text-sm text-slate-500 font-sans">
+            Generate, filter, and export system reports across all modules.
           </p>
         </div>
 
         {/* Report-launch card grid */}
         <ReportCards activeKey={activeKey} onPick={setActiveKey} />
 
-        {/* Filter panel — affects the active report AND charts */}
+        {/* Filter panel */}
         <ReportFilters
           value={filters}
           onChange={setFilters}
@@ -111,8 +73,8 @@ export function ReportsLanding() {
 
         {/* Active report — summary + detailed table */}
         {cfg ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-ink">{cfg.title}</h2>
+          <div className="space-y-5">
+            <h2 className="text-base font-semibold text-slate-700 font-sans tracking-tight">{cfg.title}</h2>
             <SummaryTiles summary={reportQ.data?.summary} />
             <ReportTable
               columns={cfg.columns}
@@ -126,17 +88,17 @@ export function ReportsLanding() {
             />
           </div>
         ) : (
-          <p className="text-sm text-ink-soft">
-            Select a report card above to view data.
-          </p>
+          <div className="bg-white rounded-xl border border-slate-200/60 p-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <p className="text-sm text-slate-400 font-sans">Select a report above to view data.</p>
+          </div>
         )}
 
-        {/* Phase 11 Slice 3 — the analytics chart grid lives on its own
-            /analytics page now. Users wanting charts navigate there from the
-            sidebar. This keeps Reports focused on the detailed table + PDF
-            export workflow. */}
-
-        {/* Export panel — bottom of the page */}
+        {/* Export panel — keep PDF code as-is */}
         {cfg ? (
           <ExportPanel
             reportKey={cfg.key}
