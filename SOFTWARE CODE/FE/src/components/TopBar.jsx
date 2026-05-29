@@ -63,6 +63,15 @@ import {
 } from '../lib/hooks/useNotifications.js';
 import { NotificationDropdown } from './notifications/NotificationDropdown.jsx';
 
+// Search API parallel fetchers
+import { fetchJobRequestList } from '../lib/api/jobRequests.js';
+import { fetchEquipmentList } from '../lib/api/equipment.js';
+import {
+  fetchInquiryJobCards,
+  fetchInquiryVendors,
+  fetchInquiryProducts,
+} from '../lib/api/inquiry.js';
+
 /**
  * Compute 2-letter initials from a display name or employee_id.
  * "Dr. A. Kumar" → "AK", "SA79900" → "SA".
@@ -84,6 +93,121 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
   const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
+
+  // ── Global Autocomplete Search State ────────────────────────────────
+  const [searchResults, setSearchResults] = useState({
+    jobRequests: [],
+    jobCards: [],
+    equipment: [],
+    vendors: [],
+    products: []
+  });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
+
+  // ── Debounced Parallel Global Search Effect ─────────────────────────────
+  useEffect(() => {
+    const term = q.trim();
+    if (!term || term.length < 2) {
+      setSearchResults({ jobRequests: [], jobCards: [], equipment: [], vendors: [], products: [] });
+      setSearchLoading(false);
+      setSearchOpen(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchOpen(true);
+
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const timer = setTimeout(async () => {
+      // Define searches based on RBAC permissions to avoid console 403s
+      const tasks = [];
+      const keys = [];
+
+      // 1. Job Requests
+      if (hasPermission('job_request:read-own') || hasPermission('job_request:approve')) {
+        tasks.push(fetchJobRequestList({ q: term, page_size: 10 }, signal).catch(() => ({ items: [] })));
+        keys.push('jobRequests');
+      }
+      
+      // 2. Job Cards
+      if (hasPermission('job_card:read-list') || hasPermission('inquiry:search-job-cards')) {
+        tasks.push(fetchInquiryJobCards({ q: term, page_size: 10 }, signal).catch(() => ({ items: [] })));
+        keys.push('jobCards');
+      }
+
+      // 3. Equipment
+      if (hasPermission('equipment:read-list') || hasPermission('inquiry:search-instruments')) {
+        tasks.push(fetchEquipmentList({ q: term, page_size: 10 }, signal).catch(() => ({ items: [] })));
+        keys.push('equipment');
+      }
+
+      // 4. Vendors
+      if (hasPermission('inquiry:search-vendors')) {
+        tasks.push(fetchInquiryVendors({ q: term, page_size: 10 }, signal).catch(() => ({ items: [] })));
+        keys.push('vendors');
+      }
+
+      // 5. Products
+      if (hasPermission('inquiry:search-products')) {
+        tasks.push(fetchInquiryProducts({ q: term, page_size: 10 }, signal).catch(() => ({ items: [] })));
+        keys.push('products');
+      }
+
+      try {
+        const responses = await Promise.all(tasks);
+        const nextResults = { jobRequests: [], jobCards: [], equipment: [], vendors: [], products: [] };
+        
+        responses.forEach((res, i) => {
+          const key = keys[i];
+          // Conforms to strict page size limit while displaying top 3 results in autocomplete UI
+          nextResults[key] = (res?.items || []).slice(0, 3);
+        });
+
+        if (!signal.aborted) {
+          setSearchResults(nextResults);
+          setSearchLoading(false);
+        }
+      } catch (err) {
+        if (!signal.aborted) {
+          setSearchLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [q, hasPermission]);
+
+  // Close search dropdown on click outside or Escape
+  useEffect(() => {
+    if (!searchOpen) return undefined;
+    function handlePointer(e) {
+      if (searchRef.current && searchRef.current.contains(e.target)) return;
+      setSearchOpen(false);
+    }
+    function handleKey(e) {
+      if (e.key === 'Escape') setSearchOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [searchOpen]);
+
+  const totalResultsCount = 
+    searchResults.jobRequests.length +
+    searchResults.jobCards.length +
+    searchResults.equipment.length +
+    searchResults.vendors.length +
+    searchResults.products.length;
 
   // Dropdown open/close state — local to this component, no need to lift.
   const [menuOpen, setMenuOpen] = useState(false);
@@ -210,8 +334,8 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
         <Menu size={18} strokeWidth={1.5} aria-hidden="true" />
       </button>
 
-      {/* ── Global search ───────────────────────────────────────── */}
-      <form onSubmit={onSearchSubmit} className="flex-1 max-w-3xl mr-auto">
+      {/* ── Global search with Dynamic Autocomplete ─────────────── */}
+      <form onSubmit={onSearchSubmit} className="flex-1 max-w-3xl mr-auto relative" ref={searchRef}>
         <label htmlFor="topbar-search" className="sr-only">Global search</label>
         <div className="relative">
           <SearchIcon
@@ -223,12 +347,210 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
           <input
             id="topbar-search"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              if (e.target.value.trim().length >= 2) {
+                setSearchOpen(true);
+              }
+            }}
+            onFocus={() => {
+              if (q.trim().length >= 2) {
+                setSearchOpen(true);
+              }
+            }}
             type="search"
             placeholder="Search equipment, job requests, vendors…"
             className="w-full h-10 rounded-md bg-base border border-border pl-9 pr-3 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            autoComplete="off"
           />
         </div>
+
+        {/* Autocomplete Dropdown Panel */}
+        {searchOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1.5 max-h-[420px] overflow-y-auto no-scrollbar bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-2 space-y-3">
+            {searchLoading ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-ink-soft text-xs font-medium font-sans">
+                <svg className="animate-spin h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Searching Database...
+              </div>
+            ) : totalResultsCount === 0 ? (
+              <div className="text-center py-6 text-ink-soft/80 text-xs font-medium font-sans">
+                No matching results found for <span className="font-bold text-ink">"{q}"</span>
+              </div>
+            ) : (
+              <div className="space-y-3 font-sans text-left">
+                {/* 1. Job Requests */}
+                {searchResults.jobRequests.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-bold text-sky-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+                      Job Requests
+                    </div>
+                    <div className="space-y-0.5">
+                      {searchResults.jobRequests.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            navigate(`/job-requests/${encodeURIComponent(item.id)}`);
+                            setSearchOpen(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="text-xs font-bold text-ink truncate">
+                              {item.request_code}
+                            </div>
+                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                              {item.equipment_name || 'No equipment specified'}
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 leading-none">
+                            {item.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Job Cards */}
+                {searchResults.jobCards.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-bold text-violet-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500"></span>
+                      Job Cards
+                    </div>
+                    <div className="space-y-0.5">
+                      {searchResults.jobCards.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            navigate(`/job-cards/${encodeURIComponent(item.id)}`);
+                            setSearchOpen(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="text-xs font-bold text-ink truncate">
+                              {item.section_job_no || 'Job Card Details'}
+                            </div>
+                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                              {item.equipment_name || 'No equipment specified'}
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-violet-50 text-violet-700 leading-none">
+                            {item.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Equipment */}
+                {searchResults.equipment.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                      Equipment Instruments
+                    </div>
+                    <div className="space-y-0.5">
+                      {searchResults.equipment.map((item) => (
+                        <div
+                          key={item.id || item.equipment_id}
+                          onClick={() => {
+                            navigate(`/equipment/${encodeURIComponent(item.id || item.equipment_id)}`);
+                            setSearchOpen(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="text-xs font-bold text-ink truncate">
+                              {item.equipment_code || item.equipment_id}
+                            </div>
+                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                              {item.name || item.equipment_name}
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 leading-none">
+                            {item.status || 'Active'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Vendors */}
+                {searchResults.vendors.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                      Vendors
+                    </div>
+                    <div className="space-y-0.5">
+                      {searchResults.vendors.map((item) => (
+                        <div
+                          key={item.vendor_id}
+                          onClick={() => {
+                            navigate(`/inquiry?tab=vendors&q=${encodeURIComponent(item.vendor_name)}`);
+                            setSearchOpen(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="text-xs font-bold text-ink truncate">
+                              {item.vendor_name}
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 leading-none">
+                            {item.vendor_type}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Products */}
+                {searchResults.products.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="px-2 text-[10px] font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500"></span>
+                      Products
+                    </div>
+                    <div className="space-y-0.5">
+                      {searchResults.products.map((item) => (
+                        <div
+                          key={item.product_id}
+                          onClick={() => {
+                            navigate(`/inquiry?tab=products&q=${encodeURIComponent(item.product_name)}`);
+                            setSearchOpen(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                        >
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="text-xs font-bold text-ink truncate">
+                              {item.product_name}
+                            </div>
+                            {item.make && (
+                              <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                                Make: {item.make}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </form>
 
       {/* ── Right cluster ───────────────────────────────────────── */}
