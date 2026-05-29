@@ -145,12 +145,15 @@ export function AuthProvider({ children }) {
     const base = r.data.data.user;
     setUser(base);
     // Enrich with display_name / designation / email from cmms_emp_mst.
+    let enriched = base;
     try {
       const me = await api.get('/me');
-      setUser({ ...base, ...me.data.data });
+      enriched = { ...base, ...me.data.data };
+      setUser(enriched);
     } catch {
       // ignore — base user stays
     }
+    return enriched;
   }, []);
 
   const logout = useCallback(async () => {
