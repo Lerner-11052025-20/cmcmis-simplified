@@ -44,6 +44,7 @@ const documentsRouter     = require('./documents/documents.routes');
 const maintenanceRouter   = require('./maintenance/maintenance.routes');
 const sparesRouter        = require('./spares/spares.routes');
 const calibrationRouter   = require('./calibration/calibration.routes');
+const repairRouter        = require('./repair/repair.routes');
 
 const router = express.Router();
 
@@ -120,6 +121,7 @@ router.use('/:id/documents',         documentsRouter);
 router.use('/:id/maintenance-rows',  maintenanceRouter);
 router.use('/:id/spares-rows',       sparesRouter);
 router.use('/:id/calibration',       calibrationRouter);
+router.use('/:id/repair',            repairRouter);
 
 // ── PDF stub — ships in Phase 11 ─────────────────────────────────────
 router.get('/:id/pdf',

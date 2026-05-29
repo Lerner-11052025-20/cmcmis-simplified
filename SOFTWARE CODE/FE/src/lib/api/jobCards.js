@@ -257,6 +257,32 @@ export async function deleteCalibrationAdjustmentRow(id, rowId) {
   return r.data.data;
 }
 
+// Dedicated repair workflow multi-row CRUD.
+export async function fetchRepairEquipmentRows(id, signal) {
+  const r = await api.get(`/job-cards/${encodeURIComponent(id)}/repair/equipment-rows`, { signal });
+  return r.data.data.items;
+}
+
+export async function addRepairEquipmentRow(id, body = {}) {
+  const r = await api.post(`/job-cards/${encodeURIComponent(id)}/repair/equipment-rows`, body);
+  return r.data.data;
+}
+
+export async function patchRepairEquipmentRow(id, rowId, body) {
+  const r = await api.patch(
+    `/job-cards/${encodeURIComponent(id)}/repair/equipment-rows/${encodeURIComponent(rowId)}`,
+    body,
+  );
+  return r.data.data;
+}
+
+export async function deleteRepairEquipmentRow(id, rowId) {
+  const r = await api.delete(
+    `/job-cards/${encodeURIComponent(id)}/repair/equipment-rows/${encodeURIComponent(rowId)}`,
+  );
+  return r.data.data;
+}
+
 /**
  * Downloads the job cards list as a PDF for a specified ID range.
  * Uses axios responseType: 'blob' to properly handle binary PDF stream.

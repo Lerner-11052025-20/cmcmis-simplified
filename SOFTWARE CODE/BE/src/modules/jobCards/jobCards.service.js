@@ -151,7 +151,7 @@ function shapeDetail(row) {
     job_end_date:           iso(row.job_end_date),
     created_at:             iso(row.created_at),
     updated_at:             iso(row.updated_at),
-    /* Phase 9 — all 53 columns as canonical snake_case */
+    /* Phase 9+ workflow columns as canonical snake_case */
     plug_in_accessories:           row.plug_in_accessories,
     equipment_submitted_date:      iso(row.equipment_submitted_date),
     submitted_by:                  row.submitted_by,
@@ -208,6 +208,31 @@ function shapeDetail(row) {
     cal_incharge_employee_id:       row.cal_incharge_employee_id,
     cal_incharge_name:              row.cal_incharge_name,
     cal_incharge_date:              ymd(row.cal_incharge_date),
+    /* Dedicated repair workflow */
+    repair_accessory_selected:       row.repair_accessory_selected,
+    repair_job_received_date:        ymd(row.repair_job_received_date),
+    repair_job_start_planned_date:   ymd(row.repair_job_start_planned_date),
+    repair_maintenance_type:         row.repair_maintenance_type,
+    repair_faulty_section:           row.repair_faulty_section,
+    repair_fault_category:           row.repair_fault_category,
+    repair_attended_by_employee_id:  row.repair_attended_by_employee_id,
+    repair_attended_by_name:         row.repair_attended_by_name,
+    repair_fault_description:        row.repair_fault_description,
+    repair_action_taken_description: row.repair_action_taken_description,
+    repair_sent_to_cal_lab_on:       ymd(row.repair_sent_to_cal_lab_on),
+    repair_equipment_received_from_cal_lab: ymd(row.repair_equipment_received_from_cal_lab),
+    repair_job_complete_date:        ymd(row.repair_job_complete_date),
+    repair_status:                   row.repair_status,
+    repair_not_repairable_reason:    row.repair_not_repairable_reason,
+    repair_remarks:                  row.repair_remarks,
+    repair_sent_to_store_on:         ymd(row.repair_sent_to_store_on),
+    repair_store_ref_number:         row.repair_store_ref_number,
+    repair_transport_charge:         row.repair_transport_charge == null ? null : Number(row.repair_transport_charge),
+    repair_invoice_cleared_on:       ymd(row.repair_invoice_cleared_on),
+    repair_fault_analysis_description: row.repair_fault_analysis_description,
+    repair_fault_analysis_action_taken: row.repair_fault_analysis_action_taken,
+    repair_fault_analysis_sections:  row.repair_fault_analysis_sections,
+    repair_fault_analysis_category:  row.repair_fault_analysis_category,
     /* completion */
     completion_summary:            row.completion_summary,
     actual_completion_date:        ymd(row.actual_completion_date),
@@ -478,28 +503,43 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
     // concurrent task-completion / doc-upload doesn't open a TOCTOU race.
     const g = await repo.gatherCompletionGates(conn, sectionJobNo);
     const failed = [];
-    // Gate 1: all tasks completed (or no tasks at all).
-    if (g.tasks_total > 0 && g.tasks_pending > 0) {
-      failed.push({ gate: 'tasks', message: `${g.tasks_pending} of ${g.tasks_total} tasks still pending` });
-    }
     const isCalibration = (jc.workflow_type === 'CALIBRATION_STANDARD'
                        || jc.workflow_type === 'CALIBRATION_PRECISION'
                        || jc.work_type === 'CALIBRATION');
+    const isRepair = jc.work_type === 'REPAIR'
+                  || jc.workflow_type === 'REPAIR_STANDARD'
+                  || jc.workflow_type === 'REPAIR_VENDOR'
+                  || jc.workflow_type === 'REPAIR_INHOUSE';
+    // Gate 1: all tasks completed (or no tasks at all). Dedicated repair
+    // workflow has no Task Checklist tab, so repair cards skip this gate.
+    if (!isRepair && g.tasks_total > 0 && g.tasks_pending > 0) {
+      failed.push({ gate: 'tasks', message: `${g.tasks_pending} of ${g.tasks_total} tasks still pending` });
+    }
     const calibrationObservationOk = isCalibration && (
       g.has_calibration_status
       || g.calibration_adjustment_count > 0
       || g.cal_remarks_length > 0
     );
-    if (!calibrationObservationOk && g.observations_count === 0 && g.observations_text_length < 20) {
+    const repairObservationOk = isRepair && (
+      g.has_repair_status
+      || g.repair_fault_description_length >= 20
+      || g.repair_action_taken_length >= 20
+      || g.repair_fault_analysis_length >= 20
+      || g.repair_fault_analysis_action_length >= 20
+    );
+    if (!calibrationObservationOk && !repairObservationOk && g.observations_count === 0 && g.observations_text_length < 20) {
       failed.push({
         gate: 'observations',
         message: isCalibration
           ? 'Fill Calibration Status, Adjustment Details, or Remarks before job closing'
+          : isRepair
+            ? 'Fill Repair Status, Maintenance Details, or Fault Analysis before job closing'
           : 'Record at least one observation row OR write >=20 chars in the observations textarea',
       });
     }
-    // Gate 3: at least one active supporting document.
-    if (g.active_doc_count === 0) {
+    // Gate 3: at least one active supporting document. Dedicated repair
+    // workflow has no Documents tab, so repair cards skip this gate.
+    if (!isRepair && g.active_doc_count === 0) {
       failed.push({ gate: 'required_doc', message: 'At least one document must be uploaded before job closing' });
     }
 

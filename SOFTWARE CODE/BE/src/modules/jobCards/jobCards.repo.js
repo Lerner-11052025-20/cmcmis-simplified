@@ -329,7 +329,7 @@ async function writeAuditLog(conn, { actorEmployeeId, actorRoleCode, action, sec
 //                          PHASE 9  ·  DETAIL + TRANSITIONS + TABS
 // ============================================================================
 
-// All 53 Phase 9 columns that the Detail page reads / the PATCH endpoint
+// All dedicated workflow columns that the Detail page reads / PATCH writes.
 // writes. Centralised here so the SELECT and the UPDATE-builder agree.
 // Order matters for SELECT-AS aliases only — write-builder uses the map below.
 const PHASE9_TAB_COLUMNS = [
@@ -366,6 +366,19 @@ const PHASE9_TAB_COLUMNS = [
   'cal_sent_to_lab_date', 'cal_received_from_lab_date',
   'cal_adjustment_status', 'cal_limited_reason',
   'cal_remarks', 'cal_incharge_employee_id', 'cal_incharge_date',
+  // Dedicated repair workflow (TME/FPE repair)
+  'repair_accessory_selected',
+  'repair_job_received_date', 'repair_job_start_planned_date',
+  'repair_maintenance_type', 'repair_faulty_section', 'repair_fault_category',
+  'repair_attended_by_employee_id',
+  'repair_fault_description', 'repair_action_taken_description',
+  'repair_sent_to_cal_lab_on', 'repair_equipment_received_from_cal_lab',
+  'repair_job_complete_date', 'repair_status', 'repair_not_repairable_reason',
+  'repair_remarks',
+  'repair_sent_to_store_on', 'repair_store_ref_number',
+  'repair_transport_charge', 'repair_invoice_cleared_on',
+  'repair_fault_analysis_description', 'repair_fault_analysis_action_taken',
+  'repair_fault_analysis_sections', 'repair_fault_analysis_category',
 ];
 
 // ───────────────────────────────────────────────────────────────────────
@@ -433,6 +446,18 @@ async function findByIdWithDetails(sectionJobNo) {
        jc.cal_sent_to_lab_date, jc.cal_received_from_lab_date,
        jc.cal_adjustment_status, jc.cal_limited_reason,
        jc.cal_remarks, jc.cal_incharge_employee_id, jc.cal_incharge_date,
+       jc.repair_accessory_selected,
+       jc.repair_job_received_date, jc.repair_job_start_planned_date,
+       jc.repair_maintenance_type, jc.repair_faulty_section, jc.repair_fault_category,
+       jc.repair_attended_by_employee_id,
+       jc.repair_fault_description, jc.repair_action_taken_description,
+       jc.repair_sent_to_cal_lab_on, jc.repair_equipment_received_from_cal_lab,
+       jc.repair_job_complete_date, jc.repair_status, jc.repair_not_repairable_reason,
+       jc.repair_remarks,
+       jc.repair_sent_to_store_on, jc.repair_store_ref_number,
+       jc.repair_transport_charge, jc.repair_invoice_cleared_on,
+       jc.repair_fault_analysis_description, jc.repair_fault_analysis_action_taken,
+       jc.repair_fault_analysis_sections, jc.repair_fault_analysis_category,
        jc.completion_summary, jc.actual_completion_date, jc.total_hours_spent,
        jc.marked_complete_by_employee_id, jc.marked_complete_at,
        jc.reviewed_by, jc.review_date, jc.review_comments,
@@ -458,7 +483,8 @@ async function findByIdWithDetails(sectionJobNo) {
        emp_vc.EMM_NAME                  AS verified_closed_by_name,
        emp_ro.EMM_NAME                  AS last_reopened_by_name,
        emp_cal.EMM_NAME                 AS calibrated_by_name,
-       emp_ci.EMM_NAME                  AS cal_incharge_name
+       emp_ci.EMM_NAME                  AS cal_incharge_name,
+       emp_rep_att.EMM_NAME             AS repair_attended_by_name
      FROM cmms_jobcard_mst jc
      LEFT JOIN cmms_eqip_mst       e        ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
      LEFT JOIN cmms_emp_mst        emp_eng  ON emp_eng.EMM_ID = jc.JM_ASSIGNED_ENGINEER
@@ -469,6 +495,7 @@ async function findByIdWithDetails(sectionJobNo) {
     LEFT JOIN cmms_emp_mst        emp_ro   ON emp_ro.EMM_ID = jc.last_reopened_by_employee_id
     LEFT JOIN cmms_emp_mst        emp_cal  ON emp_cal.EMM_ID = jc.calibrated_by_employee_id
     LEFT JOIN cmms_emp_mst        emp_ci   ON emp_ci.EMM_ID = jc.cal_incharge_employee_id
+    LEFT JOIN cmms_emp_mst        emp_rep_att ON emp_rep_att.EMM_ID = jc.repair_attended_by_employee_id
      WHERE jc.JM_SectionJobNo = ?
      LIMIT 1`,
     [sectionJobNo],
@@ -735,7 +762,12 @@ async function gatherCompletionGates(conn, sectionJobNo) {
     `SELECT
             CHAR_LENGTH(COALESCE(observations_text, '')) AS len,
             CHAR_LENGTH(COALESCE(cal_remarks, '')) AS cal_remarks_len,
-            CASE WHEN COALESCE(cal_calibration_status, '') <> '' THEN 1 ELSE 0 END AS has_cal_status
+            CASE WHEN COALESCE(cal_calibration_status, '') <> '' THEN 1 ELSE 0 END AS has_cal_status,
+            CHAR_LENGTH(COALESCE(repair_fault_description, '')) AS repair_fault_len,
+            CHAR_LENGTH(COALESCE(repair_action_taken_description, '')) AS repair_action_len,
+            CHAR_LENGTH(COALESCE(repair_fault_analysis_description, '')) AS repair_analysis_len,
+            CHAR_LENGTH(COALESCE(repair_fault_analysis_action_taken, '')) AS repair_analysis_action_len,
+            CASE WHEN COALESCE(repair_status, '') <> '' THEN 1 ELSE 0 END AS has_repair_status
        FROM cmms_jobcard_mst WHERE JM_SectionJobNo = ?`,
     [sectionJobNo],
   );
@@ -760,6 +792,11 @@ async function gatherCompletionGates(conn, sectionJobNo) {
     cal_remarks_length: Number(obsText.cal_remarks_len || 0),
     has_calibration_status: Number(obsText.has_cal_status || 0) === 1,
     calibration_adjustment_count: Number(calAdjustments.n || 0),
+    repair_fault_description_length: Number(obsText.repair_fault_len || 0),
+    repair_action_taken_length: Number(obsText.repair_action_len || 0),
+    repair_fault_analysis_length: Number(obsText.repair_analysis_len || 0),
+    repair_fault_analysis_action_length: Number(obsText.repair_analysis_action_len || 0),
+    has_repair_status: Number(obsText.has_repair_status || 0) === 1,
     active_doc_count: Number(docs.n || 0),
     required_doc_count: Number(docs.n || 0),
   };

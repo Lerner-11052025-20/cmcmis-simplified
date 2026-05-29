@@ -30,7 +30,7 @@ import { invalidateJobCardDocuments } from '../../lib/hooks/useJobCardDocuments.
 import { startWorkJobCard } from '../../lib/api/jobCards.js';
 
 import { DetailHeader } from './components/DetailHeader.jsx';
-import { DetailTabBar, CALIBRATION_TABS } from './components/DetailTabBar.jsx';
+import { DetailTabBar, CALIBRATION_TABS, REPAIR_TABS } from './components/DetailTabBar.jsx';
 
 // Tab components — all collocated in this folder.
 import {
@@ -53,6 +53,15 @@ import {
   CalibrationRemarksTab,
   CalibrationStatusTab,
 } from './tabs/CalibrationWorkflowTabs.jsx';
+import {
+  RepairContractWarrantyTab,
+  RepairEquipmentUsedTab,
+  RepairFaultAnalysisTab,
+  RepairJobCardDetailsTab,
+  RepairMaintenanceDetailsTab,
+  RepairPlugInAccessoriesTab,
+  RepairSubmittedReceivedTab,
+} from './tabs/RepairWorkflowTabs.jsx';
 import { ReopenModal }      from './modals/ReopenModal.jsx';
 
 const LIC_SA_ROLES = new Set([
@@ -81,6 +90,10 @@ export function JobCardDetail() {
   const isCalibrationWorkflow = jc?.work_type === 'CALIBRATION'
     || jc?.workflow_type === 'CALIBRATION_STANDARD'
     || jc?.workflow_type === 'CALIBRATION_PRECISION';
+  const isRepairWorkflow = jc?.work_type === 'REPAIR'
+    || jc?.workflow_type === 'REPAIR_STANDARD'
+    || jc?.workflow_type === 'REPAIR_VENDOR'
+    || jc?.workflow_type === 'REPAIR_INHOUSE';
 
   // Write access summary — used by every tab + the action bar.
   const canWrite = !isLegacy && (isOwnEngineer || isLicSa)
@@ -115,6 +128,22 @@ export function JobCardDetail() {
         'job-closing',
       ]);
     }
+    if (isRepairWorkflow) {
+      const keys = new Set([
+        'repair-plug-in',
+        'repair-submitted-recv',
+        'repair-job-card-details',
+        'repair-maintenance',
+        'repair-equipment-used',
+        'awaiting',
+        'spares',
+        'repair-contract',
+        'repair-fault-analysis',
+      ]);
+      if (canMarkComplete) keys.add('mark-complete');
+      if (canVerifyClose) keys.add('closure');
+      return keys;
+    }
     const keys = new Set([
       'plug-in', 'submitted-recv', 'job-card-details',
       'maintenance', 'equipments-used', 'awaiting',
@@ -124,11 +153,11 @@ export function JobCardDetail() {
     if (canMarkComplete) keys.add('mark-complete');
     if (canVerifyClose) keys.add('closure');
     return keys;
-  }, [canMarkComplete, canVerifyClose, isCalibrationWorkflow]);
+  }, [canMarkComplete, canVerifyClose, isCalibrationWorkflow, isRepairWorkflow]);
 
   // Active tab from URL (?tab=...) or default to first allowed.
   const requestedTab = searchParams.get('tab');
-  const defaultTab = isCalibrationWorkflow ? 'tasks' : 'plug-in';
+  const defaultTab = isCalibrationWorkflow ? 'tasks' : (isRepairWorkflow ? 'repair-plug-in' : 'plug-in');
   const activeTab = visibleKeys.has(requestedTab) ? requestedTab : defaultTab;
 
   function changeTab(key) {
@@ -236,6 +265,13 @@ export function JobCardDetail() {
     case 'cal-adjustments': body = <CalibrationAdjustmentsTab {...tabProps} />; break;
     case 'cal-remarks':     body = <CalibrationRemarksTab {...tabProps} />; break;
     case 'job-closing':     body = <CalibrationJobClosingTab {...tabProps} />; break;
+    case 'repair-plug-in': body = <RepairPlugInAccessoriesTab {...tabProps} />; break;
+    case 'repair-submitted-recv': body = <RepairSubmittedReceivedTab {...tabProps} />; break;
+    case 'repair-job-card-details': body = <RepairJobCardDetailsTab {...tabProps} />; break;
+    case 'repair-maintenance': body = <RepairMaintenanceDetailsTab {...tabProps} />; break;
+    case 'repair-equipment-used': body = <RepairEquipmentUsedTab {...tabProps} />; break;
+    case 'repair-contract': body = <RepairContractWarrantyTab {...tabProps} />; break;
+    case 'repair-fault-analysis': body = <RepairFaultAnalysisTab {...tabProps} />; break;
     default:                body = <PlugInAccessoriesTab {...tabProps} />;
   }
 
@@ -272,7 +308,7 @@ export function JobCardDetail() {
         </div>
       ) : null}
 
-      {!isCalibrationWorkflow ? (
+      {!isCalibrationWorkflow && !isRepairWorkflow ? (
         <DetailTabBar
           active={activeTab}
           onChange={changeTab}
@@ -309,14 +345,14 @@ export function JobCardDetail() {
       ) : null}
 
       {/* Active tab body */}
-      {isCalibrationWorkflow ? (
+      {isCalibrationWorkflow || isRepairWorkflow ? (
         <div className="bg-white border border-border rounded-lg overflow-hidden">
           <div className="px-3 pt-3">
             <DetailTabBar
               active={activeTab}
               onChange={changeTab}
               visibleKeys={visibleKeys}
-              tabs={CALIBRATION_TABS}
+              tabs={isCalibrationWorkflow ? CALIBRATION_TABS : REPAIR_TABS}
             />
           </div>
           <div className="p-4">

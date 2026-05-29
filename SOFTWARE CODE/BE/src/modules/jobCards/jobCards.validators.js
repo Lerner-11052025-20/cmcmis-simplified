@@ -137,6 +137,30 @@ const patchTabSchema = z.object({
   cal_remarks:                    z.string().max(8000).optional().or(z.literal('')),
   cal_incharge_employee_id:       shortTextOrEmpty(7),
   cal_incharge_date:              isoDateOrEmpty,
+  // Dedicated repair workflow (TME/FPE repair only)
+  repair_accessory_selected:       shortTextOrEmpty(120),
+  repair_job_received_date:        isoDateOrEmpty,
+  repair_job_start_planned_date:   isoDateOrEmpty,
+  repair_maintenance_type:         shortTextOrEmpty(120),
+  repair_faulty_section:           shortTextOrEmpty(120),
+  repair_fault_category:           shortTextOrEmpty(120),
+  repair_attended_by_employee_id:  shortTextOrEmpty(7),
+  repair_fault_description:        z.string().max(8000).optional().or(z.literal('')),
+  repair_action_taken_description: z.string().max(8000).optional().or(z.literal('')),
+  repair_sent_to_cal_lab_on:       isoDateOrEmpty,
+  repair_equipment_received_from_cal_lab: isoDateOrEmpty,
+  repair_job_complete_date:        isoDateOrEmpty,
+  repair_status:                   shortTextOrEmpty(80),
+  repair_not_repairable_reason:    shortTextOrEmpty(255),
+  repair_remarks:                  z.string().max(8000).optional().or(z.literal('')),
+  repair_sent_to_store_on:         isoDateOrEmpty,
+  repair_store_ref_number:         shortTextOrEmpty(120),
+  repair_transport_charge:         moneyOrEmpty,
+  repair_invoice_cleared_on:       isoDateOrEmpty,
+  repair_fault_analysis_description: z.string().max(8000).optional().or(z.literal('')),
+  repair_fault_analysis_action_taken: z.string().max(8000).optional().or(z.literal('')),
+  repair_fault_analysis_sections:  z.string().max(8000).optional().or(z.literal('')),
+  repair_fault_analysis_category:  shortTextOrEmpty(120),
 }).strict();
 
 // ============================================================================
@@ -243,6 +267,11 @@ const calibrationAdjustmentRowSchema = z.object({
   observation_after:     z.string().max(8000).optional().or(z.literal('')),
 }).strict();
 
+const repairEquipmentRowSchema = z.object({
+  equipment_id:   z.string().max(100).optional().or(z.literal('')),
+  equipment_name: z.string().max(255).optional().or(z.literal('')),
+}).strict();
+
 module.exports = {
   // Phase 6 Slice 1:
   listQuerySchema,
@@ -262,4 +291,5 @@ module.exports = {
   observationRowSchema,
   calibrationEquipmentRowSchema,
   calibrationAdjustmentRowSchema,
+  repairEquipmentRowSchema,
 };

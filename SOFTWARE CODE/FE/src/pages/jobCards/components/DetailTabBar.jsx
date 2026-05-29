@@ -34,6 +34,20 @@ export const CALIBRATION_TABS = [
   { key: 'job-closing', label: 'Job Closing' },
 ];
 
+export const REPAIR_TABS = [
+  { key: 'repair-plug-in', label: 'Plug In / Accessories' },
+  { key: 'repair-submitted-recv', label: 'Submitted & Received' },
+  { key: 'repair-job-card-details', label: 'Job Card Details' },
+  { key: 'repair-maintenance', label: 'Maintenance Details' },
+  { key: 'repair-equipment-used', label: 'Equipments Used Details' },
+  { key: 'awaiting', label: 'Awaiting Information' },
+  { key: 'spares', label: 'Spares Used Details' },
+  { key: 'repair-contract', label: 'Contract / Warranty' },
+  { key: 'repair-fault-analysis', label: 'Fault Analysis' },
+  { key: 'mark-complete', label: 'Mark as Complete' },
+  { key: 'closure', label: 'Closure' },
+];
+
 /**
  * @param {Object} props
  * @param {string} props.active

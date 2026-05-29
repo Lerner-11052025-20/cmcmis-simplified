@@ -72,6 +72,11 @@ function GateRow({ label, ok, hint, actionLabel, onAction }) {
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
 export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
+  const isRepair = jc.work_type === 'REPAIR'
+    || jc.workflow_type === 'REPAIR_STANDARD'
+    || jc.workflow_type === 'REPAIR_VENDOR'
+    || jc.workflow_type === 'REPAIR_INHOUSE';
+
   // Live gate computation. The `tasks` and `docs` hooks each manage
   // their own cache; the orchestrator's invalidateAll() clears them
   // alongside the parent JC detail, so all three reflect the same
@@ -124,7 +129,7 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
     ? `${requiredDocs.length} required doc${requiredDocs.length === 1 ? '' : 's'} uploaded`
     : 'upload a doc with type = REQUIRED, INSPECTION_REPORT, or CALIBRATION_CERT';
 
-  const allGatesOk = tasksOk && obsOk && calCertOk && requiredDocOk;
+  const allGatesOk = isRepair || (tasksOk && obsOk && calCertOk && requiredDocOk);
 
   const {
     register, handleSubmit, formState: { errors, isSubmitting },
@@ -163,13 +168,16 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
       <div>
         <h2 className="text-base font-semibold text-ink">Mark Job Card as Complete</h2>
         <p className="text-xs text-ink-soft mt-0.5">
-          When the four pre-completion gates pass and the completion summary is filled, the LIC can then verify-close this card.
+          {isRepair
+            ? 'When the completion summary is filled, the LIC can then verify-close this repair card.'
+            : 'When the four pre-completion gates pass and the completion summary is filled, the LIC can then verify-close this card.'}
         </p>
       </div>
 
       {/* Pre-completion verification panel.
           Each row shows: status + label + current/required hint +
           (if not met) a "Go to <tab>" link so the user can fix it quickly. */}
+      {!isRepair ? (
       <div className="rounded-lg border border-border bg-base p-4 space-y-2">
         <div className="text-sm font-semibold text-ink mb-2">Pre-Completion Verification</div>
         <GateRow
@@ -203,8 +211,9 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
           onAction={() => goToTab('documents')}
         />
       </div>
+      ) : null}
 
-      {!allGatesOk ? (
+      {!isRepair && !allGatesOk ? (
         <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 flex items-start gap-2 text-xs">
           <AlertTriangle size={14} strokeWidth={1.75} className="text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
           <div className="text-ink">
