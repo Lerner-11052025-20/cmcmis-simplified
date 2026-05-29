@@ -63,47 +63,50 @@ export function DetailHeader({ jr }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Back-link */}
-      <Link
-        to="/job-requests"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-soft hover:text-ink"
-      >
-        <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" />
-        Back to Job Requests
-      </Link>
+      <div>
+        <Link
+          to="/job-requests"
+          className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all duration-200 group"
+        >
+          <ArrowLeft size={13} strokeWidth={2.5} aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+          Back to Job Requests
+        </Link>
+      </div>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="bg-white rounded-2xl border border-slate-200/50 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_2px_8px_rgba(15,23,42,0.015)] border-l-[6px] border-l-indigo-500 hover:border-slate-200/80 transition-all duration-300">
         {/* Left: code + meta */}
-        <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold text-ink">
+        <div className="space-y-3">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 font-sans">
             {jr.request_code}
           </h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-ink-soft">
-            <span className="font-medium text-ink">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+            <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/50 font-extrabold">
               {JOB_TYPE_LABEL[jr.job_type] || jr.job_type || '—'}
             </span>
-            <span aria-hidden="true">·</span>
-            <span>Category: <span className="font-medium text-ink">{jr.job_category || '—'}</span></span>
-            <span aria-hidden="true">·</span>
-            <span>Submitted: <span className="font-medium text-ink">{fmt(jr.submitted_at || jr.created_at)}</span></span>
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+            <span>Category: <span className="text-slate-600 font-bold">{jr.job_category || '—'}</span></span>
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+            <span>Submitted: <span className="text-slate-600 font-bold">{fmt(jr.submitted_at || jr.created_at)}</span></span>
             {jr.updated_at && jr.updated_at !== jr.created_at ? (
               <>
-                <span aria-hidden="true">·</span>
-                <span>Updated: <span className="font-medium text-ink">{fmt(jr.updated_at)}</span></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                <span>Updated: <span className="text-slate-600 font-bold">{fmt(jr.updated_at)}</span></span>
               </>
             ) : null}
           </div>
         </div>
 
         {/* Right: status pill + Download button (Phase 11) */}
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-row md:flex-col items-center md:items-end gap-3 shrink-0">
           <StatusPill status={jr.status} />
           {canDownload ? (
             <Button
               variant="secondary"
               size="sm"
               disabled={busy}
+              className="text-slate-600 border-slate-200 hover:bg-slate-50 shadow-sm"
               title={`Download Job Request PDF (${jr.request_code})`}
               onClick={onDownload}
             >

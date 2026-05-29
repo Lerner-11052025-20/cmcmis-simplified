@@ -107,10 +107,13 @@ export function JobRequestDetail() {
   }
 
   return (
-    <div className="space-y-5 pb-6">
+    <div className="space-y-6 pb-8">
       <DetailHeader jr={jr} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Status Timeline — directly below header */}
+      <DetailTimelineCard jrId={jrNo} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DetailEquipmentCard equipment={jr.equipment} />
         <DetailSubmissionCard
           submitter={jr.submitter}
@@ -120,20 +123,17 @@ export function JobRequestDetail() {
         />
       </div>
 
-      <DetailComplaintCard
-        complaint_description={jr.complaint_description}
-        remarks={jr.remarks}
-        accessories={jr.accessories}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Linked Job Card + Accessories side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {jr.linked_job_card ? (
           <DetailLinkedJobCardCard
             linkedJobCard={jr.linked_job_card}
             assignedEngineer={jr.assigned_engineer}
           />
         ) : <div />}
-        <DetailTimelineCard jrId={jrNo} />
+        <DetailComplaintCard
+          accessories={jr.accessories}
+        />
       </div>
 
       <DetailActionBar

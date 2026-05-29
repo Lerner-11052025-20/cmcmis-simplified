@@ -14,6 +14,7 @@ export function DetailEquipmentCard({ equipment }) {
     <SectionCard
       icon={<Wrench size={16} strokeWidth={1.75} aria-hidden="true" />}
       title="Equipment"
+      accent="indigo"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <DetailRow label="Name"     value={equipment.name} />

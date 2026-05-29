@@ -13,6 +13,7 @@ export function DetailSubmissionCard({ submitter, division, project_name, subsys
     <SectionCard
       icon={<User size={16} strokeWidth={1.75} aria-hidden="true" />}
       title="Submission & Division"
+      accent="emerald"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <DetailRow label="Submitted by"
