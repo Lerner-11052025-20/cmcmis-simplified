@@ -100,15 +100,15 @@ export function DetailTimelineCard({ jrId }) {
                     <StatusPill status={h.to_status} />
 
                     {/* User + timestamp */}
-                    <div className="text-[10px] text-slate-400 font-sans leading-tight space-y-0.5">
-                      <div className="font-semibold text-slate-500 truncate max-w-[140px]">
+                    <div className="text-xs text-slate-500 font-sans leading-relaxed space-y-0.5">
+                      <div className="font-bold text-slate-700 truncate max-w-[140px]">
                         {h.transitioned_by?.name || h.transitioned_by?.employee_id || '—'}
                       </div>
                       {h.transitioned_by?.employee_id && (
-                        <div className="text-slate-400 text-[9px]">({h.transitioned_by.employee_id})</div>
+                        <div className="text-slate-400 text-[10px]">({h.transitioned_by.employee_id})</div>
                       )}
                       <div
-                        className="text-slate-400 text-[9px]"
+                        className="text-slate-400 text-[10px] font-medium"
                         title={absTime(h.transitioned_at)}
                       >
                         {relTime(h.transitioned_at)}
@@ -117,9 +117,9 @@ export function DetailTimelineCard({ jrId }) {
 
                     {/* Reason card */}
                     {h.reason ? (
-                      <div className="mt-1 text-[10px] text-slate-600 bg-slate-50/60 border border-slate-100 rounded-lg px-2.5 py-1.5 leading-relaxed font-sans text-left w-full max-w-[150px]">
-                        <span className="font-bold text-slate-400 uppercase text-[8px] tracking-wider block mb-0.5">Reason</span>
-                        <span className="text-slate-600 break-words">{h.reason}</span>
+                      <div className="mt-1.5 text-xs text-slate-700 bg-slate-50 border border-slate-150 rounded-xl px-3 py-2 leading-relaxed font-sans text-left w-full max-w-[155px]">
+                        <span className="font-extrabold text-slate-400 uppercase text-[9px] tracking-widest block mb-0.5">Reason</span>
+                        <span className="text-slate-700 break-words font-medium">{h.reason}</span>
                       </div>
                     ) : null}
                   </div>

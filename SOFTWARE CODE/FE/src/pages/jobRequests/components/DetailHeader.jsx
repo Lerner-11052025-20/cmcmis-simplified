@@ -81,18 +81,18 @@ export function DetailHeader({ jr }) {
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 font-sans">
             {jr.request_code}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
-            <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/50 font-extrabold">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold text-slate-500 font-sans">
+            <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/50 font-extrabold uppercase text-[10px] tracking-wider">
               {JOB_TYPE_LABEL[jr.job_type] || jr.job_type || '—'}
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-            <span>Category: <span className="text-slate-600 font-bold">{jr.job_category || '—'}</span></span>
+            <span>Category: <span className="text-slate-800 font-bold">{jr.job_category || '—'}</span></span>
             <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-            <span>Submitted: <span className="text-slate-600 font-bold">{fmt(jr.submitted_at || jr.created_at)}</span></span>
+            <span>Submitted: <span className="text-slate-800 font-bold">{fmt(jr.submitted_at || jr.created_at)}</span></span>
             {jr.updated_at && jr.updated_at !== jr.created_at ? (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-                <span>Updated: <span className="text-slate-600 font-bold">{fmt(jr.updated_at)}</span></span>
+                <span>Updated: <span className="text-slate-800 font-bold">{fmt(jr.updated_at)}</span></span>
               </>
             ) : null}
           </div>
