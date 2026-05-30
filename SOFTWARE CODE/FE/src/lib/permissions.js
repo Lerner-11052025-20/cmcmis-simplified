@@ -62,7 +62,6 @@ import {
 /** @type {NavItem[]} */
 export const ALL_NAV_ITEMS = [
   { label: 'Dashboard',    to: '/dashboard',    icon: LayoutGrid,     requires: 'dashboard:view' },
-  { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
   { label: 'Job Requests', to: '/job-requests', icon: FileText,       requires: 'job_request:read-own' },
   // Phase 7 Slice 2 — Conversion is the LIC + SA workspace where pending
   // requests get turned into Job Cards. Gated on the approve permission,
@@ -92,6 +91,7 @@ export const ALL_NAV_ITEMS = [
   // (mig 006) is left in place for any historical reference but is no
   // longer consulted by the FE.
   { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
+  { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
 ];
 
 const NORMAL_USER_NAV_LABELS = new Set([

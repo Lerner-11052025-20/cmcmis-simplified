@@ -59,7 +59,7 @@ const GROUPS_META = {
  */
 function getGroupForItem(item) {
   const path = item.to;
-  if (path === '/dashboard' || path === '/profile' || path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) {
+  if (path === '/dashboard' || path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) {
     return 'core';
   }
   if (path.startsWith('/equipment') || path === '/schedule' || path === '/inquiry' || path === '/procurement') {
@@ -68,7 +68,7 @@ function getGroupForItem(item) {
   if (path === '/analytics' || path === '/reports') {
     return 'reports';
   }
-  if (path.startsWith('/admin') || path === '/audit') {
+  if (path.startsWith('/admin') || path === '/audit' || path === '/profile') {
     return 'admin';
   }
   return 'core';
@@ -108,7 +108,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
   return (
     <aside
       className={clsx(
-        'shrink-0 min-h-screen flex flex-col bg-white border-r border-slate-100 shadow-sm z-30',
+        'shrink-0 min-h-screen flex flex-col bg-white border-r border-slate-200/80 shadow-sm z-30',
         'transition-[width] duration-300 ease-in-out',
         collapsed ? 'w-16' : 'w-64',
       )}
@@ -117,7 +117,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
       {/* ── Header: logo + technical branding ──────────────────── */}
       <div
         className={clsx(
-          'border-b border-slate-100 flex flex-col justify-center transition-all duration-300 shrink-0',
+          'border-b border-slate-200/80 flex flex-col justify-center transition-all duration-300 shrink-0',
           collapsed ? 'px-2 py-5 items-center' : 'px-5 py-5 gap-3.5',
         )}
       >
@@ -125,7 +125,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
           <div className="relative group">
             {/* Elegant telemetry glow ring around the logo block */}
             <div className="absolute -inset-0.5 bg-gradient-to-tr from-accent/20 to-accent/0 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-            <div className="relative h-11 w-11 rounded-lg p-1.5 bg-white border border-slate-100 shadow-sm flex items-center justify-center">
+            <div className="relative h-11 w-11 rounded-lg p-1.5 bg-white border border-slate-200/60 shadow-sm flex items-center justify-center">
               <Logo />
             </div>
             {/* Technical LED indicator badge */}
@@ -133,29 +133,16 @@ export function Sidebar({ collapsed = false, onToggle }) {
           </div>
 
           {!collapsed ? (
-            <div className="leading-tight">
-              <div className="text-sm font-bold text-ink tracking-tight">
+            <div className="leading-tight font-sans">
+              <div className="text-sm font-semibold text-ink tracking-tight">
                 CMCMIS
               </div>
-              <div className="text-[10px] font-bold text-ink-soft/75 uppercase tracking-wider mt-0.5">
+              <div className="text-[10px] font-medium text-ink-soft/75 uppercase tracking-wider mt-0.5">
                 ISRO SAC Portal
               </div>
             </div>
           ) : null}
         </div>
-
-        {/* Telemetry live status message */}
-        {!collapsed ? (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-100/50">
-            <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
-            </span>
-            <span className="text-[9px] font-bold text-ink-soft/70 tracking-widest uppercase leading-none">
-              TELEMETRY: SECURE
-            </span>
-          </div>
-        ) : null}
       </div>
 
       {/* ── Nav list grouped by module type ────────────────────── */}
@@ -183,15 +170,15 @@ export function Sidebar({ collapsed = false, onToggle }) {
                   <div className="px-4 pt-3 pb-1.5 flex items-center gap-2 select-none">
                     {/* Small technical highlight dot */}
                     <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
-                    <span className="text-[12px] font-bold text-slate-500 tracking-wide font-sans">
+                    <span className="text-[11px] font-semibold text-slate-500 tracking-wider uppercase font-sans">
                       {GROUPS_META[groupKey].title}
                     </span>
-                    {/* Fine light highlighter line */}
-                    <span className="flex-1 h-[1px] bg-slate-100/70 ml-1"></span>
+                    {/* Fine visible highlighter line */}
+                    <span className="flex-1 h-[1px] bg-slate-200 ml-2"></span>
                   </div>
                 ) : (
                   // Inline group divider in collapsed mode
-                  <div className="mx-2 my-2 border-t border-slate-100/80" />
+                  <div className="mx-2 my-2 border-t border-slate-200" />
                 )}
 
                 <div className="space-y-0.5">
@@ -253,13 +240,13 @@ export function Sidebar({ collapsed = false, onToggle }) {
 
       {/* ── User Profile Card: Emp ID & Email only ────────────── */}
       {!collapsed ? (
-        <div className="mt-auto border-t border-slate-100 p-3.5 shrink-0 transition-all duration-300 animate-fadeIn">
-          <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl leading-normal text-[11px] font-sans">
+        <div className="mt-auto border-t border-slate-200/80 p-3.5 shrink-0 transition-all duration-300 animate-fadeIn">
+          <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl leading-normal text-[11px] font-sans">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-[10px] font-bold text-ink-soft/60 uppercase tracking-wider">Emp ID</span>
+              <span className="text-[10px] font-semibold text-ink-soft/70 uppercase tracking-wider">Emp ID</span>
               <span className="text-sky-700 font-bold tracking-tight text-[11px]">{user.sub}</span>
             </div>
-            <div className="text-ink-soft/85 truncate mt-1 text-[10px]" title={user.email}>
+            <div className="text-ink-soft/80 truncate mt-1 text-[10px]" title={user.email}>
               {user.email || 'no-email@sac.isro.gov.in'}
             </div>
           </div>
@@ -269,7 +256,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
       {/* ── Footer: collapse / expand trigger ─────────────────── */}
       <div
         className={clsx(
-          'border-t border-slate-100 shrink-0',
+          'border-t border-slate-200/80 shrink-0',
           collapsed ? 'p-2 flex justify-center' : 'p-3',
         )}
       >
