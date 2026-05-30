@@ -73,7 +73,7 @@ function FieldTile({ icon: Icon, label, value, mono = false, onCopy }) {
             <Icon size={18} strokeWidth={2.1} />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+            <p className="text-xs font-semibold text-slate-400">{label}</p>
             <p className={`mt-1 truncate text-sm font-semibold text-slate-800 ${mono ? 'font-mono' : ''}`}>
               {value || '-'}
             </p>
@@ -97,14 +97,14 @@ function FieldTile({ icon: Icon, label, value, mono = false, onCopy }) {
 
 function StatTile({ label, value, icon: Icon, tone }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-          <p className="mt-1 text-xl font-bold tracking-tight text-slate-900">{value}</p>
+          <p className="text-xs font-semibold text-slate-400">{label}</p>
+          <p className="mt-0.5 text-base font-bold tracking-tight text-slate-900">{value}</p>
         </div>
-        <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${tone}`}>
-          <Icon size={20} strokeWidth={2.2} />
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone}`}>
+          <Icon size={16} strokeWidth={2.2} />
         </span>
       </div>
     </div>
@@ -162,29 +162,30 @@ export function Profile() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 font-sans antialiased">
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
-        <div className="relative bg-slate-950 px-6 py-7 text-white md:px-8">
-          <div className="absolute inset-0 opacity-20 technical-grid-bg" />
+        <div className="relative bg-white px-6 py-6 text-slate-900 md:px-8">
+          <div className="absolute inset-0 opacity-80 technical-grid-bg" />
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-500 via-blue-600 to-emerald-500" />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-3xl font-extrabold shadow-lg ring-4 ring-white/10">
+                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-2xl font-extrabold text-white shadow-lg ring-4 ring-sky-50">
                   {initialsOf(profile.displayName)}
                 </div>
-                <span className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white ring-4 ring-slate-950">
-                  <CheckCircle2 size={18} strokeWidth={2.5} />
+                <span className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white ring-4 ring-white">
+                  <CheckCircle2 size={16} strokeWidth={2.5} />
                 </span>
               </div>
               <div>
-                <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-sky-200">
+                <p className="inline-flex items-center gap-2 text-xs font-bold text-sky-700">
                   <Sparkles size={14} strokeWidth={2.4} />
                   Digital Identity Profile
                 </p>
-                <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">{profile.displayName}</h1>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{profile.displayName}</h1>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex rounded-lg border px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${roleTone(profile.role)}`}>
+                  <span className={`inline-flex rounded-lg border px-3 py-1.5 text-xs font-bold ${roleTone(profile.role)}`}>
                     {humanize(profile.role)}
                   </span>
-                  <span className="inline-flex rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/80">
+                  <span className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">
                     {profile.designation}
                   </span>
                 </div>
@@ -192,19 +193,19 @@ export function Profile() {
             </div>
 
             <div className="grid min-w-[280px] grid-cols-2 gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Employee ID</p>
-                <p className="mt-1 font-mono text-lg font-bold text-white">{profile.employeeId}</p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <p className="text-xs font-semibold text-slate-400">Employee ID</p>
+                <p className="mt-1 font-mono text-sm font-bold text-slate-900">{profile.employeeId}</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Last Login</p>
-                <p className="mt-1 text-sm font-bold text-white">{formatDate(profile.lastLoginAt, 'No login record')}</p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <p className="text-xs font-semibold text-slate-400">Last Login</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">{formatDate(profile.lastLoginAt, 'No login record')}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-4 bg-slate-50/70 p-4 md:grid-cols-4">
+        <div className="grid gap-3 border-t border-slate-200 bg-slate-50/60 p-3 md:grid-cols-4">
           <StatTile label="Account" value={accountStatus} icon={BadgeCheck} tone="bg-emerald-50 text-emerald-600" />
           <StatTile label="Permissions" value={profile.permissionsCount} icon={KeyRound} tone="bg-sky-50 text-sky-600" />
           <StatTile label="Session Key" value={`V${profile.tokenVersion}`} icon={Fingerprint} tone="bg-violet-50 text-violet-600" />
@@ -272,12 +273,12 @@ export function Profile() {
             </div>
 
             <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Role</p>
+              <p className="text-xs font-semibold text-slate-400">Current Role</p>
               <p className="mt-1 text-base font-bold text-slate-900">{humanize(profile.role)}</p>
             </div>
 
             <div className="mt-5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lane Scopes</p>
+              <p className="text-xs font-semibold text-slate-400">Lane Scopes</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {profile.laneScopes.length > 0 ? (
                   profile.laneScopes.map((scope) => (
