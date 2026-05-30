@@ -109,10 +109,10 @@ export function ProjectManagement() {
       setTotalPages(data.total_pages || 1);
 
       // 2. Fetch all active items (without query filter) to compute true KPI counts
-      const full = await fetchProjects({ page: 1, pageSize: 1000, q: '' });
+      const full = await fetchProjects({ page: 1, pageSize: 10000, q: '' });
       const items = full.items || [];
       setKpis({
-        totalCount: items.length,
+        totalCount: typeof full.total === 'number' ? full.total : items.length,
         activeCount: items.filter(p => p.is_active === 1 || p.is_active === true).length
       });
     } catch (err) {
