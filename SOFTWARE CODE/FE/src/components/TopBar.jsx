@@ -331,7 +331,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
   return (
     <header
-      className="h-16 shrink-0 sticky top-0 z-30 flex items-center gap-4 px-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_0_rgba(15,23,42,0.02),0_1px_2px_0_rgba(15,23,42,0.01)]"
+      className="h-16 shrink-0 sticky top-0 z-30 flex items-center gap-4 px-6 bg-white border-b border-slate-200 shadow-sm"
       aria-label="Page header"
     >
       {/* ── Hamburger (sidebar toggle) ──────────────────────────── */}

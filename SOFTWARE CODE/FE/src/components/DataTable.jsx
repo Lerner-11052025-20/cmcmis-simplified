@@ -31,7 +31,7 @@ export function DataTable({
   emptyMessage = 'No rows to show.',
 }) {
   return (
-    <div className="relative bg-white rounded-xl border border-slate-200/70 shadow-[0_2px_12px_rgba(15,23,42,0.06)] overflow-hidden">
+    <div className="relative bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
       {/* Loading — animated gradient sweep */}
       {loading ? (
         <div className="absolute top-0 left-0 right-0 z-20 h-[2px] overflow-hidden bg-indigo-100">
@@ -87,7 +87,7 @@ export function DataTable({
                 <tr
                   key={row[keyField]}
                   className={clsx(
-                    'border-b border-slate-100/70 last:border-b-0 transition-all duration-200 group cursor-pointer',
+                    'border-b border-slate-200/60 last:border-b-0 transition-all duration-200 group cursor-pointer',
                     'border-l-[3px] border-l-transparent hover:border-l-accent',
                     rowIndex % 2 === 0
                       ? 'bg-white'

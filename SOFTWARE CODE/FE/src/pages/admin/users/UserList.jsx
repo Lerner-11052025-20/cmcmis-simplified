@@ -240,7 +240,7 @@ export function UserList() {
       </div>
 
       {/* ── Filter strip ───────────────────────────────── */}
-      <div className="bg-white rounded-lg border border-border shadow-card p-4 space-y-3">
+      <div className="bg-slate-50/60 rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="md:col-span-6">
             <label htmlFor="u-q" className="sr-only">Search users</label>
