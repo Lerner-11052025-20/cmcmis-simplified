@@ -125,11 +125,11 @@ export function Sidebar({ collapsed = false, onToggle }) {
           <div className="relative group">
             {/* Elegant telemetry glow ring around the logo block */}
             <div className="absolute -inset-0.5 bg-gradient-to-tr from-accent/20 to-accent/0 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-            <div className="relative h-11 w-11 rounded-lg p-1.5 bg-white border border-slate-200/60 shadow-sm flex items-center justify-center">
+            <div className="relative h-14 w-14 rounded-xl p-1 bg-white border border-slate-200 shadow-md flex items-center justify-center ring-1 ring-slate-100/30">
               <Logo />
             </div>
-            {/* Technical LED indicator badge */}
-            <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-success ring-2 ring-white"></span>
+            {/* Technical LED indicator badge with continuous heartbeat pulse */}
+            <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-success ring-2 ring-white animate-pulse-radar"></span>
           </div>
 
           {!collapsed ? (
@@ -238,18 +238,12 @@ export function Sidebar({ collapsed = false, onToggle }) {
         )}
       </nav>
 
-      {/* ── User Profile Card: Emp ID & Email only ────────────── */}
+      {/* ── User Profile Card: Emp ID badge only ────────────── */}
       {!collapsed ? (
-        <div className="mt-auto border-t border-slate-200/80 p-3.5 shrink-0 transition-all duration-300 animate-fadeIn">
-          <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl leading-normal text-[11px] font-sans">
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[10px] font-semibold text-ink-soft/70 uppercase tracking-wider">Emp ID</span>
-              <span className="text-sky-700 font-bold tracking-tight text-[11px]">{user.sub}</span>
-            </div>
-            <div className="text-ink-soft/80 truncate mt-1 text-[10px]" title={user.email}>
-              {user.email || 'no-email@sac.isro.gov.in'}
-            </div>
-          </div>
+        <div className="mt-auto border-t border-slate-200/50 p-3.5 shrink-0 transition-all duration-300 animate-fadeIn flex justify-center">
+          <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-sky-50 border border-sky-100 text-sky-700 shadow-sm shadow-sky-100/50">
+            {user.sub}
+          </span>
         </div>
       ) : null}
 
