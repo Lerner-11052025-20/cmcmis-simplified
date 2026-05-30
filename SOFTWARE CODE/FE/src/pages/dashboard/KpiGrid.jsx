@@ -6,12 +6,21 @@
 // ============================================================================
 
 import { KpiCard } from './KpiCard.jsx';
+import { useAuth } from '../../lib/auth-context.jsx';
+
+const HIDDEN_KPI_IDS = new Set(['overdue_calibrations']);
+const HIDDEN_KPI_LABELS = new Set(['Overdue Calibrations']);
+const ADMIN_ONLY_KPI_IDS = new Set(['total_active_equipment', 'new_equipment_this_week']);
+const ADMIN_ONLY_KPI_LABELS = new Set(['Active Equipment', 'New Equipment (Week)', 'New Equipment']);
 
 /**
  * @param {Object} props
  * @param {Array<Object> | null} props.cards
  */
 export function KpiGrid({ cards }) {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
   // First paint — show 7 skeletons matching ORG card count.
   if (cards === null) {
     return (
@@ -20,9 +29,19 @@ export function KpiGrid({ cards }) {
       </div>
     );
   }
+
+  const visibleCards = cards.filter((card) => (
+    !HIDDEN_KPI_IDS.has(card.id)
+    && !HIDDEN_KPI_LABELS.has(card.label)
+    && (
+      isSuperAdmin
+      || (!ADMIN_ONLY_KPI_IDS.has(card.id) && !ADMIN_ONLY_KPI_LABELS.has(card.label))
+    )
+  ));
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((c) => <KpiCard key={c.id} card={c} />)}
+      {visibleCards.map((c) => <KpiCard key={c.id} card={c} />)}
     </div>
   );
 }
