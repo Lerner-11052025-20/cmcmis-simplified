@@ -224,6 +224,12 @@ app.use(`${env.API_BASE_PATH}/job-cards`, jobCardsRoutes);
 const lookupsRoutes = require('./modules/lookups/lookups.routes');
 app.use(`${env.API_BASE_PATH}/lookups`, lookupsRoutes);
 
+// ── Dynamic Terms and Conditions module ─────────────────────────────────
+// Mounted at /api/v1/job-request-terms. Powers the JR form's Terms and Conditions checklist
+// and dynamic CRUD for SUPER_ADMIN.
+const jobRequestTermsRoutes = require('./modules/jobRequestTerms/terms.routes');
+app.use(`${env.API_BASE_PATH}/job-request-terms`, jobRequestTermsRoutes);
+
 // ── Admin · Users module (Phase 7 Slice 1) ──────────────────────────────
 // Mounted at /api/v1/admin/users. Super-Admin-only surface that lists,
 // inspects, role-changes, activates, deactivates, force-logs-out users

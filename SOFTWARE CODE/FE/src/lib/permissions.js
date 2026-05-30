@@ -87,6 +87,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'Admin · Users',     to: '/admin/users',     icon: Users,    requires: 'user:read-list' },
   { label: 'Admin · Employees', to: '/admin/employees', icon: IdCard,   requires: 'master:employees:manage' },
   { label: 'Admin · Equipment Verification', to: '/admin/equipment-verification', icon: BadgeCheck, requires: 'equipment:verify' },
+  { label: 'Admin · Terms & Conditions', to: '/admin/terms', icon: ScrollText, requires: 'terms:manage' },
   // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only.
   // Gated on the new `audit:read-list` (mig 600); legacy `audit_log:read`
   // (mig 006) is left in place for any historical reference but is no

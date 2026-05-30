@@ -47,6 +47,8 @@ import {
   jobRequestSubmitSchema,
 } from '../../lib/schemas/jobRequestSchemas.js';
 import { TERMS, TNC_VERSION } from './form/tncContent.js';
+import { fetchActiveTerms } from '../../lib/api/terms.js';
+import { Spinner } from '../../components/ui/Spinner.jsx';
 
 // ── Static select options (locked to BE enums) ──────────────────────
 const JOB_CATEGORIES = [
@@ -138,10 +140,28 @@ export function JobRequestNew() {
     accessories: [],
   });
 
-  // ── Section-5 T&C state — six independent booleans ────────────────
-  const [tnc, setTnc] = useState(() => TERMS.map(() => true));
+  // ── Section-5 T&C state — dynamic checklist from DB ────────────────
+  const [dynamicTerms, setDynamicTerms] = useState([]);
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [tnc, setTnc] = useState([]);
   const tncAcceptedCount = tnc.filter(Boolean).length;
-  const allTncAccepted = tncAcceptedCount === TERMS.length;
+  const allTncAccepted = dynamicTerms.length > 0 && tncAcceptedCount === dynamicTerms.length;
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchActiveTerms(ctrl.signal)
+      .then((items) => {
+        setDynamicTerms(items || []);
+        setTnc((items || []).map(() => false));
+      })
+      .catch(() => {
+        // Fallback to static T&C in case of error
+        setDynamicTerms(TERMS);
+        setTnc(TERMS.map(() => false));
+      })
+      .finally(() => setTermsLoading(false));
+    return () => ctrl.abort();
+  }, []);
 
   // ── Submission state ─────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
@@ -963,7 +983,7 @@ export function JobRequestNew() {
                 <span>Accepted:</span>
                 <span className="text-sm font-black">{tncAcceptedCount}</span>
                 <span>/</span>
-                <span>{TERMS.length}</span>
+                <span>{dynamicTerms.length}</span>
               </div>
             </div>
 
@@ -972,7 +992,7 @@ export function JobRequestNew() {
                 checked={allTncAccepted}
                 onChange={(e) => {
                   const val = e.target.checked;
-                  setTnc(TERMS.map(() => val));
+                  setTnc(dynamicTerms.map(() => val));
                 }}
                 label={
                   <span className="font-extrabold text-accent hover:text-accent-hover transition-colors text-xs uppercase tracking-widest leading-none">
@@ -983,9 +1003,13 @@ export function JobRequestNew() {
             </div>
 
             <ul className="space-y-3.5">
-              {TERMS.map((t, i) => (
+              {termsLoading ? (
+                <div className="flex justify-center py-6">
+                  <Spinner size={20} className="text-purple-600 animate-spin" />
+                </div>
+              ) : dynamicTerms.map((t, i) => (
                 <li
-                  key={t.index}
+                  key={t.id || t.index}
                   className={clsx(
                     "px-4 py-4 rounded-xl border transition-all duration-200 select-none",
                     tnc[i] 
@@ -994,7 +1018,7 @@ export function JobRequestNew() {
                   )}
                 >
                   <Checkbox
-                    checked={tnc[i]}
+                    checked={!!tnc[i]}
                     onChange={(e) => {
                       const next = [...tnc];
                       next[i] = e.target.checked;
@@ -1003,7 +1027,7 @@ export function JobRequestNew() {
                     label={
                       <span className="text-slate-700 leading-relaxed font-sans text-xs sm:text-sm font-semibold">
                         <span className="font-black text-slate-800 mr-1.5 uppercase text-[11px] tracking-wider">
-                          Item {t.index}:
+                          Item {t.index_no || t.index || (i + 1)}:
                         </span>{' '}
                         {t.text}
                       </span>
