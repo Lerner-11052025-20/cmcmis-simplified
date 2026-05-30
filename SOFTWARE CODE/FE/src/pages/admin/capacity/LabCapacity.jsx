@@ -1,13 +1,15 @@
 // ============================================================================
 // src/pages/admin/capacity/LabCapacity.jsx  —  Lab Capacity & Live Workload
 // ----------------------------------------------------------------------------
-// Overhauled highly professional, premium operational dashboard.
-// Restricts capacity control strictly under SUPER_ADMIN and LAB_IN_CHARGE.
+// Overhauled highly professional, premium, business-oriented dashboard.
+// Gated strictly under SUPER_ADMIN and LAB_IN_CHARGE roles.
+// Redesigned to use standard mixed-case / title-case Google Inter fonts 
+// (no uppercase or small-caps overrides) exactly matching the rest of the app.
 // ============================================================================
 
 import { useEffect, useState, useMemo } from 'react';
 import {
-  LineChart, RefreshCw, AlertCircle, Shield, ClipboardList, CheckCircle, BarChart3, Wrench, Users, Flame
+  RefreshCw, ClipboardList, CheckCircle, BarChart3, Users, Flame
 } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'sonner';
@@ -18,9 +20,9 @@ import { fetchLabCapacity } from '../../../lib/api/capacity.js';
 // ── Custom Local KPI Card (Matches Admin Style) ──────────────────────
 function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
   const ACCENT_COLORS = {
-    indigo:  { bg: 'bg-indigo-50/60',   text: 'text-indigo-600',   topBorder: 'border-t-indigo-500/80',  glow: 'hover:shadow-[0_20px_25px_-5px_rgba(79,93,255,0.06)] hover:border-indigo-200', indicator: 'bg-indigo-500' },
-    emerald: { bg: 'bg-emerald-50/60', text: 'text-emerald-600', topBorder: 'border-t-emerald-500/80', glow: 'hover:shadow-[0_20px_25px_-5px_rgba(16,185,129,0.06)] hover:border-emerald-200', indicator: 'bg-emerald-500' },
-    amber:   { bg: 'bg-amber-50/60',   text: 'text-amber-600',   topBorder: 'border-t-amber-500/80',   glow: 'hover:shadow-[0_20px_25px_-5px_rgba(245,158,11,0.06)] hover:border-amber-200', indicator: 'bg-amber-500' },
+    indigo:  { bg: 'bg-indigo-50/60',   text: 'text-indigo-650',   topBorder: 'border-t-indigo-500/80',  glow: 'hover:shadow-[0_20px_25px_-5px_rgba(79,93,255,0.04)] hover:border-indigo-200', indicator: 'bg-indigo-500' },
+    emerald: { bg: 'bg-emerald-50/60', text: 'text-emerald-655', topBorder: 'border-t-emerald-500/80', glow: 'hover:shadow-[0_20px_25px_-5px_rgba(16,185,129,0.04)] hover:border-emerald-200', indicator: 'bg-emerald-500' },
+    amber:   { bg: 'bg-amber-50/60',   text: 'text-amber-655',   topBorder: 'border-t-amber-500/80',   glow: 'hover:shadow-[0_20px_25px_-5px_rgba(245,158,11,0.04)] hover:border-amber-200', indicator: 'bg-amber-500' },
   };
 
   const color = ACCENT_COLORS[accent] || ACCENT_COLORS.indigo;
@@ -39,10 +41,9 @@ function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
   return (
     <div
       className={clsx(
-        'group bg-white rounded-2xl border border-slate-200/50 p-5 border-t-[4px] transition-all duration-300 shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg font-sans antialiased',
+        'group bg-white rounded-2xl border border-slate-200/50 p-5 border-t-[4px] transition-all duration-300 shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg font-sans antialiased hover:-translate-y-0.5',
         color.topBorder,
-        color.glow,
-        'hover:-translate-y-0.5'
+        color.glow
       )}
     >
       <div className="flex items-center justify-between">
@@ -68,74 +69,57 @@ function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
   );
 }
 
-// ── Horizontal Progress Bar Row ──────────────────────────────────────
-function ProgressBarRow({ label, count, max }) {
-  const percent = max > 0 ? Math.min(Math.round((count / max) * 100), 100) : 0;
-  return (
-    <div className="space-y-1.5 font-sans">
-      <div className="flex justify-between items-center text-xs">
-        <span className="font-extrabold text-slate-700 uppercase tracking-tight">{label}</span>
-        <span className="font-bold text-slate-500 tabular-nums">{count} active JCs ({percent}%)</span>
-      </div>
-      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-accent rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 // ── SLA Circular Dial Component ──────────────────────────────────────
 function SlaDial({ label, rate, accent }) {
   const ACCENTS = {
-    indigo:  { stroke: 'stroke-indigo-600',   text: 'text-indigo-600',   bg: 'bg-indigo-50/60' },
-    emerald: { stroke: 'stroke-emerald-600', text: 'text-emerald-600', bg: 'bg-emerald-50/60' },
-    amber:   { stroke: 'stroke-amber-600',   text: 'text-amber-600',   bg: 'bg-amber-50/60' },
+    indigo:  { stroke: 'stroke-indigo-500',  text: 'text-indigo-650',  bg: 'bg-indigo-50/40' },
+    emerald: { stroke: 'stroke-emerald-500', text: 'text-emerald-655', bg: 'bg-emerald-50/40' },
+    amber:   { stroke: 'stroke-amber-500',   text: 'text-amber-655',   bg: 'bg-amber-50/40' },
   };
   const color = ACCENTS[accent] || ACCENTS.indigo;
 
   // SVG parameters
-  const radius = 34;
+  const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (rate / 100) * circumference;
 
   return (
-    <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl flex items-center gap-4 shadow-sm select-none font-sans">
-      <div className="relative w-18 h-18 shrink-0 flex items-center justify-center">
-        <svg className="w-full h-full -rotate-90">
+    <div className="bg-slate-50/60 border border-slate-200/80 p-4 rounded-xl flex items-center gap-4 shadow-sm select-none font-sans min-w-0 flex-1">
+      <div className="relative w-16 h-16 shrink-0 flex items-center justify-center bg-white rounded-full shadow-inner border border-slate-100">
+        <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
           <circle
-            cx="36"
-            cy="36"
+            cx="32"
+            cy="32"
             r={radius}
-            className="stroke-slate-200 fill-none"
-            strokeWidth="5"
+            fill="none"
+            className="stroke-slate-100"
+            strokeWidth="4.5"
           />
           <circle
-            cx="36"
-            cy="36"
+            cx="32"
+            cy="32"
             r={radius}
-            className={clsx("fill-none transition-all duration-1000 ease-out", color.stroke)}
-            strokeWidth="5"
+            fill="none"
+            className={clsx("transition-all duration-1000 ease-out", color.stroke)}
+            strokeWidth="4.5"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
           />
         </svg>
-        <span className={clsx("absolute text-xs font-black tracking-tight", color.text)}>
+        <span className={clsx("absolute text-xs font-bold tracking-tight tabular-nums", color.text)}>
           {rate}%
         </span>
       </div>
-      <div>
-        <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-semibold text-slate-500 tracking-tight truncate" title={label}>
           {label}
         </div>
-        <div className="text-sm font-extrabold text-slate-800 mt-0.5">
+        <div className="text-xs font-bold text-slate-700 mt-0.5 leading-tight">
           SLA Compliance
         </div>
-        <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-          Target dates vs actuals
+        <div className="text-[10px] text-slate-400 font-normal mt-0.5 truncate">
+          On-time completions
         </div>
       </div>
     </div>
@@ -176,27 +160,21 @@ export function LabCapacity() {
     };
   }, [data]);
 
-  // Find max queue to render progress bars proportionally
-  const maxQueue = useMemo(() => {
-    if (!data || !data.instrumentQueue.length) return 0;
-    return Math.max(...data.instrumentQueue.map(i => i.queue_count));
-  }, [data]);
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto w-full px-1 font-sans">
       
       {/* ── Page Header ── */}
-      <div className="flex justify-between items-center select-none">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between justify-start gap-4 select-none">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Admin · Lab Capacity & Workloads</h1>
-          <p className="text-sm text-ink-soft mt-1">
+          <h1 className="text-2xl font-bold text-ink tracking-tight">Admin · Lab Capacity & Workloads</h1>
+          <p className="text-xs sm:text-sm text-ink-soft mt-1.5">
             Real-time technician allocation density, SLA turnaround stats, and instrument category bottlenecks.
           </p>
         </div>
         <button
           type="button"
           onClick={loadMetrics}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-3 text-xs font-semibold text-slate-600 transition-colors shadow-sm select-none"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 text-xs font-semibold text-slate-655 transition-all shadow-sm select-none active:scale-98"
           disabled={loading}
         >
           <RefreshCw size={13} className={clsx(loading && "animate-spin")} />
@@ -236,7 +214,7 @@ export function LabCapacity() {
         <div className="flex h-60 items-center justify-center bg-white rounded-2xl border border-slate-200/50 shadow-sm">
           <div className="flex flex-col items-center gap-3">
             <Spinner size={32} className="text-accent" />
-            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest animate-pulse">Retrieving Real-Time Queue Logs...</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest animate-pulse">Retrieving Real-Time Queue Logs...</p>
           </div>
         </div>
       ) : (
@@ -244,8 +222,8 @@ export function LabCapacity() {
 
           {/* ── Section: SLA Target Dials ── */}
           <div className="bg-white rounded-2xl border border-slate-200/50 p-5 shadow-[0_2px_8px_rgba(15,23,42,0.01)] space-y-4">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-100 pb-3 flex items-center gap-1.5 select-none">
-              <BarChart3 size={13} className="text-slate-400" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-3 flex items-center gap-2 select-none">
+              <BarChart3 size={14} className="text-slate-400" />
               SLA Turnaround Tracker
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -255,118 +233,80 @@ export function LabCapacity() {
             </div>
           </div>
 
-          {/* ── Two Column Operational View ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* ── Linear Full-Width Operational View ── */}
+          <div className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.01)] p-6 space-y-5 w-full">
+            <h2 className="text-xs font-bold text-slate-500 border-b border-slate-100 pb-3 flex items-center gap-2 select-none">
+              <Users size={14} className="text-slate-400" />
+              Technician Workload & Cycle Metrics (Spacious Roster)
+            </h2>
             
-            {/* Left Side: Technician Workload Heatmap Table */}
-            <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.01)] p-5 space-y-4">
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-100 pb-3 flex items-center gap-2 select-none">
-                <Users size={14} className="text-slate-400" />
-                Technician Workload & cycle metrics
-              </h2>
-              
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                <table className="w-full text-left border-collapse text-xs select-none">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <th className="py-3 px-4">Technician</th>
-                      <th className="py-3 px-4 text-center">Active Jobs</th>
-                      <th className="py-3 px-4 text-center">Pending Approvals</th>
-                      <th className="py-3 px-4 text-center">Avg. Cycle Speed</th>
-                      <th className="py-3 px-4 text-center">Load Status</th>
+            <div className="overflow-x-auto rounded-xl border border-slate-100/80 shadow-inner no-scrollbar">
+              <table className="w-full text-left border-collapse text-xs select-none">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <th className="py-4 px-6 min-w-[240px]">Technician Details</th>
+                    <th className="py-4 px-6 text-center min-w-[120px]">Active Jobs</th>
+                    <th className="py-4 px-6 text-center min-w-[160px]">Pending Manager Approvals</th>
+                    <th className="py-4 px-6 text-center min-w-[160px]">Average Resolution Speed</th>
+                    <th className="py-4 px-6 text-center min-w-[160px]">Operational Load Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 font-sans font-medium text-slate-600">
+                  {data?.engineerWorkload.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-10 text-center text-slate-400 font-bold uppercase tracking-wider">
+                        No active workloads found in queue.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 font-sans font-semibold text-slate-700">
-                    {data?.engineerWorkload.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="py-6 text-center text-slate-400 font-bold uppercase tracking-wider">
-                          No active workloads found in queue.
-                        </td>
-                      </tr>
-                    ) : (
-                      data?.engineerWorkload.map((tech) => {
-                        const jobs = tech.active_jobs;
-                        // Load status thresholds
-                        let statusText = 'Low Load';
-                        let statusColor = 'bg-emerald-50 border-emerald-100 text-emerald-700';
-                        let dotColor = 'bg-emerald-500';
+                  ) : (
+                    data?.engineerWorkload.map((tech) => {
+                      const jobs = tech.active_jobs;
+                      // Load status thresholds
+                      let statusText = 'Low Load';
+                      let statusColor = 'bg-emerald-50 border-emerald-100 text-emerald-700';
+                      let dotColor = 'bg-emerald-500';
 
-                        if (jobs > 5) {
-                          statusText = 'Critical Load';
-                          statusColor = 'bg-red-50 border-red-150 text-red-700 animate-pulse';
-                          dotColor = 'bg-red-500';
-                        } else if (jobs >= 3) {
-                          statusText = 'Moderate Load';
-                          statusColor = 'bg-amber-50 border-amber-100 text-amber-700';
-                          dotColor = 'bg-amber-500';
-                        }
+                      if (jobs > 5) {
+                        statusText = 'Critical Load';
+                        statusColor = 'bg-red-50 border-red-150 text-red-700 animate-pulse-radar';
+                        dotColor = 'bg-red-500';
+                      } else if (jobs >= 3) {
+                        statusText = 'Moderate Load';
+                        statusColor = 'bg-amber-50 border-amber-100 text-amber-700';
+                        dotColor = 'bg-amber-500';
+                      }
 
-                        return (
-                          <tr key={tech.engineer_employee_id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-3 px-4">
-                              <div className="font-extrabold text-slate-800 leading-normal">{tech.engineer_name}</div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">ID: #{tech.engineer_employee_id}</div>
-                            </td>
-                            <td className="py-3 px-4 text-center text-sm font-bold text-slate-800 tabular-nums">
-                              {jobs}
-                            </td>
-                            <td className="py-3 px-4 text-center font-bold text-slate-500 tabular-nums">
-                              {tech.pending_approvals}
-                            </td>
-                            <td className="py-3 px-4 text-center text-slate-650 tabular-nums">
-                              {tech.avg_cycle_days !== null ? `${tech.avg_cycle_days} days` : '—'}
-                            </td>
-                            <td className="py-3 px-4 text-center select-none">
-                              <span className={clsx(
-                                "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm",
-                                statusColor
-                              )}>
-                                <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", dotColor)} />
-                                {statusText}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      return (
+                        <tr key={tech.engineer_employee_id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="font-bold text-slate-800 text-sm leading-normal">{tech.engineer_name}</div>
+                            <div className="text-[10px] text-slate-450 font-medium uppercase tracking-wider mt-1">ID: #{tech.engineer_employee_id}</div>
+                          </td>
+                          <td className="py-4 px-6 text-center text-base font-bold text-slate-800 tabular-nums">
+                            {jobs}
+                          </td>
+                          <td className="py-4 px-6 text-center text-sm font-semibold text-slate-550 tabular-nums">
+                            {tech.pending_approvals}
+                          </td>
+                          <td className="py-4 px-6 text-center text-sm text-slate-655 font-medium tabular-nums">
+                            {tech.avg_cycle_days !== null ? `${tech.avg_cycle_days} days` : '—'}
+                          </td>
+                          <td className="py-4 px-6 text-center select-none">
+                            <span className={clsx(
+                              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm",
+                              statusColor
+                            )}>
+                              <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", dotColor)} />
+                              {statusText}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
-
-            {/* Right Side: Instrument Category Backlogs Progress Bars */}
-            <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.01)] p-5 space-y-4">
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-100 pb-3 flex items-center gap-2 select-none">
-                <Wrench size={14} className="text-slate-400" />
-                Instrument Category Backlogs
-              </h2>
-
-              <div className="space-y-4 pt-1">
-                {data?.instrumentQueue.length === 0 ? (
-                  <p className="text-center text-slate-400 font-bold uppercase tracking-wider text-xs py-4">
-                    No active category queues.
-                  </p>
-                ) : (
-                  data?.instrumentQueue.map((queue) => (
-                    <ProgressBarRow
-                      key={queue.category_name}
-                      label={queue.category_name}
-                      count={queue.queue_count}
-                      max={maxQueue}
-                    />
-                  ))
-                )}
-              </div>
-
-              <div className="rounded-xl bg-indigo-50/40 border border-indigo-100/50 p-4 select-none flex gap-2.5 shadow-sm font-sans mt-3">
-                <AlertCircle size={15} className="text-indigo-650 shrink-0 mt-0.5" />
-                <div className="text-[10.5px] font-bold text-indigo-750 leading-relaxed">
-                  <span className="uppercase tracking-wider font-black block mb-0.5 text-indigo-850">Procurement Priority Tip</span>
-                  Instrument groups displaying the longest backlog queues represent high laboratory utilization bottlenecks. Target these categories first in next-cycle capital equipment purchases.
-                </div>
-              </div>
-            </div>
-
           </div>
 
         </div>
