@@ -398,6 +398,48 @@ async function orgNewEquipmentThisWeek() {
   };
 }
 
+// ── SUPER ADMIN CARD — Users Logged In Today ─────────────────────────────
+/**
+ * Count unique users with successful login activity today.
+ *
+ * @returns {Promise<{ total: number, attempts: number }>}
+ */
+async function orgLoggedInUsersToday() {
+  const [[usersRow], [attemptsRow]] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(DISTINCT employee_id) AS n
+         FROM login_audit
+        WHERE outcome = 'SUCCESS'
+          AND attempt_at >= CURDATE()`
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS n
+         FROM login_audit
+        WHERE outcome = 'SUCCESS'
+          AND attempt_at >= CURDATE()`
+    ),
+  ]);
+  return {
+    total: Number(usersRow[0].n),
+    attempts: Number(attemptsRow[0].n),
+  };
+}
+
+// ── SUPER ADMIN CARD — Audit Events Today ────────────────────────────────
+/**
+ * Count operational audit events recorded today.
+ *
+ * @returns {Promise<{ total: number }>}
+ */
+async function orgAuditEventsToday() {
+  const [rows] = await pool.query(
+    `SELECT COUNT(*) AS n
+       FROM audit_log
+      WHERE occurred_at >= CURDATE()`
+  );
+  return { total: Number(rows[0].n) };
+}
+
 // ── MY CARD 5 — Draft Requests ────────────────────────────────────────
 /**
  * MY Card 5 — How many of the user's job requests are still in DRAFT
@@ -580,6 +622,8 @@ module.exports = {
   orgOpenJobCards,
   orgOverdueCalibrations,
   orgNewEquipmentThisWeek,
+  orgLoggedInUsersToday,
+  orgAuditEventsToday,
   // MY
   myActiveRequests,
   myInProgress,

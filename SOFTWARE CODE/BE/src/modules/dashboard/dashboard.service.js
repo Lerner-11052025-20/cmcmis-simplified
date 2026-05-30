@@ -31,9 +31,11 @@ function normalizeActorLaneScopes(actor) {
   return Array.isArray(actor?.laneScopes) ? [...actor.laneScopes].sort() : [];
 }
 
-function orgCacheKeyForLaneScopes(laneScopes) {
-  if (!Array.isArray(laneScopes) || laneScopes.length === 0) return KEYS.ORG;
-  return `${KEYS.ORG}:lanes:${laneScopes.join('|')}`;
+function orgCacheKeyFor(actor, laneScopes) {
+  const roleKey = actor?.role || 'unknown';
+  const baseKey = `${KEYS.ORG}:role:${roleKey}`;
+  if (!Array.isArray(laneScopes) || laneScopes.length === 0) return baseKey;
+  return `${baseKey}:lanes:${laneScopes.join('|')}`;
 }
 
 function personalCacheKeyFor(actor) {
@@ -130,7 +132,7 @@ function formatPctDelta(current, previous, suffix) {
 //     href:      '/job-requests?status=SUBMITTED',
 //   }
 
-async function buildOrgCards(laneScopes = []) {
+async function buildOrgCards(laneScopes = [], role = null) {
   // From: one shared org dashboard. To: same KPI layout, but JR/JC counts
   // are narrowed to the actor's operational lane when their role is scoped.
   // Run all 8 KPI groups in parallel — independent queries, independent
@@ -146,6 +148,8 @@ async function buildOrgCards(laneScopes = []) {
     openJC,
     overdueCalibration,
     newEqmThisWeek,
+    loggedInUsers,
+    auditEvents,
   ] = await Promise.all([
     repo.orgPendingJobs(laneScopes),
     repo.orgCompletedThisWeek(laneScopes),
@@ -154,9 +158,11 @@ async function buildOrgCards(laneScopes = []) {
     repo.orgOpenJobCards(laneScopes),
     repo.orgOverdueCalibrations(),
     repo.orgNewEquipmentThisWeek(),
+    role === 'SUPER_ADMIN' ? repo.orgLoggedInUsersToday() : Promise.resolve(null),
+    role === 'SUPER_ADMIN' ? repo.orgAuditEventsToday() : Promise.resolve(null),
   ]);
 
-  return [
+  const cards = [
     // ── Row 1 ────────────────────────────────────────────────────────
     {
       id: 'pending_jobs',
@@ -234,6 +240,35 @@ async function buildOrgCards(laneScopes = []) {
       href: '/equipment',
     },
   ];
+
+  if (role === 'SUPER_ADMIN') {
+    cards.push(
+      {
+        id: 'users_logged_in_today',
+        label: 'Users Logged In',
+        value: loggedInUsers.total,
+        value_kind: 'count',
+        subtitle: loggedInUsers.attempts > loggedInUsers.total
+          ? `${loggedInUsers.attempts} successful logins today`
+          : 'Unique successful logins today',
+        icon: 'activity',
+        accent: 'blue',
+        href: '/admin/users',
+      },
+      {
+        id: 'audit_events_today',
+        label: 'Audit Events Today',
+        value: auditEvents.total,
+        value_kind: 'count',
+        subtitle: auditEvents.total > 0 ? 'System activity recorded today' : 'No audit events today',
+        icon: 'file-text',
+        accent: 'slate',
+        href: '/audit',
+      },
+    );
+  }
+
+  return cards;
 }
 
 async function buildMyCards(employeeId, role) {
@@ -463,7 +498,7 @@ async function getKpis(actor) {
   const variant = variantForRole(actor.role);
   const laneScopes = normalizeActorLaneScopes(actor);
   const cacheKey =
-    variant === 'org' ? orgCacheKeyForLaneScopes(laneScopes) : personalCacheKeyFor(actor);
+    variant === 'org' ? orgCacheKeyFor(actor, laneScopes) : personalCacheKeyFor(actor);
 
   // Cache lookup first — short TTL means even a "stale" hit is < 10 s.
   const hit = kpiCache.get(cacheKey);
@@ -480,7 +515,7 @@ async function getKpis(actor) {
   // Cache miss — compute cards + recent activity in parallel, then memoise.
   const [cards, recent_activity] = await Promise.all([
     variant === 'org'
-      ? buildOrgCards(laneScopes)
+      ? buildOrgCards(laneScopes, actor.role)
       : buildMyCards(actor.employeeId, actor.role),
     repo.recentActivity(variant, actor.employeeId, laneScopes),
   ]);
