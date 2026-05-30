@@ -40,8 +40,8 @@ async function getMe(req, res, next) {
     division_name: '',
   };
 
-  // Enrich from cmms_emp_mst (best effort). If the row is missing or the
-  // query fails, we still return 200 with the base payload.
+  // Enrich from cmms_emp_mst, users, and login_audit (best effort). If any query fails,
+  // we still return 200 with the base payload.
   try {
     const profile = await repo.findEmployeeProfile(req.user.employeeId);
     if (profile) {
@@ -54,6 +54,18 @@ async function getMe(req, res, next) {
       payload.division_code = profile.division_code || '';
       payload.division_name = profile.division_name || '';
     }
+
+    const account = await repo.findUserAccountDetails(req.user.userId);
+    if (account) {
+      payload.is_active = account.is_active;
+      payload.is_locked = account.is_locked;
+      payload.last_login_at = account.last_login_at;
+      payload.created_at = account.created_at;
+      payload.token_version = account.token_version;
+    }
+
+    const loginHistory = await repo.findUserLoginHistory(req.user.employeeId);
+    payload.login_history = loginHistory || [];
   } catch (err) {
     req.log?.warn?.({ err: { message: err.message } },
       'Profile enrichment failed; returning base JWT fields only');

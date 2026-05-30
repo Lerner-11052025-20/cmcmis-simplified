@@ -51,4 +51,33 @@ async function findEmployeeProfile(employeeId) {
   return profile;
 }
 
-module.exports = { findEmployeeProfile };
+/**
+ * Read the users table account metadata for a user.
+ */
+async function findUserAccountDetails(userId) {
+  const [rows] = await pool.query(
+    `SELECT is_active, is_locked, last_login_at, created_at, token_version
+       FROM users
+      WHERE user_id = ?
+      LIMIT 1`,
+    [userId],
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Read the last 5 authentication audit logs for this employee.
+ */
+async function findUserLoginHistory(employeeId) {
+  const [rows] = await pool.query(
+    `SELECT outcome, ip_address, attempt_at, notes
+       FROM login_audit
+      WHERE employee_id = ?
+      ORDER BY audit_id DESC
+      LIMIT 5`,
+    [employeeId],
+  );
+  return rows;
+}
+
+module.exports = { findEmployeeProfile, findUserAccountDetails, findUserLoginHistory };

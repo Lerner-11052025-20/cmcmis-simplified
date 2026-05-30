@@ -102,83 +102,69 @@ export function NotificationDropdown({ onClose }) {
   }
 
   return (
-    <div className="w-96 max-w-[95vw] rounded-lg border border-border bg-white shadow-lg overflow-hidden">
+    <div className="w-96 max-w-[95vw] rounded-2xl border border-slate-100 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.15)] overflow-hidden font-sans">
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="text-sm font-semibold text-ink">
+      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-50 to-indigo-50/20 border-b border-slate-100">
+        <div className="text-[13px] font-bold text-slate-800 flex items-center">
           Notifications
           {unread > 0 ? (
-            <span className="ml-2 inline-flex items-center rounded-full bg-danger/10 text-danger px-2 py-0.5 text-[11px] font-medium">
+            <span className="ml-2 inline-flex items-center rounded-md bg-rose-50 border border-rose-100 text-rose-600 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
               {unread} unread
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => markAll.mutate()}
             disabled={marking || unread === 0}
-            className="inline-flex items-center gap-1 text-[11px] text-ink-soft hover:text-ink px-2 py-1 rounded hover:bg-base disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-slate-100/80 active:scale-95 disabled:opacity-40 transition-all duration-150"
             title="Mark all as read"
           >
-            <CheckCheck size={13} strokeWidth={1.75} aria-hidden="true" />
+            <CheckCheck size={13} strokeWidth={2} aria-hidden="true" />
             Mark all
           </button>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close notifications"
-            className="inline-flex h-7 w-7 items-center justify-center rounded text-ink-soft hover:text-ink hover:bg-base"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:scale-95 transition-all duration-150"
           >
-            <X size={14} strokeWidth={1.75} aria-hidden="true" />
+            <X size={14} strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
       </div>
 
       {/* ── List ───────────────────────────────────────────────────── */}
-      <div className="max-h-96 overflow-y-auto divide-y divide-border">
+      <div className="max-h-96 overflow-y-auto divide-y divide-slate-100/60 no-scrollbar">
         {loading ? (
-          <div className="px-4 py-8 text-center text-xs text-ink-soft">Loading…</div>
+          <div className="px-4 py-10 text-center text-xs font-semibold text-slate-400">Loading notifications...</div>
         ) : error ? (
-          <div className="px-4 py-8 text-center text-xs text-red-700">
+          <div className="px-4 py-10 text-center text-xs font-semibold text-red-600">
             {error.response?.data?.error?.message || error.message || 'Failed to load'}
           </div>
         ) : rows.length === 0 ? (
-          <div className="px-4 py-10 text-center text-xs text-ink-soft">
+          <div className="px-4 py-12 text-center text-xs font-semibold text-slate-400">
             You're all caught up.
           </div>
         ) : (
-          rows.map((n, idx) => {
-            const isEven = idx % 2 === 0;
+          rows.map((n) => {
             const cat = getNotificationCategory(n);
             const Icon = cat.type === 'job_request' ? FileText :
                          cat.type === 'job_card' ? ClipboardList :
                          cat.type === 'equipment' ? Wrench : Bell;
 
-            // High contrast alternating backgrounds for read/unread entries
-            let rowBg = '';
+            // Cohesive premium palette for row background and border colors
+            let rowBgClass = '';
+            let borderClass = 'border-transparent';
+
             if (n.is_read) {
-              rowBg = isEven 
-                ? 'bg-slate-100/90 hover:bg-slate-200/60' 
-                : 'bg-white hover:bg-slate-100/50';
+              rowBgClass = 'bg-white hover:bg-slate-50/50';
             } else {
-              if (cat.type === 'job_request') {
-                rowBg = isEven 
-                  ? 'bg-sky-100/65 hover:bg-sky-200/50' 
-                  : 'bg-sky-50/40 hover:bg-sky-100/40';
-              } else if (cat.type === 'job_card') {
-                rowBg = isEven 
-                  ? 'bg-violet-100/65 hover:bg-violet-200/50' 
-                  : 'bg-violet-50/40 hover:bg-violet-100/40';
-              } else if (cat.type === 'equipment') {
-                rowBg = isEven 
-                  ? 'bg-emerald-100/65 hover:bg-emerald-200/50' 
-                  : 'bg-emerald-50/40 hover:bg-emerald-100/40';
-              } else {
-                rowBg = isEven 
-                  ? 'bg-amber-100/65 hover:bg-amber-200/50' 
-                  : 'bg-amber-50/40 hover:bg-amber-100/40';
-              }
+              rowBgClass = 'bg-indigo-50/20 hover:bg-indigo-50/45';
+              borderClass = cat.type === 'job_request' ? 'border-sky-500' :
+                            cat.type === 'job_card' ? 'border-violet-500' :
+                            cat.type === 'equipment' ? 'border-emerald-500' : 'border-amber-500';
             }
 
             return (
@@ -187,22 +173,18 @@ export function NotificationDropdown({ onClose }) {
                 type="button"
                 onClick={() => activate(n)}
                 className={clsx(
-                  'w-full text-left px-4 py-4 flex items-start gap-3 transition-colors border-l-[3.5px] font-sans antialiased',
-                  rowBg,
-                  n.is_read ? 'border-transparent' : (
-                    cat.type === 'job_request' ? 'border-sky-500' :
-                    cat.type === 'job_card' ? 'border-violet-500' :
-                    cat.type === 'equipment' ? 'border-emerald-500' : 'border-amber-500'
-                  )
+                  'w-full text-left px-5 py-4 flex items-start gap-3.5 transition-all border-l-[4px] font-sans antialiased relative',
+                  rowBgClass,
+                  borderClass
                 )}
               >
                 {/* Category icon with color light contrast + pulsing status indicator dot */}
                 <div className="relative shrink-0 mt-0.5">
                   <div className={clsx(
-                    'h-7 w-7 rounded flex items-center justify-center transition-all',
+                    'h-8 w-8 rounded-xl flex items-center justify-center shadow-sm border transition-all',
                     cat.iconBg
                   )}>
-                    <Icon size={13} strokeWidth={2} />
+                    <Icon size={14} strokeWidth={2} />
                   </div>
                   {!n.is_read && (
                     <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
@@ -219,34 +201,34 @@ export function NotificationDropdown({ onClose }) {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap leading-none">
                     <span className={clsx(
                       'text-xs tracking-tight font-sans',
-                      n.is_read ? 'text-ink-soft/90 font-medium' : 'text-ink font-bold'
+                      n.is_read ? 'text-slate-600 font-medium' : 'text-slate-800 font-bold'
                     )}>
                       {n.title}
                     </span>
                     <span className={clsx(
-                      'px-1.5 py-0.25 rounded text-[8px] font-bold uppercase tracking-wider border font-sans',
+                      'px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border leading-none font-sans',
                       cat.colorClass
                     )}>
                       {cat.label}
                     </span>
                   </div>
                   {n.body ? (
-                    <div className="text-[11px] text-ink-soft/85 mt-1 line-clamp-2 leading-relaxed font-sans font-medium">
+                    <div className="text-[11px] text-slate-500 mt-1.5 line-clamp-2 leading-relaxed font-sans font-medium">
                       {n.body}
                     </div>
                   ) : null}
-                  <div className="text-[10px] text-ink-soft/50 font-bold mt-1.5 font-sans">
+                  <div className="text-[9px] text-slate-400 font-bold mt-2 font-sans tracking-wider uppercase">
                     {dayjs(n.created_at).fromNow()}
                   </div>
                 </div>
                 {!n.is_read ? (
                   <Check
                     size={14}
-                    strokeWidth={1.5}
-                    className="text-ink-soft/60 opacity-0 group-hover:opacity-100"
+                    strokeWidth={2}
+                    className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-hidden="true"
                   />
                 ) : null}
@@ -257,11 +239,11 @@ export function NotificationDropdown({ onClose }) {
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <div className="border-t border-border">
+      <div className="border-t border-slate-100 bg-slate-50/40 p-1.5">
         <button
           type="button"
           onClick={() => { onClose?.(); navigate('/notifications'); }}
-          className="w-full px-4 py-2.5 text-xs text-accent font-medium hover:bg-base transition-colors"
+          className="w-full px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border border-transparent hover:border-indigo-100/50 transition-all duration-150"
         >
           See all notifications ({total.toLocaleString()})
         </button>

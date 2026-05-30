@@ -65,6 +65,8 @@ import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
 // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only viewer
 // over audit_log + user_role_history + status-history tables.
 import { AuditViewer }     from './pages/audit/AuditViewer.jsx';
+// Phase 15 — Profile Module (any logged-in user can access)
+import { Profile }         from './pages/profile/Profile.jsx';
 
 const SHOW_PROCUREMENT_MODULE = false;
 
@@ -82,6 +84,16 @@ export function App() {
             element={
               <ProtectedRoute requiredPermission="dashboard:view">
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── Profile (Phase 15 implemented for all roles) ────── */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout><Profile /></Layout>
               </ProtectedRoute>
             }
           />

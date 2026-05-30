@@ -48,6 +48,7 @@ import {
   BadgeCheck,
   RefreshCw,
   ScrollText,
+  User,
 } from 'lucide-react';
 
 /**
@@ -61,6 +62,7 @@ import {
 /** @type {NavItem[]} */
 export const ALL_NAV_ITEMS = [
   { label: 'Dashboard',    to: '/dashboard',    icon: LayoutGrid,     requires: 'dashboard:view' },
+  { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
   { label: 'Job Requests', to: '/job-requests', icon: FileText,       requires: 'job_request:read-own' },
   // Phase 7 Slice 2 — Conversion is the LIC + SA workspace where pending
   // requests get turned into Job Cards. Gated on the approve permission,
@@ -94,6 +96,7 @@ export const ALL_NAV_ITEMS = [
 
 const NORMAL_USER_NAV_LABELS = new Set([
   'Dashboard',
+  'Profile',
   'Job Requests',
   'Equipment',
   'Inquiry',
@@ -123,6 +126,7 @@ export function visibleNavItems(permissions, role) {
   if (!Array.isArray(permissions) || permissions.length === 0) return [];
   const owned = new Set(permissions);
   return ALL_NAV_ITEMS.filter((item) => {
+    if (item.label === 'Profile') return true; // Profile is always visible to all 13 user roles globally!
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (!owned.has(item.requires)) return false;

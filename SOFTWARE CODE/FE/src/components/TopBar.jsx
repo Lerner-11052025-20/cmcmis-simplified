@@ -94,6 +94,21 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
 
+  // ── Keyboard Shortcut listener for Ctrl+K ──────────────────────────
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('topbar-search');
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // ── Global Autocomplete Search State ────────────────────────────────
   const [searchResults, setSearchResults] = useState({
     jobRequests: [],
@@ -316,7 +331,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
   return (
     <header
-      className="h-14 shrink-0 sticky top-0 z-10 flex items-center gap-4 px-6 bg-white border-b border-border"
+      className="h-16 shrink-0 sticky top-0 z-30 flex items-center gap-4 px-6 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_0_rgba(15,23,42,0.02),0_1px_2px_0_rgba(15,23,42,0.01)]"
       aria-label="Page header"
     >
       {/* ── Hamburger (sidebar toggle) ──────────────────────────── */}
@@ -329,20 +344,20 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
         aria-expanded={!collapsed}
         aria-controls="primary-sidebar"
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-base-elev hover:text-ink transition-colors"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 active:scale-95 transition-all duration-200"
       >
-        <Menu size={18} strokeWidth={1.5} aria-hidden="true" />
+        <Menu size={18} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       {/* ── Global search with Dynamic Autocomplete ─────────────── */}
-      <form onSubmit={onSearchSubmit} className="flex-1 max-w-3xl mr-auto relative" ref={searchRef}>
+      <form onSubmit={onSearchSubmit} className="flex-1 max-w-2xl mr-auto relative" ref={searchRef}>
         <label htmlFor="topbar-search" className="sr-only">Global search</label>
-        <div className="relative">
+        <div className="relative group">
           <SearchIcon
-            size={16}
-            strokeWidth={1.5}
+            size={15}
+            strokeWidth={1.75}
             aria-hidden="true"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"
           />
           <input
             id="topbar-search"
@@ -359,34 +374,38 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
               }
             }}
             type="search"
-            placeholder="Search equipment, job requests, vendors…"
-            className="w-full h-10 rounded-md bg-base border border-border pl-9 pr-3 text-sm text-ink placeholder:text-ink-soft focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            placeholder="Search equipment, job requests, vendors..."
+            className="w-full h-10 rounded-xl bg-slate-50/50 border border-slate-200/80 pl-10 pr-16 text-[13px] text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 shadow-sm transition-all font-sans"
             autoComplete="off"
           />
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-0.5 select-none">
+            <kbd className="h-5 px-1.5 flex items-center justify-center rounded border border-slate-200/80 bg-white text-[9px] font-bold text-slate-400 shadow-sm font-sans">Ctrl</kbd>
+            <kbd className="h-5 px-1.5 flex items-center justify-center rounded border border-slate-200/80 bg-white text-[9px] font-bold text-slate-400 shadow-sm font-sans">K</kbd>
+          </div>
         </div>
 
         {/* Autocomplete Dropdown Panel */}
         {searchOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 max-h-[420px] overflow-y-auto no-scrollbar bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-2 space-y-3">
+          <div className="absolute top-full left-0 right-0 mt-2 max-h-[420px] overflow-y-auto no-scrollbar bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.15)] z-50 p-3 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
             {searchLoading ? (
-              <div className="flex items-center justify-center py-6 gap-2 text-ink-soft text-xs font-medium font-sans">
-                <svg className="animate-spin h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-xs font-semibold font-sans">
+                <svg className="animate-spin h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 Searching Database...
               </div>
             ) : totalResultsCount === 0 ? (
-              <div className="text-center py-6 text-ink-soft/80 text-xs font-medium font-sans">
-                No matching results found for <span className="font-bold text-ink">"{q}"</span>
+              <div className="text-center py-6 text-slate-400 text-xs font-semibold font-sans">
+                No matching results found for <span className="font-bold text-slate-700">"{q}"</span>
               </div>
             ) : (
-              <div className="space-y-3 font-sans text-left">
+              <div className="space-y-3.5 font-sans text-left">
                 {/* 1. Job Requests */}
                 {searchResults.jobRequests.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="px-2 text-[10px] font-bold text-sky-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500"></span>
+                  <div className="space-y-1.5">
+                    <div className="px-2 pb-1 text-[9px] font-bold text-sky-600 uppercase tracking-widest flex items-center gap-2 border-b border-sky-100/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500 shadow-sm shadow-sky-400/50"></span>
                       Job Requests
                     </div>
                     <div className="space-y-0.5">
@@ -397,17 +416,17 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                             navigate(`/job-requests/${encodeURIComponent(item.id)}`);
                             setSearchOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-100/85 border border-transparent cursor-pointer transition-all duration-150 group/item hover:translate-x-0.5"
                         >
                           <div className="min-w-0 flex-1 pr-3">
-                            <div className="text-xs font-bold text-ink truncate">
+                            <div className="text-xs font-semibold text-slate-800 group-hover/item:text-indigo-600 truncate transition-colors">
                               {item.request_code}
                             </div>
-                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                            <div className="text-[10px] text-slate-400 group-hover/item:text-indigo-900/60 truncate mt-0.5 transition-colors">
                               {item.equipment_name || 'No equipment specified'}
                             </div>
                           </div>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 leading-none">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-100/50 leading-none">
                             {item.status}
                           </span>
                         </div>
@@ -418,9 +437,9 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
                 {/* 2. Job Cards */}
                 {searchResults.jobCards.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="px-2 text-[10px] font-bold text-violet-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500"></span>
+                  <div className="space-y-1.5">
+                    <div className="px-2 pb-1 text-[9px] font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2 border-b border-violet-100/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500 shadow-sm shadow-violet-400/50"></span>
                       Job Cards
                     </div>
                     <div className="space-y-0.5">
@@ -431,17 +450,17 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                             navigate(`/job-cards/${encodeURIComponent(item.id)}`);
                             setSearchOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-100/85 border border-transparent cursor-pointer transition-all duration-150 group/item hover:translate-x-0.5"
                         >
                           <div className="min-w-0 flex-1 pr-3">
-                            <div className="text-xs font-bold text-ink truncate">
+                            <div className="text-xs font-semibold text-slate-800 group-hover/item:text-indigo-600 truncate transition-colors">
                               {item.section_job_no || 'Job Card Details'}
                             </div>
-                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                            <div className="text-[10px] text-slate-400 group-hover/item:text-indigo-900/60 truncate mt-0.5 transition-colors">
                               {item.equipment_name || 'No equipment specified'}
                             </div>
                           </div>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-violet-50 text-violet-700 leading-none">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-100/50 leading-none">
                             {item.status}
                           </span>
                         </div>
@@ -452,9 +471,9 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
                 {/* 3. Equipment */}
                 {searchResults.equipment.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="px-2 text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  <div className="space-y-1.5">
+                    <div className="px-2 pb-1 text-[9px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-2 border-b border-emerald-100/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-400/50"></span>
                       Equipment Instruments
                     </div>
                     <div className="space-y-0.5">
@@ -465,17 +484,17 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                             navigate(`/equipment/${encodeURIComponent(item.id || item.equipment_id)}`);
                             setSearchOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-100/85 border border-transparent cursor-pointer transition-all duration-150 group/item hover:translate-x-0.5"
                         >
                           <div className="min-w-0 flex-1 pr-3">
-                            <div className="text-xs font-bold text-ink truncate">
+                            <div className="text-xs font-semibold text-slate-800 group-hover/item:text-indigo-600 truncate transition-colors">
                               {item.equipment_code || item.equipment_id}
                             </div>
-                            <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                            <div className="text-[10px] text-slate-400 group-hover/item:text-indigo-900/60 truncate mt-0.5 transition-colors">
                               {item.name || item.equipment_name}
                             </div>
                           </div>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 leading-none">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100/50 leading-none">
                             {item.status || 'Active'}
                           </span>
                         </div>
@@ -486,9 +505,9 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
                 {/* 4. Vendors */}
                 {searchResults.vendors.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="px-2 text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                  <div className="space-y-1.5">
+                    <div className="px-2 pb-1 text-[9px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-2 border-b border-amber-100/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-sm shadow-amber-400/50"></span>
                       Vendors
                     </div>
                     <div className="space-y-0.5">
@@ -499,14 +518,14 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                             navigate(`/inquiry?tab=vendors&q=${encodeURIComponent(item.vendor_name)}`);
                             setSearchOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-100/85 border border-transparent cursor-pointer transition-all duration-150 group/item hover:translate-x-0.5"
                         >
                           <div className="min-w-0 flex-1 pr-3">
-                            <div className="text-xs font-bold text-ink truncate">
+                            <div className="text-xs font-semibold text-slate-800 group-hover/item:text-indigo-600 truncate transition-colors">
                               {item.vendor_name}
                             </div>
                           </div>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 leading-none">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100/50 leading-none">
                             {item.vendor_type}
                           </span>
                         </div>
@@ -517,9 +536,9 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
                 {/* 5. Products */}
                 {searchResults.products.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="px-2 text-[10px] font-bold text-cyan-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500"></span>
+                  <div className="space-y-1.5">
+                    <div className="px-2 pb-1 text-[9px] font-bold text-cyan-600 uppercase tracking-widest flex items-center gap-2 border-b border-cyan-100/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 shadow-sm shadow-cyan-400/50"></span>
                       Products
                     </div>
                     <div className="space-y-0.5">
@@ -530,14 +549,14 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                             navigate(`/inquiry?tab=products&q=${encodeURIComponent(item.product_name)}`);
                             setSearchOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100/50 cursor-pointer transition"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50/50 hover:border-indigo-100/85 border border-transparent cursor-pointer transition-all duration-150 group/item hover:translate-x-0.5"
                         >
                           <div className="min-w-0 flex-1 pr-3">
-                            <div className="text-xs font-bold text-ink truncate">
+                            <div className="text-xs font-semibold text-slate-800 group-hover/item:text-indigo-600 truncate transition-colors">
                               {item.product_name}
                             </div>
                             {item.make && (
-                              <div className="text-[10px] text-ink-soft truncate mt-0.5">
+                              <div className="text-[10px] text-slate-400 group-hover/item:text-indigo-900/60 truncate mt-0.5 transition-colors">
                                 Make: {item.make}
                               </div>
                             )}
@@ -567,20 +586,20 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
               aria-haspopup="menu"
               aria-expanded={bellOpen}
               title={unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Notifications'}
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-base-elev hover:text-ink transition-colors"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 hover:rotate-12 active:scale-95 transition-all duration-200 group/bell"
             >
-              <Bell size={18} strokeWidth={1.5} aria-hidden="true" />
+              <Bell size={18} strokeWidth={1.75} aria-hidden="true" className="group-hover/bell:animate-pulse-radar" />
               {/* Live unread indicator. Show a count badge when ≥ 1; the
                   badge caps visually at "9+" so the layout doesn't shift
                   on a 3-digit count. */}
               {unread > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-danger text-white text-[10px] font-semibold leading-none tabular-nums">
+                <span className="absolute -top-0.5 -right-0.5 inline-flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[9px] font-bold leading-none tabular-nums shadow-sm border-2 border-white animate-pulse">
                   {unread > 9 ? '9+' : unread}
                 </span>
               ) : null}
             </button>
             {bellOpen ? (
-              <div className="absolute right-0 mt-2 z-20">
+              <div className="absolute right-0 mt-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <NotificationDropdown onClose={() => setBellOpen(false)} />
               </div>
             ) : null}
@@ -600,37 +619,37 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
               aria-expanded={menuOpen}
               aria-label={`Account menu for ${user.display_name || user.sub}`}
               className={clsxCond(
-                'flex items-center gap-3 pl-2 pr-0 py-1 rounded-md transition-colors',
+                'flex items-center gap-3 pl-3 pr-2.5 py-1.5 rounded-xl border transition-all duration-200 shadow-sm',
                 menuOpen
-                  ? 'bg-base-elev'
-                  : 'hover:bg-base-elev',
+                  ? 'bg-indigo-50/50 border-indigo-200/80 text-indigo-900 ring-2 ring-indigo-100/50'
+                  : 'bg-slate-50/30 border-slate-200/60 hover:bg-slate-50/80 hover:border-slate-300/80',
               )}
             >
-              <div className="text-right leading-tight">
-                <div className="text-sm font-medium text-ink truncate max-w-[12rem]">
+              <div className="text-right leading-none flex flex-col justify-center">
+                <div className="text-[13px] font-semibold text-slate-700 truncate max-w-[12rem] tracking-tight">
                   {user.display_name || user.sub}
                 </div>
-                <div className="mt-0.5">
+                <div className="mt-1 flex justify-end">
                   <RolePill role={user.role} />
                 </div>
               </div>
               <div
                 aria-hidden="true"
-                className="h-8 w-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-semibold"
+                className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white flex items-center justify-center text-[11px] font-bold shadow-sm shadow-indigo-200/50 hover:brightness-105 transition-all"
                 title={user.sub}
               >
                 {initialsOf(user.display_name || user.sub)
                   ? (
                       <span>{initialsOf(user.display_name || user.sub)}</span>
                     )
-                  : <User size={16} strokeWidth={1.5} />}
+                  : <User size={14} strokeWidth={2} />}
               </div>
               <ChevronDown
-                size={14}
-                strokeWidth={1.5}
+                size={13}
+                strokeWidth={2}
                 className={clsxCond(
-                  'text-ink-soft transition-transform',
-                  menuOpen ? 'rotate-180' : 'rotate-0',
+                  'text-slate-400 transition-transform duration-300',
+                  menuOpen ? 'rotate-180 text-indigo-500' : 'rotate-0',
                 )}
               />
             </button>
@@ -644,39 +663,46 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
               <div
                 role="menu"
                 aria-label="Account menu"
-                className="absolute right-0 mt-2 w-72 rounded-lg border border-border bg-white shadow-card z-20 overflow-hidden"
+                className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-100 bg-white/95 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,42,0.15)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
               >
-                {/* Identity card */}
-                <div className="px-4 py-3 border-b border-border">
-                  <div className="text-sm font-semibold text-ink truncate">
-                    {user.display_name || user.sub}
+                {/* Identity card with wide vertical spacing */}
+                <div className="px-6 py-6 bg-gradient-to-b from-slate-50/50 to-indigo-50/10 border-b border-slate-100 flex gap-4 items-center">
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 text-white flex items-center justify-center text-[15px] font-bold shadow-md shadow-indigo-100/80 shrink-0">
+                    {initialsOf(user.display_name || user.sub)}
                   </div>
-                  {user.email ? (
-                    <div className="mt-0.5 text-xs text-ink-soft truncate">
-                      {user.email}
+                  <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                    <div className="text-[14px] font-bold text-slate-800 leading-snug tracking-tight">
+                      {user.display_name || user.sub}
                     </div>
-                  ) : null}
-                  {/* Division / department line — falls back to the role
-                      code if no division is known, so the slot always has
-                      content (avoids a tighter card just for SA users). */}
-                  <div className="mt-1.5 text-[11px] uppercase tracking-wider text-ink-soft">
-                    {user.division_code
-                      || user.division
-                      || user.designation
-                      || roleLabel(user.role)}
+                    {user.email ? (
+                      <div className="text-[11px] font-medium text-slate-400 truncate leading-none">
+                        {user.email}
+                      </div>
+                    ) : null}
+                    {/* Division / department line — beautifully outlined for readability */}
+                    <div className="flex mt-0.5">
+                      <span className="px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-600 leading-none">
+                        {user.division_code
+                          || user.division
+                          || user.designation
+                          || roleLabel(user.role)}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Action: Logout (red, full-width, icon on the left) */}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
-                >
-                  <LogOut size={16} strokeWidth={1.75} aria-hidden="true" />
-                  <span>Logout</span>
-                </button>
+                {/* Action: Logout - more spacious and comfortable */}
+                <div className="p-2 bg-white">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3.5 px-4 py-3 text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50/50 rounded-xl transition-all duration-150 group"
+                  >
+                    <LogOut size={16} strokeWidth={2} aria-hidden="true" className="group-hover:-translate-x-0.5 transition-transform" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -697,7 +723,7 @@ function RolePill({ role }) {
   return (
     <span
       className={clsxCond(
-        'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+        'inline-flex items-center rounded-md px-1.5 py-0.5 font-medium leading-none',
         cls,
       )}
     >
@@ -709,35 +735,33 @@ function RolePill({ role }) {
 function rolePillStyle(role) {
   switch (role) {
     case 'SUPER_ADMIN':
-      return { label: 'Admin', cls: 'bg-danger/10 text-danger' };
+      return { label: 'Admin', cls: 'bg-rose-50 border border-rose-200/50 text-rose-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'LAB_IN_CHARGE':
-      return { label: 'Lab InC', cls: 'bg-accent/10 text-accent' };
+      return { label: 'Lab InC', cls: 'bg-indigo-50 border border-indigo-200/50 text-indigo-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'LAB_ENGINEER':
-      return { label: 'Lab Eng', cls: 'bg-accent/10 text-accent' };
+      return { label: 'Lab Eng', cls: 'bg-indigo-50 border border-indigo-200/50 text-indigo-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'TME_REPAIR_LAB_IN_CHARGE':
-      return { label: 'TME R InC', cls: 'bg-violet-100 text-violet-700' };
+      return { label: 'TME R InC', cls: 'bg-violet-50 border border-violet-200/50 text-violet-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'TME_CAL_LAB_IN_CHARGE':
-      return { label: 'TME C InC', cls: 'bg-violet-100 text-violet-700' };
+      return { label: 'TME C InC', cls: 'bg-violet-50 border border-violet-200/50 text-violet-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'FPE_REPAIR_LAB_IN_CHARGE':
-      return { label: 'FPE R InC', cls: 'bg-sky-100 text-sky-700' };
+      return { label: 'FPE R InC', cls: 'bg-sky-50 border border-sky-200/50 text-sky-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'FPE_CAL_LAB_IN_CHARGE':
-      return { label: 'FPE C InC', cls: 'bg-sky-100 text-sky-700' };
+      return { label: 'FPE C InC', cls: 'bg-sky-50 border border-sky-200/50 text-sky-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'TME_REPAIR_LAB_ENG':
-      return { label: 'TME R Eng', cls: 'bg-blue-100 text-blue-700' };
+      return { label: 'TME R Eng', cls: 'bg-blue-50 border border-blue-200/50 text-blue-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'TME_CAL_LAB_ENG':
-      return { label: 'TME C Eng', cls: 'bg-blue-100 text-blue-700' };
+      return { label: 'TME C Eng', cls: 'bg-blue-50 border border-blue-200/50 text-blue-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'FPE_REPAIR_LAB_ENG':
-      return { label: 'FPE R Eng', cls: 'bg-cyan-100 text-cyan-700' };
+      return { label: 'FPE R Eng', cls: 'bg-cyan-50 border border-cyan-200/50 text-cyan-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'FPE_CAL_LAB_ENG':
-      return { label: 'FPE C Eng', cls: 'bg-cyan-100 text-cyan-700' };
+      return { label: 'FPE C Eng', cls: 'bg-cyan-50 border border-cyan-200/50 text-cyan-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'NORMAL_USER':
-      // Tailwind built-in green — sidesteps any custom-palette assumption
-      // and matches the reference image's "User" badge.
-      return { label: 'User', cls: 'bg-green-100 text-green-700' };
+      return { label: 'User', cls: 'bg-emerald-50 border border-emerald-200/50 text-emerald-600 text-[9px] font-bold uppercase tracking-wider' };
     case 'VIEW_ONLY':
-      return { label: 'View', cls: 'bg-gray-100 text-gray-700' };
+      return { label: 'View', cls: 'bg-slate-50 border border-slate-200/50 text-slate-600 text-[9px] font-bold uppercase tracking-wider' };
     default:
-      return { label: role || '—', cls: 'bg-gray-100 text-gray-700' };
+      return { label: role || '—', cls: 'bg-slate-50 border border-slate-200/50 text-slate-600 text-[9px] font-bold uppercase tracking-wider' };
   }
 }
 

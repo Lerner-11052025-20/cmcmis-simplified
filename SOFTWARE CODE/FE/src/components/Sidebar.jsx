@@ -59,7 +59,7 @@ const GROUPS_META = {
  */
 function getGroupForItem(item) {
   const path = item.to;
-  if (path === '/dashboard' || path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) {
+  if (path === '/dashboard' || path === '/profile' || path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) {
     return 'core';
   }
   if (path.startsWith('/equipment') || path === '/schedule' || path === '/inquiry' || path === '/procurement') {
