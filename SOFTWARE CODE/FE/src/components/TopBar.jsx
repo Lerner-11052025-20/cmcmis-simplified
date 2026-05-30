@@ -49,6 +49,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   ChevronDown,
+  Info,
   LogOut,
   Menu,
   Search as SearchIcon,
@@ -574,6 +575,16 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
       {/* ── Right cluster ───────────────────────────────────────── */}
       <div className="ml-auto flex shrink-0 items-center justify-end gap-5">
+        <button
+          type="button"
+          onClick={() => navigate('/about')}
+          aria-label="About CMCMIS"
+          title="About CMCMIS"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:text-sky-700 hover:bg-sky-50/80 active:scale-95 transition-all duration-200"
+        >
+          <Info size={20} strokeWidth={2.25} aria-hidden="true" />
+        </button>
+
         {/* Phase 12 — live notifications bell. Hidden entirely for users
             without `notifications:read-own` (i.e. View-Only) so the
             UI never offers an action the BE would 403. */}

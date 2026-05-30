@@ -69,6 +69,7 @@ import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
 import { AuditViewer }     from './pages/audit/AuditViewer.jsx';
 // Phase 15 — Profile Module (any logged-in user can access)
 import { Profile }         from './pages/profile/Profile.jsx';
+import { AboutUs }         from './pages/about/AboutUs.jsx';
 
 const SHOW_PROCUREMENT_MODULE = false;
 
@@ -97,6 +98,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <Layout><Profile /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <ProtectedRoute>
+                <Layout><AboutUs /></Layout>
               </ProtectedRoute>
             }
           />

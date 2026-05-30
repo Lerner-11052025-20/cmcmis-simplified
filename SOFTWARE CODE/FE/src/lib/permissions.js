@@ -49,6 +49,7 @@ import {
   RefreshCw,
   ScrollText,
   User,
+  Info,
 } from 'lucide-react';
 
 /**
@@ -92,11 +93,13 @@ export const ALL_NAV_ITEMS = [
   // longer consulted by the FE.
   { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
   { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
+  { label: 'About Us',     to: '/about',        icon: Info,           requires: 'dashboard:view' },
 ];
 
 const NORMAL_USER_NAV_LABELS = new Set([
   'Dashboard',
   'Profile',
+  'About Us',
   'Job Requests',
   'Equipment',
   'Inquiry',
@@ -126,7 +129,7 @@ export function visibleNavItems(permissions, role) {
   if (!Array.isArray(permissions) || permissions.length === 0) return [];
   const owned = new Set(permissions);
   return ALL_NAV_ITEMS.filter((item) => {
-    if (item.label === 'Profile') return true; // Profile is always visible to all 13 user roles globally!
+    if (item.label === 'Profile' || item.label === 'About Us') return true; // Always visible to all signed-in roles.
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (!owned.has(item.requires)) return false;

@@ -68,7 +68,7 @@ function getGroupForItem(item) {
   if (path === '/analytics' || path === '/reports') {
     return 'reports';
   }
-  if (path.startsWith('/admin') || path === '/audit' || path === '/profile') {
+  if (path.startsWith('/admin') || path === '/audit' || path === '/profile' || path === '/about') {
     return 'admin';
   }
   return 'core';
