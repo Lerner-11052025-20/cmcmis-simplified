@@ -81,6 +81,15 @@ const equipmentRegistrationHandlers = makeChartHandlers('equipmentRegistrationTr
 const priorityMixHandlers           = makeChartHandlers('priorityMixTrend',
   svc.getPriorityMixTrend, 'priority-mix-trend', svc.csvPriorityMixTrend);
 
+async function labCapacity(req, res, next) {
+  try {
+    const data = await svc.getLabCapacity();
+    return res.json({ data });
+  } catch (e) {
+    return next(e);
+  }
+}
+
 module.exports = {
   ...monthlyActivityHandlers,
   ...equipmentStatusHandlers,
@@ -95,4 +104,7 @@ module.exports = {
   ...jcLifecycleFunnelHandlers,
   ...equipmentRegistrationHandlers,
   ...priorityMixHandlers,
+  // Lab Capacity
+  labCapacity,
 };
+

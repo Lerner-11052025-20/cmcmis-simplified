@@ -90,6 +90,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'Admin · Terms & Conditions', to: '/admin/terms', icon: ScrollText, requires: 'terms:manage' },
   { label: 'Admin · Projects', to: '/admin/projects', icon: Settings, requires: 'projects:manage' },
   { label: 'Admin · Tasks', to: '/admin/tasks', icon: ClipboardList, requires: 'tasks:manage' },
+  { label: 'Admin · Lab Capacity', to: '/admin/lab-capacity', icon: LineChart, requires: 'analytics:view' },
 
   // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only.
   // Gated on the new `audit:read-list` (mig 600); legacy `audit_log:read`
@@ -136,6 +137,7 @@ export function visibleNavItems(permissions, role) {
     if (item.label === 'Profile' || item.label === 'About Us') return true; // Always visible to all signed-in roles.
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
+    if (item.label === 'Admin · Lab Capacity' && role !== 'SUPER_ADMIN' && role !== 'LAB_IN_CHARGE' && role !== 'LAB_IN_CHARGE_SCOPED') return false;
     if (!owned.has(item.requires)) return false;
     if (role === 'NORMAL_USER') return NORMAL_USER_NAV_LABELS.has(item.label);
     if (role === 'VIEW_ONLY') return !VIEW_ONLY_HIDDEN_NAV_LABELS.has(item.label);

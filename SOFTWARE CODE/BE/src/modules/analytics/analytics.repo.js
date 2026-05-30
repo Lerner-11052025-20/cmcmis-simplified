@@ -403,6 +403,96 @@ async function priorityMixTrend(params) {
   }));
 }
 
+/**
+ * Compiles dynamic real-time resource allocations, instrument queues, and SLA rates.
+ */
+async function labCapacityMetrics() {
+  const engineerWorkloadSql = `
+    SELECT 
+      jc.JM_ASSIGNED_ENGINEER AS engineer_employee_id,
+      COALESCE(emp.EMM_NAME, 'UNASSIGNED') AS engineer_name,
+      SUM(CASE WHEN jc.JM_MVP_STATUS IN ('ASSIGNED', 'IN_PROGRESS', 'REOPENED') THEN 1 ELSE 0 END) AS active_jobs,
+      SUM(CASE WHEN jc.JM_MVP_STATUS = 'COMPLETED' THEN 1 ELSE 0 END) AS pending_approvals,
+      ROUND(AVG(CASE WHEN jc.JM_MVP_STATUS IN ('COMPLETED', 'VERIFIED_CLOSED') AND jc.JM_JobStartDate IS NOT NULL AND jc.marked_complete_at IS NOT NULL 
+            THEN TIMESTAMPDIFF(HOUR, jc.JM_JobStartDate, jc.marked_complete_at) / 24.0 ELSE NULL END), 1) AS avg_cycle_days
+    FROM cmms_jobcard_mst jc
+    LEFT JOIN cmms_emp_mst emp ON emp.EMM_ID = jc.JM_ASSIGNED_ENGINEER
+    GROUP BY jc.JM_ASSIGNED_ENGINEER, emp.EMM_NAME
+    ORDER BY active_jobs DESC
+  `;
+
+  const instrumentQueueSql = `
+    SELECT 
+      COALESCE(p.PROD_NAME, 'OTHER') AS category_name,
+      COUNT(*) AS queue_count
+    FROM cmms_jobcard_mst jc
+    INNER JOIN cmms_eqip_mst e ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
+    LEFT JOIN cmms_product_mst p ON p.PROD_ID = e.EQM_INST_TYPE
+    WHERE jc.JM_MVP_STATUS IN ('ASSIGNED', 'IN_PROGRESS', 'REOPENED')
+    GROUP BY p.PROD_NAME
+    ORDER BY queue_count DESC
+    LIMIT 10
+  `;
+
+  const slaComplianceSql = `
+    SELECT 
+      jc.JM_JOB_TYPE AS job_type,
+      COUNT(CASE WHEN jc.JM_MVP_STATUS IN ('COMPLETED', 'VERIFIED_CLOSED') THEN 1 END) AS total_completed,
+      COUNT(CASE WHEN jc.JM_MVP_STATUS IN ('COMPLETED', 'VERIFIED_CLOSED') AND (jc.actual_completion_date <= jc.job_complete_planned_date OR jc.job_complete_planned_date IS NULL) THEN 1 END) AS on_time
+    FROM cmms_jobcard_mst jc
+    GROUP BY jc.JM_JOB_TYPE
+  `;
+
+  const [[engineers], [instruments], [slaRaw]] = await Promise.all([
+    pool.query(engineerWorkloadSql),
+    pool.query(instrumentQueueSql),
+    pool.query(slaComplianceSql)
+  ]);
+
+  let overallCompleted = 0;
+  let overallOnTime = 0;
+  let calCompleted = 0;
+  let calOnTime = 0;
+  let repCompleted = 0;
+  let repOnTime = 0;
+
+  slaRaw.forEach(row => {
+    const total = Number(row.total_completed) || 0;
+    const onTime = Number(row.on_time) || 0;
+    overallCompleted += total;
+    overallOnTime += onTime;
+
+    if (row.job_type === 'CALIBRATION') {
+      calCompleted = total;
+      calOnTime = onTime;
+    } else if (row.job_type === 'REPAIR') {
+      repCompleted = total;
+      repOnTime = onTime;
+    }
+  });
+
+  const sla = {
+    overall: overallCompleted > 0 ? Number(((overallOnTime / overallCompleted) * 100).toFixed(1)) : 100.0,
+    calibration: calCompleted > 0 ? Number(((calOnTime / calCompleted) * 100).toFixed(1)) : 100.0,
+    repair: repCompleted > 0 ? Number(((repOnTime / repCompleted) * 100).toFixed(1)) : 100.0,
+  };
+
+  return {
+    engineerWorkload: engineers.map(e => ({
+      engineer_employee_id: e.engineer_employee_id,
+      engineer_name: e.engineer_name,
+      active_jobs: Number(e.active_jobs) || 0,
+      pending_approvals: Number(e.pending_approvals) || 0,
+      avg_cycle_days: e.avg_cycle_days !== null ? Number(e.avg_cycle_days) : null
+    })),
+    instrumentQueue: instruments.map(i => ({
+      category_name: i.category_name,
+      queue_count: Number(i.queue_count) || 0
+    })),
+    sla
+  };
+}
+
 
 module.exports = {
   // G1..G8 (Phase 10)
@@ -419,4 +509,7 @@ module.exports = {
   jcLifecycleFunnel,
   equipmentRegistrationTrend,
   priorityMixTrend,
+  // Lab Capacity (Heatmaps)
+  labCapacityMetrics,
 };
+

@@ -92,4 +92,12 @@ register('/jc-lifecycle-funnel',          ctrl.jcLifecycleFunnel,           ctrl
 register('/equipment-registration-trend', ctrl.equipmentRegistrationTrend,  ctrl.equipmentRegistrationTrendCsv);
 register('/priority-mix-trend',           ctrl.priorityMixTrend,            ctrl.priorityMixTrendCsv);
 
+// ── Lab Capacity & Heatmaps (Phase 16) ──────────────────────────────────
+router.get('/lab-capacity',
+  authenticate,
+  authorizeAny(...VIEW_PERMS),
+  ctrl.labCapacity,
+);
+
 module.exports = router;
+

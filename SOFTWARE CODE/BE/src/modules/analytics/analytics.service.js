@@ -33,6 +33,10 @@ async function getJcLifecycleFunnel(params)          { return repo.jcLifecycleFu
 async function getEquipmentRegistrationTrend(params) { return repo.equipmentRegistrationTrend(params); }
 async function getPriorityMixTrend(params)           { return repo.priorityMixTrend(params); }
 
+// Lab Capacity Heatmaps service
+async function getLabCapacity() { return repo.labCapacityMetrics(); }
+
+
 
 // ── CSV helpers ────────────────────────────────────────────────────────
 
@@ -151,4 +155,6 @@ module.exports = {
   csvJcLifecycleFunnel,
   csvEquipmentRegistrationTrend,
   csvPriorityMixTrend,
+  // Lab Capacity
+  getLabCapacity,
 };
