@@ -14,7 +14,8 @@ const service = require('./terms.service');
  */
 async function getActive(req, res, next) {
   try {
-    const items = await service.getActiveTerms();
+    const category = ['JR', 'EQM'].includes(req.query.category) ? req.query.category : 'JR';
+    const items = await service.getActiveTerms(category);
     return res.json({ data: { items } });
   } catch (e) {
     return next(e);
@@ -27,7 +28,8 @@ async function getActive(req, res, next) {
  */
 async function getAll(req, res, next) {
   try {
-    const items = await service.getAllTerms();
+    const category = ['JR', 'EQM'].includes(req.query.category) ? req.query.category : 'JR';
+    const items = await service.getAllTerms(category);
     return res.json({ data: { items } });
   } catch (e) {
     return next(e);

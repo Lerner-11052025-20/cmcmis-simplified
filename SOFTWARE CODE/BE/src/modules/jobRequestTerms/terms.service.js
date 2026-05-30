@@ -12,25 +12,27 @@ const { errors } = require('../../middleware/errorHandler');
 
 /**
  * Fetch all active terms for form loading.
+ * @param {string} [category]
  */
-async function getActiveTerms() {
-  return await repo.findActive();
+async function getActiveTerms(category = 'JR') {
+  return await repo.findActive(category);
 }
 
 /**
  * Fetch all terms for admin dashboard.
+ * @param {string} [category]
  */
-async function getAllTerms() {
-  return await repo.findAll();
+async function getAllTerms(category = 'JR') {
+  return await repo.findAll(category);
 }
 
 /**
  * Create a new term.
  */
-async function createTerm({ text, index_no, is_active }) {
+async function createTerm({ text, index_no, is_active, category = 'JR' }) {
   // Normalize is_active to 1 or 0 for MySQL TINYINT
   const isActiveTiny = is_active ? 1 : 0;
-  return await repo.insert({ text, index_no, is_active: isActiveTiny });
+  return await repo.insert({ text, index_no, is_active: isActiveTiny, category });
 }
 
 /**
@@ -46,6 +48,7 @@ async function updateTerm(id, payload) {
     text: payload.text !== undefined ? payload.text : existing.text,
     index_no: payload.index_no !== undefined ? payload.index_no : existing.index_no,
     is_active: payload.is_active !== undefined ? (payload.is_active ? 1 : 0) : existing.is_active,
+    category: payload.category !== undefined ? payload.category : existing.category,
   };
 
   await repo.update(id, updatedData);

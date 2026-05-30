@@ -7,22 +7,40 @@
 import { api } from '../api-client.js';
 
 /**
- * Fetch all active terms for the job request creation checklist.
+ * Fetch all active terms for the job request or equipment creation checklist.
+ * @param {string} [category]
  * @param {AbortSignal} [signal]
- * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number }>>}
+ * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number, category: string }>>}
  */
-export async function fetchActiveTerms(signal) {
-  const r = await api.get('/job-request-terms', { signal });
+export async function fetchActiveTerms(category = 'JR', signal) {
+  let actualCategory = 'JR';
+  let actualSignal = undefined;
+  if (typeof category === 'string') {
+    actualCategory = category;
+    actualSignal = signal;
+  } else {
+    actualSignal = category;
+  }
+  const r = await api.get('/job-request-terms', { params: { category: actualCategory }, signal: actualSignal });
   return r.data.data.items;
 }
 
 /**
  * Fetch all terms (active & inactive) for the admin dashboard.
+ * @param {string} [category]
  * @param {AbortSignal} [signal]
- * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number }>>}
+ * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number, category: string }>>}
  */
-export async function fetchAllTerms(signal) {
-  const r = await api.get('/job-request-terms/all', { signal });
+export async function fetchAllTerms(category = 'JR', signal) {
+  let actualCategory = 'JR';
+  let actualSignal = undefined;
+  if (typeof category === 'string') {
+    actualCategory = category;
+    actualSignal = signal;
+  } else {
+    actualSignal = category;
+  }
+  const r = await api.get('/job-request-terms/all', { params: { category: actualCategory }, signal: actualSignal });
   return r.data.data.items;
 }
 

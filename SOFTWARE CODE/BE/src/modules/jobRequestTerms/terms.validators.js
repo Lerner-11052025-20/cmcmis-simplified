@@ -21,6 +21,7 @@ const createSchema = z.object({
     },
     z.boolean()
   ).optional().default(true),
+  category: z.enum(['JR', 'EQM']).optional().default('JR'),
 }).strict();
 
 const updateSchema = z.object({
@@ -37,6 +38,7 @@ const updateSchema = z.object({
     },
     z.boolean()
   ).optional(),
+  category: z.enum(['JR', 'EQM']).optional(),
 }).strict();
 
 module.exports = {

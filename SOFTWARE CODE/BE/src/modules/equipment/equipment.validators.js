@@ -107,15 +107,8 @@ const createEquipmentSchema = z
     subsystem: z.string().max(80).optional().default(''),
     project: z.string().max(120).optional().default(''),
 
-    // §6 — Six T&C checkboxes, all must be literal true
-    tc_accepted: z.object({
-      tc_1: z.literal(true),
-      tc_2: z.literal(true),
-      tc_3: z.literal(true),
-      tc_4: z.literal(true),
-      tc_5: z.literal(true),
-      tc_6: z.literal(true),
-    }),
+    // §6 — Dynamic T&C checkboxes, all must be literal true
+    tc_accepted: z.record(z.literal(true)),
   })
   .strict();
 

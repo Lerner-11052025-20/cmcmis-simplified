@@ -82,6 +82,7 @@ function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
 
 export function TermsManagement() {
   const [terms, setTerms] = useState([]);
+  const [category, setCategory] = useState('JR'); // 'JR' or 'EQM'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -92,11 +93,11 @@ export function TermsManagement() {
   const [isActive, setIsActive] = useState(true);
   const [formError, setFormError] = useState('');
 
-  // ── Load terms on mount ─────────────────────────────────────────────
-  async function loadData() {
+  // ── Load terms on mount / category change ───────────────────────────
+  async function loadData(targetCategory = category) {
     setLoading(true);
     try {
-      const data = await fetchAllTerms();
+      const data = await fetchAllTerms(targetCategory);
       const sorted = [...data].sort((a, b) => a.index_no - b.index_no);
       setTerms(sorted);
       if (sorted.length > 0) {
@@ -114,7 +115,12 @@ export function TermsManagement() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [category]);
+
+  function handleCategoryChange(newCat) {
+    setCategory(newCat);
+    resetForm();
+  }
 
   // ── Handlers ────────────────────────────────────────────────────────
   function resetForm() {
@@ -156,7 +162,8 @@ export function TermsManagement() {
       const payload = {
         text: cleanText,
         index_no: Number(indexNo),
-        is_active: isActive ? 1 : 0
+        is_active: isActive ? 1 : 0,
+        category: category
       };
 
       if (editingId) {
@@ -201,7 +208,8 @@ export function TermsManagement() {
       await updateTerm(t.id, {
         text: t.text,
         index_no: t.index_no,
-        is_active: updatedStatus
+        is_active: updatedStatus,
+        category: t.category
       });
       toast.success(`Terms item #${t.index_no} ${updatedStatus ? 'activated' : 'deactivated'}`);
       await loadData();
@@ -225,12 +233,14 @@ export function TermsManagement() {
       await updateTerm(current.id, {
         text: current.text,
         index_no: target.index_no,
-        is_active: !!current.is_active
+        is_active: !!current.is_active,
+        category: current.category
       });
       await updateTerm(target.id, {
         text: target.text,
         index_no: tempIndex,
-        is_active: !!target.is_active
+        is_active: !!target.is_active,
+        category: target.category
       });
 
       toast.success('Ordering updated successfully');
@@ -347,6 +357,32 @@ export function TermsManagement() {
         <p className="text-sm text-ink-soft mt-1">
           Manage dynamic checklist items and operational compliance guidelines. Super-Admin-only.
         </p>
+      </div>
+
+      {/* ── Category Selector Tabs ── */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => handleCategoryChange('JR')}
+          className={clsx(
+            "px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 font-sans select-none",
+            category === 'JR'
+              ? "border-accent text-accent"
+              : "border-transparent text-slate-500 hover:text-slate-750 hover:border-slate-300"
+          )}
+        >
+          Job Requests (JR)
+        </button>
+        <button
+          onClick={() => handleCategoryChange('EQM')}
+          className={clsx(
+            "px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 font-sans select-none",
+            category === 'EQM'
+              ? "border-accent text-accent"
+              : "border-transparent text-slate-500 hover:text-slate-750 hover:border-slate-300"
+          )}
+        >
+          Equipment Registration (EQM)
+        </button>
       </div>
 
       {/* ── KPI Grid ── */}

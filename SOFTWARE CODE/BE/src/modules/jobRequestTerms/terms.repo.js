@@ -11,27 +11,32 @@ const pool = require('../../config/db');
 
 /**
  * Fetch all terms currently active (is_active = 1), sorted by index_no ASC.
- * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number }>>}
+ * @param {string} [category]
+ * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number, category: string }>>}
  */
-async function findActive() {
+async function findActive(category = 'JR') {
   const [rows] = await pool.query(
-    `SELECT id, index_no, text, is_active
+    `SELECT id, index_no, text, is_active, category
        FROM job_request_terms
-      WHERE is_active = 1
-      ORDER BY index_no ASC`
+      WHERE is_active = 1 AND category = ?
+      ORDER BY index_no ASC`,
+    [category]
   );
   return rows;
 }
 
 /**
  * Fetch all terms (active and inactive) for admin CRUD view, sorted by index_no ASC.
- * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number }>>}
+ * @param {string} [category]
+ * @returns {Promise<Array<{ id: number, index_no: number, text: string, is_active: number, category: string }>>}
  */
-async function findAll() {
+async function findAll(category = 'JR') {
   const [rows] = await pool.query(
-    `SELECT id, index_no, text, is_active
+    `SELECT id, index_no, text, is_active, category
        FROM job_request_terms
-      ORDER BY index_no ASC`
+      WHERE category = ?
+      ORDER BY index_no ASC`,
+    [category]
   );
   return rows;
 }
@@ -43,7 +48,7 @@ async function findAll() {
  */
 async function findById(id) {
   const [rows] = await pool.query(
-    `SELECT id, index_no, text, is_active
+    `SELECT id, index_no, text, is_active, category
        FROM job_request_terms
       WHERE id = ?
       LIMIT 1`,
@@ -58,15 +63,16 @@ async function findById(id) {
  * @param {number} payload.index_no
  * @param {string} payload.text
  * @param {number} payload.is_active
- * @returns {Promise<{ id: number, index_no: number, text: string, is_active: number }>}
+ * @param {string} payload.category
+ * @returns {Promise<{ id: number, index_no: number, text: string, is_active: number, category: string }>}
  */
-async function insert({ index_no, text, is_active }) {
+async function insert({ index_no, text, is_active, category }) {
   const [result] = await pool.query(
-    `INSERT INTO job_request_terms (index_no, text, is_active)
-     VALUES (?, ?, ?)`,
-    [index_no, text, is_active]
+    `INSERT INTO job_request_terms (index_no, text, is_active, category)
+     VALUES (?, ?, ?, ?)`,
+    [index_no, text, is_active, category]
   );
-  return { id: result.insertId, index_no, text, is_active };
+  return { id: result.insertId, index_no, text, is_active, category };
 }
 
 /**
@@ -76,16 +82,18 @@ async function insert({ index_no, text, is_active }) {
  * @param {number} payload.index_no
  * @param {string} payload.text
  * @param {number} payload.is_active
+ * @param {string} payload.category
  * @returns {Promise<boolean>}  true if rows updated, false otherwise
  */
-async function update(id, { index_no, text, is_active }) {
+async function update(id, { index_no, text, is_active, category }) {
   const [result] = await pool.query(
     `UPDATE job_request_terms
         SET index_no = ?,
             text = ?,
-            is_active = ?
+            is_active = ?,
+            category = ?
       WHERE id = ?`,
-    [index_no, text, is_active, id]
+    [index_no, text, is_active, category, id]
   );
   return result.affectedRows > 0;
 }

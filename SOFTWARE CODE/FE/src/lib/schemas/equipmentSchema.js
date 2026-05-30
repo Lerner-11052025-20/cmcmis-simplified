@@ -67,15 +67,8 @@ export const equipmentSchema = z.object({
   subsystem: z.string().trim().max(80).optional().default(''),
   project: z.string().trim().max(120).optional().default(''),
 
-  // §6 — all six MUST be true
-  tc_accepted: z.object({
-    tc_1: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-    tc_2: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-    tc_3: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-    tc_4: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-    tc_5: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-    tc_6: z.literal(true, { errorMap: () => ({ message: 'Required' }) }),
-  }),
+  // §6 — Dynamic T&C checkboxes, all must be true
+  tc_accepted: z.record(z.literal(true, { errorMap: () => ({ message: 'Required' }) })),
 }).superRefine((data, ctx) => {
   if (data.make_id === 'other' && (!data.mfg_model_name || data.mfg_model_name.trim() === '')) {
     ctx.addIssue({

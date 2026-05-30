@@ -32,6 +32,7 @@ import { equipmentSchema } from '../../lib/schemas/equipmentSchema.js';
 import {
   fetchTypes, fetchMakes, fetchDivisions, fetchProjects, createEquipment,
 } from '../../lib/api/equipment.js';
+import { fetchActiveTerms } from '../../lib/api/terms.js';
 
 // Six T&C bodies — verbatim from the reference image.
 const TC_TEXT = [
@@ -109,6 +110,30 @@ export function EquipmentForm() {
     return () => ctrl.abort();
   }, []);
 
+  // ── Dynamic T&C checklist states ───────────────────────────────────
+  const [dynamicTerms, setDynamicTerms] = useState([]);
+  const [termsLoading, setTermsLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchActiveTerms('EQM', ctrl.signal)
+      .then((items) => {
+        setDynamicTerms(items || []);
+      })
+      .catch((err) => {
+        console.error(err);
+        // Fallback to static T&C in case of error
+        const fallback = TC_TEXT.map((text, idx) => ({
+          id: `static_${idx}`,
+          index_no: idx + 1,
+          text
+        }));
+        setDynamicTerms(fallback);
+      })
+      .finally(() => setTermsLoading(false));
+    return () => ctrl.abort();
+  }, []);
+
   // ── react-hook-form ─────────────────────────────────────────────────
   const draftKey = user ? DRAFT_KEY_PREFIX + user.userId : null;
   const initialValues = useMemo(() => {
@@ -137,7 +162,7 @@ export function EquipmentForm() {
       division_id: '',
       subsystem: '',
       project: '',
-      tc_accepted: { tc_1: false, tc_2: false, tc_3: false, tc_4: false, tc_5: false, tc_6: false },
+      tc_accepted: {},
     };
     if (!draftKey) return base;
     try {
@@ -167,7 +192,7 @@ export function EquipmentForm() {
   // ── T&C live counter ────────────────────────────────────────────────
   const tc = watch('tc_accepted');
   const tcCount = Object.values(tc || {}).filter(Boolean).length;
-  const allTncAccepted = tcCount === 6;
+  const allTncAccepted = dynamicTerms.length > 0 && tcCount === dynamicTerms.length;
 
   const selectedMake = watch('make_id');
   const selectedType = watch('equipment_type_id');
@@ -673,21 +698,19 @@ export function EquipmentForm() {
                   <span>Accepted:</span>
                   <span className="text-sm font-black">{tcCount}</span>
                   <span>/</span>
-                  <span>6</span>
+                  <span>{dynamicTerms.length || 6}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-4 mb-5 pb-3.5 border-b border-slate-100/60 select-none">
                 <Checkbox
-                  checked={tcCount === 6}
+                  checked={dynamicTerms.length > 0 && tcCount === dynamicTerms.length}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    setValue('tc_accepted.tc_1', checked, { shouldValidate: true });
-                    setValue('tc_accepted.tc_2', checked, { shouldValidate: true });
-                    setValue('tc_accepted.tc_3', checked, { shouldValidate: true });
-                    setValue('tc_accepted.tc_4', checked, { shouldValidate: true });
-                    setValue('tc_accepted.tc_5', checked, { shouldValidate: true });
-                    setValue('tc_accepted.tc_6', checked, { shouldValidate: true });
+                    dynamicTerms.forEach((t, i) => {
+                      const key = `tc_${t.id || i + 1}`;
+                      setValue(`tc_accepted.${key}`, checked, { shouldValidate: true });
+                    });
                   }}
                   label={
                     <span className="font-extrabold text-accent hover:text-accent-hover transition-colors text-xs uppercase tracking-widest leading-none">
@@ -698,11 +721,15 @@ export function EquipmentForm() {
               </div>
 
               <ul className="space-y-3.5">
-                {TC_TEXT.map((text, i) => {
-                  const key = `tc_${i + 1}`;
+                {termsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Spinner size={20} className="text-purple-600 animate-spin" />
+                  </div>
+                ) : dynamicTerms.map((t, i) => {
+                  const key = `tc_${t.id || i + 1}`;
                   return (
                     <li
-                      key={key}
+                      key={t.id || i}
                       className={clsx(
                         "px-4 py-4 rounded-xl border transition-all duration-200 select-none",
                         tc?.[key] 
@@ -715,9 +742,9 @@ export function EquipmentForm() {
                         label={
                           <span className="text-slate-700 leading-relaxed font-sans text-xs sm:text-sm font-semibold">
                             <span className="font-black text-slate-800 mr-1.5 uppercase text-[11px] tracking-wider">
-                              Item {i + 1}:
+                              Item {t.index_no || (i + 1)}:
                             </span>{' '}
-                            {text}
+                            {t.text}
                           </span>
                         }
                       />
@@ -726,7 +753,7 @@ export function EquipmentForm() {
                 })}
               </ul>
 
-              {tcCount !== 6 ? (
+              {!allTncAccepted ? (
                 <div
                   role="status"
                   className="mt-5 rounded-xl bg-warning/5 border border-warning/20 text-amber-700 text-xs px-4 py-3 flex items-center gap-2.5 font-semibold animate-pulse-radar"
@@ -762,10 +789,10 @@ export function EquipmentForm() {
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={!isValid || tcCount !== 6 || isSubmitting}
+                  disabled={!isValid || !allTncAccepted || isSubmitting}
                   className={clsx(
                     "shadow-md shadow-accent/15 transition-all duration-150 active:scale-95 hover:bg-accent-hover",
-                    (!isValid || tcCount !== 6) ? 'opacity-65' : undefined
+                    (!isValid || !allTncAccepted) ? 'opacity-65' : undefined
                   )}
                 >
                   {isSubmitting ? (
