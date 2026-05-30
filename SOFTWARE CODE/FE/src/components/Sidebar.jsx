@@ -241,8 +241,8 @@ export function Sidebar({ collapsed = false, onToggle }) {
       {/* ── User Profile Card: Emp ID badge only ────────────── */}
       {!collapsed ? (
         <div className="mt-auto border-t border-slate-200/50 p-3.5 shrink-0 transition-all duration-300 animate-fadeIn flex justify-center">
-          <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest bg-sky-50 border border-sky-100 text-sky-700 shadow-sm shadow-sky-100/50">
-            {user.sub}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-emerald-50 border border-emerald-200/60 text-emerald-700 shadow-sm">
+            Emp_ID :- {user.sub}
           </span>
         </div>
       ) : null}
