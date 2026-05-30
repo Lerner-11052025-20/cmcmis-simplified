@@ -593,7 +593,7 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
                   badge caps visually at "9+" so the layout doesn't shift
                   on a 3-digit count. */}
               {unread > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 inline-flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[9px] font-bold leading-none tabular-nums shadow-sm border-2 border-white animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full bg-red-600 text-white text-[10.5px] font-extrabold leading-none tabular-nums shadow-md border-2 border-white">
                   {unread > 9 ? '9+' : unread}
                 </span>
               ) : null}
