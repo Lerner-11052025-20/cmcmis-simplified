@@ -224,6 +224,8 @@ const addTaskSchema = z.object({
 
 const toggleTaskSchema = z.object({
   is_completed: z.boolean(),
+  task_type:    z.enum(['NABL', 'NON-NABL', 'BOTH']).optional().or(z.null()),
+  task_result:  z.enum(['PASS', 'FAIL', 'Functional Test', 'Not Carried Out']).optional().or(z.null()),
 }).strict();
 
 // ============================================================================

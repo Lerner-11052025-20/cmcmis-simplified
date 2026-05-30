@@ -255,6 +255,15 @@ async function findEngineerByEmployeeId(employeeId) {
  * @param {'CALIBRATION'|'INSPECTION'|'MAINTENANCE'|null} category
  */
 async function listTaskLibrary(category) {
+  if (category === 'CALIBRATION') {
+    const [rows] = await pool.query(
+      `SELECT TSK_ID AS id, 'CALIBRATION' AS category, TSK_NAME AS task_text, TSK_ID AS display_order
+         FROM cmms_task_mst
+        WHERE TSK_TYPE = 'Calibration'
+        ORDER BY TSK_NAME ASC`,
+    );
+    return rows;
+  }
   if (category) {
     const [rows] = await pool.query(
       `SELECT id, category, task_text, display_order

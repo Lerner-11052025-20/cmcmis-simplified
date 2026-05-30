@@ -747,10 +747,21 @@ async function appendStatusHistory(conn, sectionJobNo, fromStatus, toStatus, act
  * @returns {Promise<Object>}
  */
 async function gatherCompletionGates(conn, sectionJobNo) {
+  const [[jc]] = await conn.query(
+    `SELECT JM_JOB_TYPE AS work_type, JM_WORKFLOW_TYPE AS workflow_type
+       FROM cmms_jobcard_mst WHERE JM_SectionJobNo = ?`,
+    [sectionJobNo],
+  );
+  const isCalibration = jc && (jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION');
+
+  const taskTable = isCalibration ? 'jc_calibration_task_checklist' : 'jc_task_checklist';
+
   const [[tasks]] = await conn.query(
     `SELECT COUNT(*) AS total,
             SUM(CASE WHEN is_completed = 0 THEN 1 ELSE 0 END) AS pending
-       FROM jc_task_checklist
+       FROM \`${taskTable}\`
       WHERE jc_section_no = ?`,
     [sectionJobNo],
   );

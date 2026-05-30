@@ -174,6 +174,15 @@ async function loadJobCardFull(sectionJobNo) {
   const main = rows[0];
   if (!main) return null;
 
+  const isCalibration = main.work_type === 'CALIBRATION'
+    || main.workflow_type === 'CALIBRATION_STANDARD'
+    || main.workflow_type === 'CALIBRATION_PRECISION';
+
+  const taskTable = isCalibration ? 'jc_calibration_task_checklist' : 'jc_task_checklist';
+  const taskFields = isCalibration
+    ? 'task_text, is_custom, is_completed, completed_at, completed_by_employee_id, order_index, task_type, task_result'
+    : 'task_text, is_custom, is_completed, completed_at, completed_by_employee_id, order_index';
+
   // ── 2. Fire all child-table queries in PARALLEL ─────────────────────
   // 6 narrow indexed queries — all cheap. Even on a fully populated card
   // (multi-row maintenance + spares + readings) total wall-clock is one
@@ -204,9 +213,8 @@ async function loadJobCardFull(sectionJobNo) {
       [sectionJobNo],
     ),
     pool.query(
-      `SELECT task_text, is_custom, is_completed, completed_at,
-              completed_by_employee_id, order_index
-         FROM jc_task_checklist
+      `SELECT ${taskFields}
+         FROM \`${taskTable}\`
         WHERE jc_section_no = ?
         ORDER BY order_index ASC, id ASC`,
       [sectionJobNo],

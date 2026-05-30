@@ -87,11 +87,12 @@ export async function addJobCardTask(id, body) {
   return r.data.data;
 }
 
-/** PATCH /api/v1/job-cards/:id/tasks/:taskId — toggle is_completed */
-export async function toggleJobCardTask(id, taskId, isCompleted) {
+/** PATCH /api/v1/job-cards/:id/tasks/:taskId — toggle or update task */
+export async function toggleJobCardTask(id, taskId, payload) {
+  const body = typeof payload === 'object' ? payload : { is_completed: payload };
   const r = await api.patch(
     `/job-cards/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}`,
-    { is_completed: isCompleted },
+    body,
   );
   return r.data.data;
 }

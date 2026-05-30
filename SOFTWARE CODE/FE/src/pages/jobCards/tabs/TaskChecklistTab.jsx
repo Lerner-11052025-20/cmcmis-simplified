@@ -3,20 +3,21 @@
 // ----------------------------------------------------------------------------
 // Tab 10 — Task Checklist (image 15).
 //
-// Engineer workflow:
-//   1. Dropdown shows library tasks pre-filtered by JC's workflow_type
-//      category (D-9.7). "Show all" toggle expands to cross-category.
-//   2. "+ Add" copies the library task TEXT into jc_task_checklist
-//      (is_custom=0, task_id populated).
-//   3. "+ Add Custom Task" reveals inline text input → POST is_custom=1.
-//   4. Checkbox toggles → optimistic UI (D-9.9), PATCH /tasks/:id.
-//   5. Trash icon → DELETE /tasks/:id (hard delete, Q-5).
+// Calibration / Calibration Department Workflow:
+//   1. Dropdown shows library tasks from cmms_task_mst (D-9.7).
+//   2. "+ Add" copies the library task TEXT into jc_calibration_task_checklist.
+//   3. "+ Add Custom Task" reveals inline text input.
+//   4. Radio buttons: NABL Task, NON-NABL Task, BOTH NABL & NON-NABL.
+//   5. Result Buttons: Pass (Green), Fail (Red), Functional Test (Blue), Not Carried Out (Gray).
+//   6. Completed states have specialized background colors, badge indicators, and line-through styles.
+//   7. Blue Edit button next to completed tasks reverts completion.
 //
-// Progress bar = completed / total. Used by the Mark Complete gate.
+// Non-Calibration Workflow (Standard):
+//   Acts as a standard checklist with standard checklist mechanics.
 // ============================================================================
 
-import { useMemo, useState } from 'react';
-import { Plus, Trash2, Check } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Plus, Trash2, Check, FileText } from 'lucide-react';
 import { useJobCardTasks, invalidateJobCardTasks } from '../../../lib/hooks/useJobCardTasks.js';
 import { useTaskLibrary } from '../../../lib/hooks/useTaskLibrary.js';
 import { Button } from '../../../components/ui/Button.jsx';
@@ -36,6 +37,10 @@ function workflowToCategory(workflowType) {
 }
 
 export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
+  const isCalibration = jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION';
+
   const { items: tasks, loading: tasksLoading, refetch: refetchTasks } = useJobCardTasks(jc.section_job_no);
   const [showAll, setShowAll] = useState(false);
   const libCategory = showAll ? null : workflowToCategory(jc.workflow_type);
@@ -45,6 +50,23 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
   const [customText, setCustomText] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Calibration checklist state
+  const [selectedTypes, setSelectedTypes] = useState({}); // task.id -> 'NABL' | 'NON-NABL' | 'BOTH'
+  const [warnings, setWarnings] = useState({}); // task.id -> string
+
+  // Initialize selected types when tasks load
+  useEffect(() => {
+    if (tasks && isCalibration) {
+      const types = {};
+      for (const t of tasks) {
+        if (t.task_type) {
+          types[t.id] = t.task_type;
+        }
+      }
+      setSelectedTypes(types);
+    }
+  }, [tasks, isCalibration]);
 
   const completedCount = useMemo(() => (tasks || []).filter((t) => t.is_completed).length, [tasks]);
   const totalCount = tasks?.length || 0;
@@ -61,7 +83,6 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       refetchTasks();
     } catch (e) {
       const msg = e?.response?.data?.error?.message;
-      // eslint-disable-next-line no-alert
       alert('Could not add task: ' + (msg || 'Unknown error'));
     } finally {
       setBusy(false);
@@ -81,14 +102,13 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       refetchTasks();
     } catch (e) {
       const msg = e?.response?.data?.error?.message;
-      // eslint-disable-next-line no-alert
       alert('Could not add custom task: ' + (msg || 'Unknown error'));
     } finally {
       setBusy(false);
     }
   }
 
-  // ── Toggle completion (optimistic per D-9.9) ────────────────────
+  // ── Toggle completion (Standard Flow) ───────────────────────────
   async function handleToggle(task) {
     if (!canWrite) return;
     const desired = !task.is_completed;
@@ -98,15 +118,56 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       refetchTasks();
     } catch (e) {
       const msg = e?.response?.data?.error?.message;
-      // eslint-disable-next-line no-alert
       alert('Could not toggle task: ' + (msg || 'Unknown error'));
+    }
+  }
+
+  // ── Save Calibration Task Result ────────────────────────────────
+  async function handleSaveCalibrationResult(task, result) {
+    if (!canWrite) return;
+    const type = selectedTypes[task.id];
+    if (!type) {
+      setWarnings((prev) => ({ ...prev, [task.id]: 'Please select NABL, NON-NABL or BOTH option.' }));
+      return;
+    }
+    setWarnings((prev) => ({ ...prev, [task.id]: null }));
+    setBusy(true);
+    try {
+      await toggleJobCardTask(jc.section_job_no, task.id, {
+        is_completed: true,
+        task_type: type,
+        task_result: result,
+      });
+      invalidateJobCardTasks(jc.section_job_no);
+      refetchTasks();
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message;
+      alert('Could not save task result: ' + (msg || 'Unknown error'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ── Edit/Reopen Calibration Task ────────────────────────────────
+  async function handleReopenCalibration(task) {
+    if (!canWrite) return;
+    try {
+      await toggleJobCardTask(jc.section_job_no, task.id, {
+        is_completed: false,
+        task_type: task.task_type,
+        task_result: task.task_result,
+      });
+      invalidateJobCardTasks(jc.section_job_no);
+      refetchTasks();
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message;
+      alert('Could not reopen task: ' + (msg || 'Unknown error'));
     }
   }
 
   // ── Delete task ─────────────────────────────────────────────────
   async function handleDelete(task) {
     if (!canWrite) return;
-    // eslint-disable-next-line no-alert
     if (!window.confirm(`Delete task: "${task.task_text.slice(0, 60)}…"? This cannot be undone.`)) return;
     try {
       await deleteJobCardTask(jc.section_job_no, task.id);
@@ -114,9 +175,211 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       refetchTasks();
     } catch (e) {
       const msg = e?.response?.data?.error?.message;
-      // eslint-disable-next-line no-alert
       alert('Could not delete task: ' + (msg || 'Unknown error'));
     }
+  }
+
+  // Calibration Task Row Rendering
+  function renderCalibrationRow(t, i) {
+    const isCompleted = !!t.is_completed;
+    const taskType = selectedTypes[t.id] || t.task_type || '';
+
+    // Badges classes & styles
+    const typeBadge = (() => {
+      const type = t.task_type;
+      if (type === 'NABL') {
+        return <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-blue-200">NABL</span>;
+      }
+      if (type === 'NON-NABL') {
+        return <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-purple-200">NON-NABL</span>;
+      }
+      if (type === 'BOTH') {
+        return <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-indigo-200">BOTH NABL & NON-NABL</span>;
+      }
+      return null;
+    })();
+
+    const resultBadge = (() => {
+      const res = t.task_result;
+      if (res === 'PASS') {
+        return <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-emerald-200">PASS</span>;
+      }
+      if (res === 'FAIL') {
+        return <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-red-200">FAIL</span>;
+      }
+      if (res === 'Functional Test') {
+        return <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-blue-200">Functional Test</span>;
+      }
+      if (res === 'Not Carried Out') {
+        return <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-0.5 rounded shadow-sm border border-gray-200">Not Carried Out</span>;
+      }
+      return null;
+    })();
+
+    if (isCompleted) {
+      // Completed row visual states
+      let rowClass = 'border-border bg-white';
+      let textClass = 'text-ink';
+      if (t.task_result === 'PASS') {
+        rowClass = 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/60';
+        textClass = 'text-ink-soft line-through';
+      } else if (t.task_result === 'FAIL') {
+        rowClass = 'border-red-200 bg-red-50/40 hover:bg-red-50/60';
+        textClass = 'text-red-700 font-semibold';
+      } else if (t.task_result === 'Functional Test') {
+        rowClass = 'border-blue-200 bg-blue-50/40 hover:bg-blue-50/60';
+        textClass = 'text-blue-700 font-medium';
+      } else if (t.task_result === 'Not Carried Out') {
+        rowClass = 'border-gray-200 bg-gray-50/40 hover:bg-gray-50/60';
+        textClass = 'text-ink-soft';
+      }
+
+      return (
+        <li key={t.id} className={`flex items-center gap-3 rounded-lg border p-3.5 transition-colors shadow-sm ${rowClass}`}>
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-base border border-border text-xs font-semibold text-ink-soft">{i + 1}</span>
+          <span className={`flex-1 text-sm ${textClass}`}>
+            {t.task_text}
+            {t.is_custom ? <span className="ml-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-200">Custom</span> : null}
+          </span>
+          <div className="flex items-center gap-2 mr-2">
+            {typeBadge}
+            {resultBadge}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleReopenCalibration(t)}
+              disabled={!canWrite || busy}
+              aria-label="Edit result"
+              title="Edit Task Result"
+              className="p-1.5 rounded text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-colors"
+            >
+              <FileText size={16} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(t)}
+              disabled={!canWrite || busy}
+              aria-label="Delete task"
+              title="Delete Task"
+              className="p-1.5 rounded text-ink-soft hover:text-danger disabled:opacity-30 transition-colors"
+            >
+              <Trash2 size={16} strokeWidth={1.75} />
+            </button>
+          </div>
+        </li>
+      );
+    }
+
+    // In-Progress / Uncompleted Row with radio selectors and results buttons
+    return (
+      <li key={t.id} className="flex flex-col gap-3 rounded-lg border border-border bg-white p-4 shadow-sm hover:border-accent/40 transition-colors">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-base border border-border text-xs font-semibold text-ink-soft shrink-0 mt-0.5">{i + 1}</span>
+          <span className="flex-1 text-sm font-medium text-ink">
+            {t.task_text}
+            {t.is_custom ? <span className="ml-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-200">Custom</span> : null}
+          </span>
+          <button
+            type="button"
+            onClick={() => handleDelete(t)}
+            disabled={!canWrite || busy}
+            aria-label="Delete task"
+            title="Delete Task"
+            className="p-1.5 rounded text-ink-soft hover:text-danger disabled:opacity-30 transition-colors shrink-0"
+          >
+            <Trash2 size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+
+        {/* Dynamic Warning Message */}
+        {warnings[t.id] && (
+          <div className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded">
+            ⚠️ {warnings[t.id]}
+          </div>
+        )}
+
+        <div className="border-t border-dashed border-border/80 pt-3 flex flex-col gap-3">
+          {/* Radio Buttons for Task Type */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+            <span className="font-semibold text-ink-soft">Task Type:</span>
+            <label className="flex items-center gap-2 font-medium text-ink cursor-pointer">
+              <input
+                type="radio"
+                name={`task_type_${t.id}`}
+                value="NABL"
+                checked={taskType === 'NABL'}
+                disabled={!canWrite}
+                onChange={() => setSelectedTypes((prev) => ({ ...prev, [t.id]: 'NABL' }))}
+                className="w-4 h-4 text-purple-600 border-border focus:ring-purple-500 cursor-pointer"
+              />
+              NABL Task
+            </label>
+            <label className="flex items-center gap-2 font-medium text-ink cursor-pointer">
+              <input
+                type="radio"
+                name={`task_type_${t.id}`}
+                value="NON-NABL"
+                checked={taskType === 'NON-NABL'}
+                disabled={!canWrite}
+                onChange={() => setSelectedTypes((prev) => ({ ...prev, [t.id]: 'NON-NABL' }))}
+                className="w-4 h-4 text-purple-600 border-border focus:ring-purple-500 cursor-pointer"
+              />
+              NON-NABL Task
+            </label>
+            <label className="flex items-center gap-2 font-medium text-ink cursor-pointer">
+              <input
+                type="radio"
+                name={`task_type_${t.id}`}
+                value="BOTH"
+                checked={taskType === 'BOTH'}
+                disabled={!canWrite}
+                onChange={() => setSelectedTypes((prev) => ({ ...prev, [t.id]: 'BOTH' }))}
+                className="w-4 h-4 text-purple-600 border-border focus:ring-purple-500 cursor-pointer"
+              />
+              BOTH NABL & NON-NABL Task
+            </label>
+          </div>
+
+          {/* Action buttons for Results */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-semibold text-ink-soft mr-2">Task Result:</span>
+            <button
+              type="button"
+              disabled={!canWrite || busy}
+              onClick={() => handleSaveCalibrationResult(t, 'PASS')}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1.5 px-3 rounded shadow-sm hover:shadow active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              Pass
+            </button>
+            <button
+              type="button"
+              disabled={!canWrite || busy}
+              onClick={() => handleSaveCalibrationResult(t, 'FAIL')}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-1.5 px-3 rounded shadow-sm hover:shadow active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              Fail
+            </button>
+            <button
+              type="button"
+              disabled={!canWrite || busy}
+              onClick={() => handleSaveCalibrationResult(t, 'Functional Test')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3 rounded shadow-sm hover:shadow active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              Functional Test
+            </button>
+            <button
+              type="button"
+              disabled={!canWrite || busy}
+              onClick={() => handleSaveCalibrationResult(t, 'Not Carried Out')}
+              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1.5 px-3 rounded shadow-sm hover:shadow active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              Not Carried Out
+            </button>
+          </div>
+        </div>
+      </li>
+    );
   }
 
   return (
@@ -149,14 +412,16 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       <div className="rounded-lg border border-border bg-base p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-ink">📋 Add from Task Library</span>
-          <label className="text-xs text-ink-soft flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showAll}
-              onChange={(e) => setShowAll(e.target.checked)}
-            />
-            Show all categories
-          </label>
+          {!isCalibration && (
+            <label className="text-xs text-ink-soft flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={showAll}
+                onChange={(e) => setShowAll(e.target.checked)}
+              />
+              Show all categories
+            </label>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Select
@@ -165,10 +430,10 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
             disabled={!canWrite || busy || libLoading}
             className="flex-1"
           >
-            <option value="">{libLoading ? 'Loading…' : 'Select a standard task…'}</option>
+            <option value="">{libLoading ? 'Loading…' : isCalibration ? 'Select a standard calibration task…' : 'Select a standard task…'}</option>
             {(library || []).map((t) => (
               <option key={t.id} value={t.id}>
-                {showAll ? `[${t.category[0]}] ` : ''}{t.task_text}
+                {!isCalibration && showAll ? `[${t.category[0]}] ` : ''}{t.task_text}
               </option>
             ))}
           </Select>
@@ -215,7 +480,7 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-ink">
-            {jc.workflow_type && workflowToCategory(jc.workflow_type) ? workflowToCategory(jc.workflow_type)[0] + workflowToCategory(jc.workflow_type).slice(1).toLowerCase() + ' Tasks' : 'Tasks'} ({totalCount})
+            {isCalibration ? 'Calibration Tasks' : jc.workflow_type && workflowToCategory(jc.workflow_type) ? workflowToCategory(jc.workflow_type)[0] + workflowToCategory(jc.workflow_type).slice(1).toLowerCase() + ' Tasks' : 'Tasks'} ({totalCount})
           </h3>
         </div>
         {tasksLoading && !tasks ? (
@@ -227,42 +492,44 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
         ) : (
           <ol className="space-y-2">
             {tasks.map((t, i) => (
-              <li
-                key={t.id}
-                className={
-                  'flex items-center gap-3 rounded-lg border p-2.5 transition-colors '
-                  + (t.is_completed ? 'border-emerald-200 bg-emerald-50/40' : 'border-border bg-white')
-                }
-              >
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-base text-xs text-ink-soft">{i + 1}</span>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(t)}
-                  disabled={!canWrite}
-                  aria-label={t.is_completed ? 'Mark task as incomplete' : 'Mark task as complete'}
+              isCalibration ? renderCalibrationRow(t, i) : (
+                <li
+                  key={t.id}
                   className={
-                    'w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors '
-                    + (t.is_completed
-                      ? 'bg-violet-500 border-violet-500 text-white'
-                      : 'border-border bg-white hover:border-accent')
+                    'flex items-center gap-3 rounded-lg border p-2.5 transition-colors '
+                    + (t.is_completed ? 'border-emerald-200 bg-emerald-50/40' : 'border-border bg-white')
                   }
                 >
-                  {t.is_completed ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : null}
-                </button>
-                <span className={'flex-1 text-sm ' + (t.is_completed ? 'text-ink-soft line-through' : 'text-ink')}>
-                  {t.task_text}
-                  {t.is_custom ? <span className="ml-2 text-xs text-emerald-700">[custom]</span> : null}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(t)}
-                  disabled={!canWrite}
-                  aria-label="Delete task"
-                  className="p-1.5 text-ink-soft hover:text-danger disabled:opacity-30"
-                >
-                  <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
-                </button>
-              </li>
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-base text-xs text-ink-soft">{i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(t)}
+                    disabled={!canWrite}
+                    aria-label={t.is_completed ? 'Mark task as incomplete' : 'Mark task as complete'}
+                    className={
+                      'w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors '
+                      + (t.is_completed
+                        ? 'bg-violet-500 border-violet-500 text-white'
+                        : 'border-border bg-white hover:border-accent')
+                    }
+                  >
+                    {t.is_completed ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : null}
+                  </button>
+                  <span className={'flex-1 text-sm ' + (t.is_completed ? 'text-ink-soft line-through' : 'text-ink')}>
+                    {t.task_text}
+                    {t.is_custom ? <span className="ml-2 text-xs text-emerald-700">[custom]</span> : null}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(t)}
+                    disabled={!canWrite}
+                    aria-label="Delete task"
+                    className="p-1.5 text-ink-soft hover:text-danger disabled:opacity-30"
+                  >
+                    <Trash2 size={14} strokeWidth={1.75} aria-hidden="true" />
+                  </button>
+                </li>
+              )
             ))}
           </ol>
         )}

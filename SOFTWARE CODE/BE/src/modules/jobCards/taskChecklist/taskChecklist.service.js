@@ -34,7 +34,12 @@ async function listTasks({ sectionJobNo, actor }) {
   const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
   if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
   jcService.assertCanAccessLane(jc, actor);
-  const rows = await repo.listTasksForJc(sectionJobNo);
+  
+  const isCalibration = jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION';
+
+  const rows = await repo.listTasksForJc(sectionJobNo, isCalibration);
   return rows.map((r) => ({
     id:            r.id,
     task_id:       r.task_id,
@@ -44,6 +49,8 @@ async function listTasks({ sectionJobNo, actor }) {
     completed_by_employee_id: r.completed_by_employee_id,
     completed_at:  r.completed_at,
     order_index:   r.order_index,
+    task_type:     r.task_type || null,
+    task_result:   r.task_result || null,
   }));
 }
 
@@ -51,8 +58,7 @@ async function listTasks({ sectionJobNo, actor }) {
 async function addTask({ sectionJobNo, body, actor }) {
   const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
   if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
-  // findByIdWithDetails has a different shape than findForMutation —
-  // map onto what jcService.isOwnEngineer / isLegacyRow expect.
+  // map onto what jcService.isOwnEngineer / isLegacyRow expect
   const jcShape = {
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
@@ -61,11 +67,17 @@ async function addTask({ sectionJobNo, body, actor }) {
   };
   requireWriteAccess(jcShape, actor);
 
+  const isCalibration = jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION';
+
   let task_text, isCustom = body.is_custom === true, libraryTaskId = null;
   if (body.task_id) {
-    // Library path — load the canonical text from the library so the
-    // engineer can't substitute their own text under a library id.
-    const lib = await repo.findLibraryTask(body.task_id);
+    // If calibration, library task refers to master table cmms_task_mst
+    const lib = isCalibration
+      ? await repo.findMstTask(body.task_id)
+      : await repo.findLibraryTask(body.task_id);
+
     if (!lib || !lib.is_active) {
       throw errors.badRequest('Selected library task not found or inactive', { field: 'task_id' });
     }
@@ -90,18 +102,24 @@ async function addTask({ sectionJobNo, body, actor }) {
     taskText: task_text,
     isCustom,
     createdByEmployeeId: actor.employeeId,
-  });
+  }, isCalibration);
   return { id: newId, task_text, is_custom: isCustom };
 }
 
 // ── Toggle completion ───────────────────────────────────────────────
 async function toggleTask({ sectionJobNo, taskRowId, body, actor }) {
-  const task = await repo.findTaskById(taskRowId);
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+
+  const isCalibration = jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION';
+
+  const task = await repo.findTaskById(taskRowId, isCalibration);
   if (!task || task.jc_section_no !== sectionJobNo) {
     throw errors.notFound('Task not found on this job card');
   }
-  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
-  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+
   requireWriteAccess({
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
@@ -112,18 +130,32 @@ async function toggleTask({ sectionJobNo, taskRowId, body, actor }) {
   await repo.setTaskCompletion(null, taskRowId, {
     isCompleted: body.is_completed === true,
     byEmployeeId: actor.employeeId,
-  });
-  return { id: taskRowId, is_completed: body.is_completed === true };
+    taskType: body.task_type || null,
+    taskResult: body.task_result || null,
+  }, isCalibration);
+
+  return {
+    id: taskRowId,
+    is_completed: body.is_completed === true,
+    task_type: body.task_type || null,
+    task_result: body.task_result || null,
+  };
 }
 
 // ── Delete task ─────────────────────────────────────────────────────
 async function deleteTask({ sectionJobNo, taskRowId, actor }) {
-  const task = await repo.findTaskById(taskRowId);
+  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
+  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+
+  const isCalibration = jc.work_type === 'CALIBRATION'
+    || jc.workflow_type === 'CALIBRATION_STANDARD'
+    || jc.workflow_type === 'CALIBRATION_PRECISION';
+
+  const task = await repo.findTaskById(taskRowId, isCalibration);
   if (!task || task.jc_section_no !== sectionJobNo) {
     throw errors.notFound('Task not found on this job card');
   }
-  const jc = await jcRepo.findByIdWithDetails(sectionJobNo);
-  if (!jc) throw errors.notFound(`Job card ${sectionJobNo} not found`);
+
   requireWriteAccess({
     parent_jr_no: jc.parent_jr_no,
     assigned_engineer_employee_id: jc.assigned_engineer_employee_id,
@@ -131,7 +163,7 @@ async function deleteTask({ sectionJobNo, taskRowId, actor }) {
     lane_code: jc.lane_code,
   }, actor);
 
-  await repo.deleteTask(null, taskRowId);
+  await repo.deleteTask(null, taskRowId, isCalibration);
   return { id: taskRowId, deleted: true };
 }
 
