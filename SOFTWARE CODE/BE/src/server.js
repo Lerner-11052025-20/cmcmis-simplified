@@ -305,6 +305,11 @@ app.use(`${env.API_BASE_PATH}/procurement`, procurementRoutes);
 const projectsRoutes = require('./modules/projects/projects.routes');
 app.use(`${env.API_BASE_PATH}/projects`, projectsRoutes);
 
+// ── Tasks module (Phase 16) ─────────────────────────────────────────────
+const tasksRoutes = require('./modules/tasks/tasks.routes');
+app.use(`${env.API_BASE_PATH}/tasks`, tasksRoutes);
+
+
 // ── Audit Log Viewer (Phase 14) ─────────────────────────────────────────
 // Mounted at /api/v1/audit. STRICTLY read-only — every endpoint is a GET
 // over audit_log / user_role_history / status-history tables. Super-Admin-
