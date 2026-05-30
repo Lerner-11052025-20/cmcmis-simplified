@@ -164,11 +164,11 @@ export function Login() {
           </span>
         </div>
 
-        <div className="relative z-10 my-auto grid gap-9">
-          <div className="mx-auto flex h-[330px] w-[330px] items-center justify-center rounded-[28px] border border-slate-100 bg-white/70 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+        <div className="relative z-10 my-auto grid gap-8">
+          <div className="mx-auto flex h-[200px] w-[200px] items-center justify-center rounded-2xl border border-slate-100 bg-white/70 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur-sm">
             <svg
               viewBox="0 0 320 320"
-              className="h-[292px] w-[292px] text-indigo-500 select-none"
+              className="h-[200px] w-[200px] text-indigo-500 select-none"
               aria-hidden="true"
             >
               <defs>
@@ -207,23 +207,6 @@ export function Login() {
               calibration workflows, equipment verification, and audit-ready
               maintenance control.
             </p>
-          </div>
-
-          <div className="mx-auto grid w-full max-w-xl grid-cols-2 gap-3">
-            {[
-              ['Live Equipment Control', 'Asset readiness and service traceability'],
-              ['Audit Ready', 'Role-wise logs and verified actions'],
-              ['Workflow Secure', 'Request to job-card conversion'],
-              ['ISRO Style UI', 'Clean, readable mission interface'],
-            ].map(([title, text], index) => (
-              <div key={title} className="rounded-lg border border-slate-200 bg-white/85 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${index % 2 === 0 ? 'bg-sky-500' : 'bg-orange-400'} animate-pulse`} />
-                  <p className="text-xs font-bold text-slate-900">{title}</p>
-                </div>
-                <p className="mt-2 text-[11px] font-medium leading-5 text-slate-500">{text}</p>
-              </div>
-            ))}
           </div>
         </div>
 
