@@ -350,7 +350,7 @@ export function Profile() {
                           {humanizedOutcome(log.outcome)}
                         </span>
                         <span className="text-slate-500 font-medium">
-                          {log.attempt_at ? dayjs(log.attempt_at).format('MMM DD, YYYY · hh:mm A') : '—'}
+                          {log.attempt_at ? dayjs(typeof log.attempt_at === 'string' ? log.attempt_at.replace('Z', '') : log.attempt_at).format('MMM DD, YYYY · hh:mm A') : '—'}
                         </span>
                       </div>
 
