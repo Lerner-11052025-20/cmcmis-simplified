@@ -135,98 +135,102 @@ export function Login() {
   return (
     <main className="h-screen max-h-screen overflow-hidden grid grid-cols-1 lg:grid-cols-2 bg-base select-none relative">
       
-      {/* ── LEFT PANEL: ISRO SAC Presentation & High-Contrast Status Badges (50% Width) ── */}
-      <div className="hidden lg:flex bg-white border-r border-border/70 flex-col justify-between p-12 lg:p-16 h-full relative overflow-hidden">
-        {/* Visual Blueprint/Math drafting grid specifically for the Left Panel */}
-        <div className="absolute inset-0 technical-grid-bg opacity-[0.5] pointer-events-none" />
+      {/* Left panel: mission identity and orbital visual only. Login box is untouched. */}
+      <div className="hidden lg:flex bg-white border-r border-slate-200 flex-col justify-between px-12 py-10 xl:px-16 h-full relative overflow-hidden">
+        <div className="absolute inset-0 technical-grid-bg opacity-60 pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-500 to-orange-400" />
 
-        {/* Top Header */}
-        <div className="relative z-10 flex items-center gap-3.5">
-          <div className="p-2 bg-accent/5 rounded-xl border border-accent/10">
-            <svg className="w-8 h-8 text-accent animate-pulse-radar" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="8 4" />
-              <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="50" cy="50" r="6" fill="currentColor" />
-            </svg>
+        <div className="relative z-10 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-sky-100 bg-white shadow-sm">
+              <svg className="h-8 w-8 text-sky-600" viewBox="0 0 100 100" aria-hidden="true">
+                <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" strokeWidth="6" className="opacity-25" />
+                <path d="M50 86 L58 50 L50 14" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+                <ellipse cx="50" cy="50" rx="42" ry="15" fill="none" stroke="currentColor" strokeWidth="3" transform="rotate(-18 50 50)" className="opacity-60" />
+                <circle cx="24" cy="39" r="6" fill="currentColor" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold tracking-[0.22em] text-slate-900 uppercase font-sans">
+                ISRO SAC
+              </h2>
+              <p className="text-[10px] font-sans font-semibold text-slate-500 tracking-[0.18em] uppercase">
+                Space Applications Centre
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold tracking-widest text-slate-800 uppercase font-sans">
-              Space Applications Centre
-            </h2>
-            <p className="text-[10px] font-sans font-semibold text-slate-500 tracking-widest uppercase">
-              Indian Space Research Organisation
-            </p>
-          </div>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+            Secure Portal
+          </span>
         </div>
 
-        {/* Center content: Scope & High-Contrast badges */}
-        <div className="relative z-10 my-auto flex flex-col items-center text-center">
-          
-          {/* Diagnostic scope animation */}
-          <div className="relative mb-8 p-1">
+        <div className="relative z-10 my-auto grid gap-9">
+          <div className="mx-auto flex h-[330px] w-[330px] items-center justify-center rounded-[28px] border border-slate-100 bg-white/70 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm">
             <svg
-              viewBox="0 0 100 100"
-              className="w-40 h-40 text-accent select-none drop-shadow-[0_4px_12px_rgba(79,93,255,0.06)]"
+              viewBox="0 0 320 320"
+              className="h-[292px] w-[292px] text-indigo-500 select-none"
               aria-hidden="true"
             >
-              {/* Compass ticks outer */}
-              <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="0.75" strokeDasharray="1 7" className="animate-spin-slow" />
-              {/* Outer dotted calibration path */}
-              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="1.25" strokeDasharray="6 3" className="animate-spin-slow opacity-70" />
-              {/* Outer solid guideline */}
-              <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" strokeWidth="0.75" className="opacity-30" />
-              {/* Core measurement rings */}
-              <circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" strokeWidth="1" className="opacity-40" />
-              <circle cx="50" cy="50" r="14" fill="none" stroke="currentColor" strokeWidth="1.5" className="opacity-60" />
-              {/* Concentric diagnostic lines */}
-              <line x1="50" y1="2" x2="50" y2="98" stroke="currentColor" strokeWidth="0.5" className="opacity-[0.18]" />
-              <line x1="2" y1="50" x2="98" y2="50" stroke="currentColor" strokeWidth="0.5" className="opacity-[0.18]" />
-              
-              {/* Sweeping radar scanner line */}
-              <g className="animate-spin-slow" style={{ transformOrigin: '50px 50px' }}>
-                <line x1="50" y1="50" x2="50" y2="8" stroke="currentColor" strokeWidth="1.5" className="opacity-80" />
-                <circle cx="50" cy="8" r="3.5" fill="currentColor" />
+              <defs>
+                <linearGradient id="loginOrbit" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#a5b4fc" />
+                  <stop offset="55%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+              </defs>
+              <line x1="160" y1="14" x2="160" y2="306" stroke="currentColor" strokeWidth="1.5" className="opacity-20" />
+              <line x1="14" y1="160" x2="306" y2="160" stroke="currentColor" strokeWidth="1.5" className="opacity-20" />
+              <circle cx="160" cy="160" r="116" fill="none" stroke="currentColor" strokeWidth="2.5" className="opacity-25" />
+              <circle cx="160" cy="160" r="78" fill="none" stroke="currentColor" strokeWidth="3" className="opacity-35" />
+              <circle cx="160" cy="160" r="46" fill="none" stroke="url(#loginOrbit)" strokeWidth="5" className="opacity-85" />
+              <ellipse cx="160" cy="160" rx="117" ry="36" fill="none" stroke="url(#loginOrbit)" strokeWidth="2.5" transform="rotate(-18 160 160)" className="opacity-45 animate-spin-slow" style={{ transformOrigin: '160px 160px' }} />
+              <ellipse cx="160" cy="160" rx="130" ry="33" fill="none" stroke="currentColor" strokeWidth="2" transform="rotate(-36 160 160)" className="opacity-25" />
+              <g className="animate-spin-slow" style={{ transformOrigin: '160px 160px' }}>
+                <line x1="160" y1="160" x2="139" y2="292" stroke="url(#loginOrbit)" strokeWidth="6" strokeLinecap="round" />
+                <circle cx="139" cy="292" r="12" fill="url(#loginOrbit)" />
               </g>
-
-              {/* Simulated Satellite path orbit */}
-              <ellipse cx="50" cy="50" rx="38" ry="12" fill="none" stroke="currentColor" strokeWidth="0.75" transform="rotate(-25 50 50)" className="opacity-30" />
-              <circle cx="21" cy="38" r="4.5" fill="currentColor" className="animate-pulse" />
-
-              {/* Active tracking signal dot */}
-              <circle cx="50" cy="50" r="4" fill="currentColor" className="animate-pulse-radar" />
+              <circle cx="70" cy="121" r="15" fill="url(#loginOrbit)" className="opacity-70 animate-pulse" />
+              <circle cx="160" cy="160" r="13" fill="url(#loginOrbit)" className="opacity-55 animate-pulse-radar" />
+              <circle cx="160" cy="160" r="5" fill="#ffffff" className="opacity-90" />
             </svg>
           </div>
 
-          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight max-w-xl font-sans">
-            Calibration &amp; Maintenance Management System
-          </h1>
+          <div className="mx-auto max-w-xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-sky-700">
+              CMCMIS Mission Console
+            </p>
+            <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-slate-950">
+              Calibration &amp; Maintenance Management System
+            </h1>
+            <p className="mx-auto mt-4 max-w-lg text-sm font-medium leading-7 text-slate-500">
+              A secure operational suite for instrument records, job requests,
+              calibration workflows, equipment verification, and audit-ready
+              maintenance control.
+            </p>
+          </div>
 
-          {/* Small badges with the text */}
-          <div className="flex flex-col gap-3 mt-10 w-full max-w-md items-center justify-center font-sans">
-            <div className="w-full inline-flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-              <span className="tracking-wide">ISO/IEC 17025 Regulatory Compliance</span>
-            </div>
-            
-            <div className="w-full inline-flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-100/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200">
-              <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 animate-pulse" />
-              <span className="tracking-wide">5,701 Active Space Calibration Assets</span>
-            </div>
-            
-            <div className="w-full inline-flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold bg-indigo-50 text-indigo-800 border border-indigo-100/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 animate-pulse" />
-              <span className="tracking-wide">ISO Class 5 Cleanroom Environmental Standard</span>
-            </div>
-            
-            <div className="w-full inline-flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold bg-purple-50 text-purple-800 border border-purple-100/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200">
-              <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0 animate-pulse" />
-              <span className="tracking-wide">Secure ISRO-Net Encrypted Gateway Uplink</span>
-            </div>
+          <div className="mx-auto grid w-full max-w-xl grid-cols-2 gap-3">
+            {[
+              ['Live Equipment Control', 'Asset readiness and service traceability'],
+              ['Audit Ready', 'Role-wise logs and verified actions'],
+              ['Workflow Secure', 'Request to job-card conversion'],
+              ['ISRO Style UI', 'Clean, readable mission interface'],
+            ].map(([title, text], index) => (
+              <div key={title} className="rounded-lg border border-slate-200 bg-white/85 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${index % 2 === 0 ? 'bg-sky-500' : 'bg-orange-400'} animate-pulse`} />
+                  <p className="text-xs font-bold text-slate-900">{title}</p>
+                </div>
+                <p className="mt-2 text-[11px] font-medium leading-5 text-slate-500">{text}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Empty spacer for flex alignment to maintain vertical geometry */}
-        <div className="h-2" />
+        <div className="relative z-10 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+          <span>CMCMIS Simplified</span>
+          <span>Authenticated Access Only</span>
+        </div>
       </div>
 
       {/* ── RIGHT PANEL: Standard Glassmorphic Sign-In Box (50% Width) ── */}
