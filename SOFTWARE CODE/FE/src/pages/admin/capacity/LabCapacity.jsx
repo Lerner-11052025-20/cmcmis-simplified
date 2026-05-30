@@ -5,7 +5,7 @@
 // Restricts capacity control strictly under SUPER_ADMIN and LAB_IN_CHARGE.
 // ============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   LineChart, RefreshCw, AlertCircle, Shield, ClipboardList, CheckCircle, BarChart3, Wrench, Users, Flame
 } from 'lucide-react';
