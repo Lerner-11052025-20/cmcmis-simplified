@@ -1,110 +1,138 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Tag, 
-  MapPin, 
-  CreditCard, 
-  Calendar, 
-  User, 
-  FileText, 
-  Info, 
-  ShieldCheck, 
-  Wrench, 
-  Activity 
-} from 'lucide-react';
 import dayjs from 'dayjs';
-import clsx from 'clsx';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  BadgeIndianRupee,
+  Boxes,
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  Clipboard,
+  CreditCard,
+  FileText,
+  Fingerprint,
+  Gauge,
+  History,
+  Info,
+  MapPin,
+  PackageCheck,
+  ShieldCheck,
+  Tag,
+  UserRound,
+  Wrench,
+} from 'lucide-react';
+
 import { fetchEquipmentDetail } from '../../lib/api/equipment.js';
 
-// ── Status badge colors mapping ──────────────────────────────────────
+const TABS = [
+  { key: 'overview', label: 'Overview', icon: Gauge },
+  { key: 'procurement', label: 'Procurement', icon: CreditCard },
+  { key: 'service', label: 'Service', icon: Wrench },
+  { key: 'records', label: 'Records', icon: History },
+];
+
 const STATUS_STYLES = {
-  ACTIVE: {
-    bg: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 border-emerald-100',
-    dot: 'bg-emerald-500',
-    border: 'border-emerald-500',
-    title: 'Active / Calibrated'
-  },
-  PENDING_VERIFICATION: {
-    bg: 'bg-amber-50 text-amber-700 ring-amber-600/20 border-amber-100',
-    dot: 'bg-amber-500',
-    border: 'border-amber-500',
-    title: 'Pending Verification'
-  },
-  UNDER_CALIBRATION: {
-    bg: 'bg-sky-50 text-sky-700 ring-sky-600/20 border-sky-100',
-    dot: 'bg-sky-500',
-    border: 'border-sky-500',
-    title: 'Under Calibration'
-  },
-  UNDER_REPAIR: {
-    bg: 'bg-orange-50 text-orange-700 ring-orange-600/20 border-orange-100',
-    dot: 'bg-orange-500',
-    border: 'border-orange-500',
-    title: 'Under Repair'
-  },
-  OUT_OF_TOLERANCE: {
-    bg: 'bg-rose-50 text-rose-700 ring-rose-600/20 border-rose-100',
-    dot: 'bg-rose-500',
-    border: 'border-rose-500',
-    title: 'Out of Tolerance'
-  },
-  QUARANTINED: {
-    bg: 'bg-rose-50 text-rose-700 ring-rose-600/20 border-rose-100',
-    dot: 'bg-rose-500',
-    border: 'border-rose-500',
-    title: 'Quarantined / Hold'
-  },
-  CONDEMNED: {
-    bg: 'bg-slate-50 text-slate-700 ring-slate-600/20 border-slate-100',
-    dot: 'bg-slate-500',
-    border: 'border-slate-500',
-    title: 'Condemned'
-  },
-  RETIRED: {
-    bg: 'bg-slate-50 text-slate-700 ring-slate-600/20 border-slate-100',
-    dot: 'bg-slate-500',
-    border: 'border-slate-500',
-    title: 'Retired / Archived'
-  }
+  ACTIVE: { label: 'Active / Calibrated', dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200', panel: 'bg-emerald-50 text-emerald-600' },
+  PENDING_VERIFICATION: { label: 'Pending Verification', dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200', panel: 'bg-amber-50 text-amber-600' },
+  UNDER_CALIBRATION: { label: 'Under Calibration', dot: 'bg-sky-500', chip: 'bg-sky-50 text-sky-700 border-sky-200', panel: 'bg-sky-50 text-sky-600' },
+  UNDER_REPAIR: { label: 'Under Repair', dot: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700 border-orange-200', panel: 'bg-orange-50 text-orange-600' },
+  OUT_OF_TOLERANCE: { label: 'Out of Tolerance', dot: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700 border-rose-200', panel: 'bg-rose-50 text-rose-600' },
+  QUARANTINED: { label: 'Quarantined / Hold', dot: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700 border-rose-200', panel: 'bg-rose-50 text-rose-600' },
+  CONDEMNED: { label: 'Condemned', dot: 'bg-slate-500', chip: 'bg-slate-50 text-slate-700 border-slate-200', panel: 'bg-slate-50 text-slate-600' },
+  RETIRED: { label: 'Retired / Archived', dot: 'bg-slate-500', chip: 'bg-slate-50 text-slate-700 border-slate-200', panel: 'bg-slate-50 text-slate-600' },
 };
 
-function formatDisplayDate(value) {
-  if (!value) return '—';
+function display(value, fallback = '-') {
+  return value === null || value === undefined || value === '' ? fallback : value;
+}
+
+function formatDate(value, fallback = '-') {
+  if (!value) return fallback;
   return dayjs(value).format('DD MMM YYYY');
 }
 
-function SectionCard({ title, icon: Icon, borderColor, children }) {
+function formatMoney(cost, currency) {
+  if (cost === null || cost === undefined || cost === '') return '-';
+  return `${Number(cost).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ${currency || 'INR'}`;
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+  return dayjs(value).startOf('day').diff(dayjs().startOf('day'), 'day');
+}
+
+function FieldTile({ icon: Icon, label, value, mono = false, copyValue, emphasis = false }) {
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    if (!copyValue && !value) return;
+    navigator.clipboard?.writeText(String(copyValue || value));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  }
+
   return (
-    <div className={clsx(
-      'bg-white rounded-xl border border-border shadow-card overflow-hidden transition-all duration-200 hover:shadow-md border-l-4',
-      borderColor
-    )}>
-      <div className="bg-slate-50/50 px-5 py-4 border-b border-border flex items-center gap-2.5">
-        <div className={clsx('p-1.5 rounded-lg bg-white border border-border', borderColor.replace('border-l-4', '').trim())}>
-          <Icon size={16} className="text-ink" />
+    <div className={`group rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md ${emphasis ? 'border-sky-200 ring-1 ring-sky-100' : 'border-slate-200'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 ring-1 ring-sky-100">
+            <Icon size={18} strokeWidth={2.1} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+            <p className={`mt-1 truncate text-sm font-semibold text-slate-800 ${mono ? 'font-mono' : ''}`}>
+              {display(value)}
+            </p>
+          </div>
         </div>
-        <h2 className="text-sm font-semibold text-ink uppercase tracking-wider">{title}</h2>
-      </div>
-      <div className="p-5 space-y-4">
-        {children}
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`Copy ${label}`}
+          title={copied ? 'Copied' : 'Copy'}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-slate-50 hover:text-sky-600 group-hover:opacity-100"
+        >
+          <Clipboard size={15} strokeWidth={2} />
+        </button>
       </div>
     </div>
   );
 }
 
-function DetailRow({ label, value, isMonospaced = false, isHighlighted = false }) {
+function MetricCard({ label, value, icon: Icon, tone, caption }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2.5 border-b border-border/60 last:border-b-0 gap-1.5">
-      <span className="text-xs font-semibold text-ink-soft tracking-wide uppercase sm:max-w-[40%]">{label}</span>
-      <span className={clsx(
-        'text-sm font-medium text-ink text-left sm:text-right break-all',
-        isMonospaced && 'font-mono text-xs tracking-wider bg-slate-50 px-2 py-0.5 rounded border border-border/80',
-        isHighlighted && 'text-red-600 font-semibold bg-rose-50 px-2.5 py-0.5 rounded border border-rose-100'
-      )}>
-        {value || '—'}
-      </span>
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+          <p className="mt-0.5 truncate text-base font-bold tracking-tight text-slate-900">{value}</p>
+          {caption ? <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">{caption}</p> : null}
+        </div>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+          <Icon size={16} strokeWidth={2.2} />
+        </span>
+      </div>
     </div>
+  );
+}
+
+function Panel({ title, subtitle, icon: Icon, children }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+          <Icon size={21} strokeWidth={2.2} />
+        </span>
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">{title}</h2>
+          {subtitle ? <p className="text-xs font-medium text-slate-400">{subtitle}</p> : null}
+        </div>
+      </div>
+      <div className="mt-6">{children}</div>
+    </section>
   );
 }
 
@@ -113,6 +141,7 @@ export function EquipmentDetailPlaceholder() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -128,202 +157,271 @@ export function EquipmentDetailPlaceholder() {
     return () => ctrl.abort();
   }, [id]);
 
-  const statusInfo = data ? (STATUS_STYLES[data.status] || {
-    bg: 'bg-gray-50 text-gray-700 ring-gray-600/20 border-gray-100',
-    dot: 'bg-gray-500',
-    border: 'border-gray-500',
-    title: data.status || 'Unknown'
-  }) : null;
+  const summary = useMemo(() => {
+    if (!data) return null;
+    const dueDays = daysUntil(data.next_cal_due_date);
+    const isOverdue = dueDays !== null && dueDays < 0;
+    const status = STATUS_STYLES[data.status] || {
+      label: data.status || 'Unknown',
+      dot: 'bg-slate-500',
+      chip: 'bg-slate-50 text-slate-700 border-slate-200',
+      panel: 'bg-slate-50 text-slate-600',
+    };
 
-  // Determine if calibration is overdue
-  const isOverdue = data && data.next_cal_due_date && dayjs(data.next_cal_due_date).isBefore(dayjs());
+    return {
+      status,
+      dueDays,
+      isOverdue,
+      model: data.model_no || data.mfg_model_name || '-',
+      type: data.type_name || data.eqm_type || '-',
+      accessories: Array.isArray(data.accessories) ? data.accessories : [],
+      locationParts: String(data.location_name || '').split('-').map((part) => part.trim()).filter(Boolean),
+    };
+  }, [data]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1">
-      {/* ── Breadcrumbs ─────────────────────────────────────── */}
+    <div className="mx-auto max-w-7xl space-y-6 font-sans antialiased">
       <Link
         to="/equipment"
-        className="inline-flex items-center gap-2 text-xs font-semibold text-ink-soft uppercase tracking-wider hover:text-accent transition-colors duration-150"
+        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 transition-colors hover:text-sky-700"
       >
-        <ArrowLeft size={14} strokeWidth={2.25} />
+        <ArrowLeft size={14} strokeWidth={2.3} />
         Back to Equipment Inventory
       </Link>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-          <div className="text-sm font-semibold text-ink-soft animate-pulse">Loading equipment records...</div>
+        <div className="flex min-h-[48vh] flex-col items-center justify-center gap-3 rounded-lg border border-slate-200 bg-white shadow-card">
+          <div className="h-9 w-9 animate-spin rounded-full border-4 border-sky-600 border-t-transparent" />
+          <p className="text-sm font-bold text-slate-500">Loading equipment dossier...</p>
         </div>
       ) : null}
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-3 shadow-card">
-          <Info className="shrink-0 mt-0.5" size={16} />
-          <div>
-            <h3 className="font-semibold">Retrieval Error</h3>
-            <p className="mt-1 text-xs text-red-600">{error.response?.data?.error?.message || error.message || 'The equipment record could not be fetched.'}</p>
+        <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-card">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 shrink-0" size={17} />
+            <div>
+              <h3 className="font-bold">Equipment record could not be loaded</h3>
+              <p className="mt-1 text-xs font-medium">{error.response?.data?.error?.message || error.message || 'Unknown retrieval error.'}</p>
+            </div>
           </div>
         </div>
       ) : null}
 
-      {data ? (
-        <div className="animate-[fadeSlideDown_200ms_ease-out] space-y-6">
-          {/* ── Dynamic Gradient Hero Card ────────────────────── */}
-          <div className="bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] rounded-2xl p-6 md:p-8 text-white shadow-lg border border-slate-800 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="absolute -right-16 -top-16 opacity-10 pointer-events-none">
-              <Activity size={180} strokeWidth={1} />
-            </div>
-            
-            <div className="space-y-2 z-10">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="bg-sky-500/20 text-sky-300 font-mono text-[10px] tracking-widest uppercase px-2.5 py-1 rounded border border-sky-400/20 shadow-inner">
-                  {data.type_name || data.eqm_type}
-                </span>
-                <span className="bg-white/10 text-slate-200 font-mono text-[10px] tracking-widest uppercase px-2.5 py-1 rounded border border-white/10 shadow-inner">
-                  {data.equipment_code}
-                </span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{data.name}</h1>
-              <p className="text-xs md:text-sm text-slate-300 font-medium tracking-wide flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                {data.make} Manufacturer &bull; Model {data.model_no || data.mfg_model_name || '—'}
-              </p>
-            </div>
-
-            {/* Premium Status Ring */}
-            <div className="z-10 shrink-0 flex items-center gap-3 bg-white/5 border border-white/10 p-4 rounded-xl shadow-card">
-              <span className={clsx(
-                'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide uppercase border shadow-sm ring-1 ring-inset',
-                statusInfo.bg
-              )}>
-                <span className={clsx('h-2 w-2 rounded-full', statusInfo.dot)} />
-                {statusInfo.title}
-              </span>
-            </div>
-          </div>
-
-          {/* ── Section-Wise Color-Coded Detail Panels ────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* CARD 1: Core Identifiers */}
-            <SectionCard title="Core Specifications" icon={Tag} borderColor="border-l-accent border-accent/25">
-              <DetailRow label="Equipment ID" value={data.equipment_code} isMonospaced />
-              <DetailRow label="Asset Category" value={data.type_name || data.eqm_type} />
-              <DetailRow label="Manufacturer" value={data.make} />
-              <DetailRow label="Model No" value={data.model_no || data.mfg_model_name} isMonospaced />
-              <DetailRow label="Serial Number" value={data.serial_no} isMonospaced />
-            </SectionCard>
-
-            {/* CARD 2: Location & Division */}
-            <SectionCard title="Location & Division" icon={MapPin} borderColor="border-l-purple border-purple-500/25">
-              <DetailRow label="Division Code" value={data.division_code} isMonospaced />
-              <DetailRow label="Facility Name" value={data.location_name} />
-              <DetailRow label="Operational Section" value={data.location_name ? String(data.location_name).split('-')[0].trim() : '—'} />
-              <DetailRow label="Room Allocation" value={data.location_name && String(data.location_name).includes('-') ? String(data.location_name).split('-').slice(1).join('-').trim() : '—'} />
-            </SectionCard>
-
-            {/* CARD 3: Procurement & Value */}
-            <SectionCard title="Procurement Assets" icon={CreditCard} borderColor="border-l-orange border-orange-500/25">
-              <DetailRow label="PO Number" value={data.po_number || '—'} isMonospaced />
-              <DetailRow label="PO Date" value={formatDisplayDate(data.po_date)} />
-              <DetailRow label="Purchase Cost" value={data.cost ? `${Number(data.cost).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ${data.currency || 'INR'}` : '—'} />
-              <DetailRow label="Warranty Expiry" value={formatDisplayDate(data.warranty_expiry_date)} />
-            </SectionCard>
-
-            {/* CARD 4: Calibration & Status */}
-            <SectionCard title="Calibration & Health" icon={Calendar} borderColor="border-l-amber border-warning/25">
-              <DetailRow 
-                label="Next Cal Due" 
-                value={formatDisplayDate(data.next_cal_due_date)} 
-                isHighlighted={isOverdue} 
-              />
-              <DetailRow 
-                label="Calibration Status" 
-                value={isOverdue ? '⚠️ Overdue' : '🟢 Calibrated / Valid'} 
-              />
-              <DetailRow label="Status Updated At" value={formatDisplayDate(data.status_at)} />
-              <DetailRow label="Last Event Code" value={data.status} isMonospaced />
-            </SectionCard>
-
-            {/* CARD 5: System Administration */}
-            <SectionCard title="Administration" icon={User} borderColor="border-l-slate-400 border-slate-300">
-              <DetailRow label="Registered By" value={data.created_by} isMonospaced />
-              <DetailRow label="Created On" value={formatDisplayDate(data.created_on)} />
-              <DetailRow label="Last Modified By" value={data.updated_by} isMonospaced />
-              <DetailRow label="Last Updated On" value={formatDisplayDate(data.updated_on)} />
-            </SectionCard>
-
-            {/* CARD 6: Interactive Quick Tools */}
-            <SectionCard title="Operational Quick Actions" icon={Wrench} borderColor="border-l-sky-500 border-sky-400/25">
-              <div className="grid grid-cols-1 gap-2 pt-1.5">
-                <Link to={`/job-requests/new?eqid=${encodeURIComponent(data.equipment_id)}`}>
-                  <button className="w-full text-left inline-flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-border/80 rounded-lg text-xs font-semibold text-ink hover:bg-accent/5 hover:border-accent hover:text-accent transition-all duration-150">
-                    <span>Raise Calibration/Repair Job</span>
-                    <span>➔</span>
-                  </button>
-                </Link>
-                <Link to={`/job-cards?eq=${encodeURIComponent(data.equipment_code)}`}>
-                  <button className="w-full text-left inline-flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-border/80 rounded-lg text-xs font-semibold text-ink hover:bg-accent/5 hover:border-accent hover:text-accent transition-all duration-150">
-                    <span>View Technical Job Cards History</span>
-                    <span>➔</span>
-                  </button>
-                </Link>
-              </div>
-            </SectionCard>
-
-          </div>
-
-          {/* ── Registered Accessories ─────────────────────────── */}
-          {data.accessories && data.accessories.length > 0 && (
-            <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden border-l-4 border-l-indigo-600 transition-all duration-200 hover:shadow-md">
-              <div className="bg-slate-50/50 px-5 py-4 border-b border-border flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-white border border-border">
-                  <Activity size={16} className="text-indigo-600" />
+      {data && summary ? (
+        <>
+          <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+            <div className="relative bg-white px-6 py-6 text-slate-900 md:px-8">
+              <div className="absolute inset-0 opacity-80 technical-grid-bg" />
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-500 via-blue-600 to-emerald-500" />
+              <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-5">
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-white shadow-lg ring-4 ring-sky-50">
+                    <Gauge size={42} strokeWidth={1.8} />
+                    <span className={`absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full border-4 border-white ${summary.status.dot}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-sky-700">
+                      <PackageCheck size={14} strokeWidth={2.4} />
+                      Equipment Detail Dossier
+                    </p>
+                    <h1 className="mt-2 truncate text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{display(data.name, 'Equipment')}</h1>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-slate-600">
+                        {display(data.equipment_code)}
+                      </span>
+                      <span className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${summary.status.chip}`}>
+                        <span className={`h-2 w-2 rounded-full ${summary.status.dot}`} />
+                        {summary.status.label}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h2 className="text-sm font-semibold text-ink uppercase tracking-wider">Registered Accessories</h2>
+
+                <div className="grid min-w-[280px] grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</p>
+                    <p className="mt-1 truncate text-sm font-bold text-slate-900">{summary.type}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Serial No</p>
+                    <p className="mt-1 truncate font-mono text-sm font-bold text-slate-900">{display(data.serial_no)}</p>
+                  </div>
+                </div>
               </div>
-              <div className="p-6">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-border text-left text-xs">
-                    <thead>
-                      <tr className="text-ink-soft uppercase tracking-wider font-semibold bg-slate-50/50">
-                        <th className="px-4 py-3">ID</th>
-                        <th className="px-4 py-3">Accessory Type</th>
-                        <th className="px-4 py-3">Accessory Name</th>
-                        <th className="px-4 py-3">Serial No</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {data.accessories.map((acc) => (
-                        <tr key={acc.id} className="hover:bg-slate-50/30 transition-colors duration-150">
-                          <td className="px-4 py-3.5 font-mono font-medium text-ink-soft">{acc.id}</td>
-                          <td className="px-4 py-3.5 font-semibold text-ink">{acc.accessory_type || 'Other'}</td>
-                          <td className="px-4 py-3.5 text-ink">{acc.accessory_name}</td>
-                          <td className="px-4 py-3.5 font-mono text-ink-soft">{acc.serial_no || '—'}</td>
+            </div>
+
+            <div className="grid gap-3 border-t border-slate-200 bg-slate-50/60 p-3 md:grid-cols-4">
+              <MetricCard label="Health" value={summary.isOverdue ? 'Overdue' : summary.status.label} icon={summary.isOverdue ? AlertTriangle : CheckCircle2} tone={summary.isOverdue ? 'bg-rose-50 text-rose-600' : summary.status.panel} />
+              <MetricCard label="Calibration Due" value={formatDate(data.next_cal_due_date)} icon={CalendarClock} tone="bg-amber-50 text-amber-600" caption={summary.dueDays === null ? 'No due date' : summary.isOverdue ? `${Math.abs(summary.dueDays)} days overdue` : `${summary.dueDays} days remaining`} />
+              <MetricCard label="Asset Value" value={formatMoney(data.cost, data.currency || data.cost_currency)} icon={BadgeIndianRupee} tone="bg-emerald-50 text-emerald-600" />
+              <MetricCard label="Accessories" value={summary.accessories.length} icon={Boxes} tone="bg-violet-50 text-violet-600" />
+            </div>
+          </section>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-all ${
+                    active ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-sky-700'
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={2.2} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeTab === 'overview' ? (
+            <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+              <Panel title="Core Specifications" subtitle="Identity and manufacturer details." icon={Tag}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FieldTile icon={Fingerprint} label="Equipment Code" value={data.equipment_code} mono emphasis />
+                  <FieldTile icon={Tag} label="Equipment Type" value={summary.type} />
+                  <FieldTile icon={Building2} label="Manufacturer" value={data.make} />
+                  <FieldTile icon={Gauge} label="Model Number" value={summary.model} mono />
+                  <FieldTile icon={Fingerprint} label="Serial Number" value={data.serial_no} mono />
+                  <FieldTile icon={ShieldCheck} label="Status Code" value={data.status} mono />
+                </div>
+              </Panel>
+
+              <aside className="space-y-6">
+                <Panel title="Location" subtitle="Division and room allocation." icon={MapPin}>
+                  <div className="space-y-4">
+                    <FieldTile icon={Building2} label="Division Code" value={data.division_code} mono />
+                    <FieldTile icon={MapPin} label="Facility" value={data.location_name} />
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Parsed Location</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(summary.locationParts.length ? summary.locationParts : ['No split location']).map((part) => (
+                          <span key={part} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600">
+                            {part}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Panel>
+              </aside>
+            </div>
+          ) : null}
+
+          {activeTab === 'procurement' ? (
+            <Panel title="Procurement and Warranty" subtitle="Purchase order, value, and warranty information." icon={CreditCard}>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <FieldTile icon={CreditCard} label="PO Number" value={data.po_number} mono />
+                <FieldTile icon={CalendarClock} label="PO Date" value={formatDate(data.po_date)} />
+                <FieldTile icon={BadgeIndianRupee} label="Purchase Cost" value={formatMoney(data.cost, data.currency || data.cost_currency)} />
+                <FieldTile icon={CalendarClock} label="Warranty Expiry" value={formatDate(data.warranty_expiry_date)} />
+                <FieldTile icon={FileText} label="MIVR Number" value={data.mivr_number} mono />
+                <FieldTile icon={Tag} label="Line Item Code" value={data.line_item_code} mono />
+              </div>
+            </Panel>
+          ) : null}
+
+          {activeTab === 'service' ? (
+            <div className="space-y-6">
+              <Panel title="Calibration and Service Health" subtitle="Operational readiness and maintenance status." icon={Wrench}>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <FieldTile icon={CalendarClock} label="Next Calibration Due" value={formatDate(data.next_cal_due_date)} emphasis={summary.isOverdue} />
+                  <FieldTile icon={ShieldCheck} label="Calibration Status" value={summary.isOverdue ? 'Overdue' : 'Valid / monitored'} />
+                  <FieldTile icon={Activity} label="Status Updated At" value={formatDate(data.status_at)} />
+                  <FieldTile icon={History} label="Last Event Code" value={data.status} mono />
+                </div>
+              </Panel>
+
+              <Panel title="Operational Quick Actions" subtitle="Jump into connected equipment workflows." icon={Activity}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Link
+                    to={`/job-requests/new?eqid=${encodeURIComponent(data.equipment_id || data.equipment_code || id)}`}
+                    className="group rounded-lg border border-slate-200 bg-slate-50 p-4 transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Raise Calibration / Repair Job</p>
+                        <p className="mt-1 text-xs font-medium text-slate-500">Create a new job request linked to this instrument.</p>
+                      </div>
+                      <Wrench className="text-sky-600 transition-transform group-hover:rotate-12" size={24} />
+                    </div>
+                  </Link>
+                  <Link
+                    to={`/job-cards?eq=${encodeURIComponent(data.equipment_code || id)}`}
+                    className="group rounded-lg border border-slate-200 bg-slate-50 p-4 transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">View Job Card History</p>
+                        <p className="mt-1 text-xs font-medium text-slate-500">Review technical service records for this equipment.</p>
+                      </div>
+                      <History className="text-sky-600 transition-transform group-hover:translate-x-1" size={24} />
+                    </div>
+                  </Link>
+                </div>
+              </Panel>
+            </div>
+          ) : null}
+
+          {activeTab === 'records' ? (
+            <div className="space-y-6">
+              <Panel title="Administration Records" subtitle="Creation and modification audit metadata." icon={UserRound}>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <FieldTile icon={UserRound} label="Registered By" value={data.created_by} mono />
+                  <FieldTile icon={CalendarClock} label="Created On" value={formatDate(data.created_on)} />
+                  <FieldTile icon={UserRound} label="Last Modified By" value={data.updated_by} mono />
+                  <FieldTile icon={CalendarClock} label="Last Updated On" value={formatDate(data.updated_on)} />
+                </div>
+              </Panel>
+
+              <Panel title="Registered Accessories" subtitle="Accessories connected with this equipment." icon={Boxes}>
+                {summary.accessories.length > 0 ? (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-500">
+                        <tr>
+                          <th className="px-4 py-3 font-bold uppercase tracking-wider">ID</th>
+                          <th className="px-4 py-3 font-bold uppercase tracking-wider">Type</th>
+                          <th className="px-4 py-3 font-bold uppercase tracking-wider">Name</th>
+                          <th className="px-4 py-3 font-bold uppercase tracking-wider">Serial No</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {summary.accessories.map((acc) => (
+                          <tr key={acc.id || `${acc.accessory_name}-${acc.serial_no}`} className="transition-colors hover:bg-sky-50/40">
+                            <td className="px-4 py-3.5 font-mono font-semibold text-slate-500">{display(acc.id)}</td>
+                            <td className="px-4 py-3.5 font-semibold text-slate-800">{display(acc.accessory_type, 'Other')}</td>
+                            <td className="px-4 py-3.5 text-slate-700">{display(acc.accessory_name)}</td>
+                            <td className="px-4 py-3.5 font-mono text-slate-500">{display(acc.serial_no)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                    <Boxes className="mx-auto text-slate-300" size={34} strokeWidth={1.7} />
+                    <p className="mt-3 text-sm font-bold text-slate-500">No accessories registered</p>
+                    <p className="mt-1 text-xs font-medium text-slate-400">Accessory data will appear here when linked to this equipment.</p>
+                  </div>
+                )}
+              </Panel>
 
-          {/* ── Options / Technical Remarks ────────────────────── */}
-          <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden border-l-4 border-l-slate-700 transition-all duration-200 hover:shadow-md">
-            <div className="bg-slate-50/50 px-5 py-4 border-b border-border flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-white border border-border">
-                <FileText size={16} className="text-ink" />
-              </div>
-              <h2 className="text-sm font-semibold text-ink uppercase tracking-wider">Specifications & Remarks</h2>
+              <Panel title="Specifications and Remarks" subtitle="Additional registered notes." icon={FileText}>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                  <p className="whitespace-pre-wrap text-sm font-medium leading-7 text-slate-600">
+                    {data.options_description || data.remarks || 'No detailed specifications or remarks registered for this equipment.'}
+                  </p>
+                </div>
+              </Panel>
             </div>
-            <div className="p-6">
-              <p className="whitespace-pre-wrap text-sm text-ink-soft leading-relaxed">
-                {data.options_description || data.remarks || 'No detailed specifications or remarks registered for this equipment.'}
-              </p>
-            </div>
-          </div>
-        </div>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
