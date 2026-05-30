@@ -117,6 +117,7 @@ const VIEW_ONLY_HIDDEN_NAV_LABELS = new Set([
 
 const GLOBAL_HIDDEN_NAV_LABELS = new Set([
   'Procurement',
+  'Admin · Lab Capacity',
 ]);
 
 const SUPER_ADMIN_ONLY_NAV_LABELS = new Set([
