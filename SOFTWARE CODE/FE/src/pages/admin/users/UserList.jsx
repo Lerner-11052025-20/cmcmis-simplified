@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search as SearchIcon, RefreshCw, Power, Shield, LogOut, Users, ShieldAlert, Key } from 'lucide-react';
 import clsx from 'clsx';
+import dayjs from 'dayjs';
 
 // ── Custom Local KPI Card ─────────────────────────────────────────────
 function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
@@ -150,7 +151,9 @@ export function UserList() {
     {
       header: 'Last Login',
       accessor: 'last_login_at',
-      format: (v) => v || <span className="text-ink-soft">never</span>,
+      format: (v) => v
+        ? dayjs(typeof v === 'string' ? v.replace('Z', '') : v).format('MMM DD, YYYY · hh:mm A')
+        : <span className="text-ink-soft">never</span>,
     },
     {
       header: 'Status',

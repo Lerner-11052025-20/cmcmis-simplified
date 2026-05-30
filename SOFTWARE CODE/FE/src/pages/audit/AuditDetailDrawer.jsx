@@ -30,6 +30,7 @@
 // ============================================================================
 
 import { X as XIcon, ExternalLink, Code2 } from 'lucide-react';
+import dayjs from 'dayjs';
 
 import { useAuditDetail } from '../../lib/hooks/useAuditLog.js';
 
@@ -87,7 +88,7 @@ export function AuditDetailDrawer({ row, onClose }) {
                 : <span className="font-medium">{r.entity_id || '—'}</span>
             } />
             {r.entity_label ? <Pair label="Entity Name" value={r.entity_label} /> : null}
-            <Pair label="When" value={r.occurred_at} />
+            <Pair label="When" value={r.occurred_at ? dayjs(typeof r.occurred_at === 'string' ? r.occurred_at.replace('Z', '') : r.occurred_at).format('MMM DD, YYYY · hh:mm A') : '—'} />
           </Section>
 
           {/* ── Diff / Transition ──────────────────────────────────── */}
