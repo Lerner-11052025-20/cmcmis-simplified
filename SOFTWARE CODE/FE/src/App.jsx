@@ -26,11 +26,13 @@
 //   *                     — catch-all → /dashboard
 // ============================================================================
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from 'react-router-dom';
 
 import { AuthProvider } from './lib/auth-context.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { Layout } from './components/Layout.jsx';
+import { ROUTE_TITLES, formatDocumentTitle } from './lib/routeTitles.js';
 
 import { Login } from './pages/Login.jsx';
 // Phase 8 Slice 1 — real Dashboard + Inquiry pages replace the Phase 4 shells.
@@ -74,6 +76,7 @@ export function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <BrowserTitle />
         <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
           <Route path="/login" element={<Login />} />
@@ -314,6 +317,20 @@ export function App() {
       </BrowserRouter>
     </AuthProvider>
   );
+}
+
+function BrowserTitle() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const match = ROUTE_TITLES.find((route) =>
+      matchPath({ path: route.path, end: true }, location.pathname),
+    );
+
+    document.title = formatDocumentTitle(match?.title ?? 'Dashboard');
+  }, [location.pathname]);
+
+  return null;
 }
 
 /**
