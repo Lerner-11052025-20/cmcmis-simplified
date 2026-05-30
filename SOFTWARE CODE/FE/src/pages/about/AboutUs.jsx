@@ -9,8 +9,8 @@ import {
   Users,
 } from 'lucide-react';
 
-import deepPhoto from '../../assets/about/deep-sorathiya.png';
-import mokshPhoto from '../../assets/about/moksh-gandhi.png';
+import deepPhoto from '../../assets/about/deep-sorathiya.webp';
+import mokshPhoto from '../../assets/about/moksh-gandhi.webp';
 
 const buildSteps = [
   {

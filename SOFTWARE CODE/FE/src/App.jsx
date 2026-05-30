@@ -26,7 +26,7 @@
 //   *                     — catch-all → /dashboard
 // ============================================================================
 
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from 'react-router-dom';
 
 import { AuthProvider } from './lib/auth-context.jsx';
@@ -34,42 +34,31 @@ import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { Layout } from './components/Layout.jsx';
 import { ROUTE_TITLES, formatDocumentTitle } from './lib/routeTitles.js';
 
-import { Login } from './pages/Login.jsx';
-// Phase 8 Slice 1 — real Dashboard + Inquiry pages replace the Phase 4 shells.
-import { Dashboard } from './pages/dashboard/Dashboard.jsx';
-import { Inquiry } from './pages/inquiry/Inquiry.jsx';
-import { EquipmentList } from './pages/equipment/EquipmentList.jsx';
-import { EquipmentForm } from './pages/equipment/EquipmentForm.jsx';
-import { EquipmentDetailPlaceholder } from './pages/equipment/EquipmentDetailPlaceholder.jsx';
-// Phase 6 Slice 1 — Job Requests + Job Cards module
-import { JobRequestList } from './pages/jobRequests/JobRequestList.jsx';
-import { JobRequestNew } from './pages/jobRequests/JobRequestNew.jsx';
-import { JobRequestDetail } from './pages/jobRequests/JobRequestDetail.jsx';
-import { JobCardList } from './pages/jobCards/JobCardList.jsx';
-// Phase 9 — Job Card Detail (the big one: 13 tabs, transitions, sub-features)
-import { JobCardDetail } from './pages/jobCards/JobCardDetail.jsx';
-// Phase 7 Slice 2 — Conversion (Approve + Assign + create JC) workspace
-import { Conversion } from './pages/conversion/Conversion.jsx';
-// Phase 7 Slice 1 — Admin · Users + Admin · Employees
-import { UserList } from './pages/admin/users/UserList.jsx';
-import { EmployeeList } from './pages/admin/employees/EmployeeList.jsx';
-import { EmployeeForm } from './pages/admin/employees/EmployeeForm.jsx';
-import { EquipmentVerification } from './pages/admin/equipment/EquipmentVerification.jsx';
-// Phase 10 — Reports & Analytics landing page (replaces Phase-8 placeholder)
-import { ReportsLanding } from './pages/reports/ReportsLanding.jsx';
-// Phase 11 Slice 2 — standalone Analytics dashboard (sidebar entry)
-import { Analytics } from './pages/analytics/Analytics.jsx';
-// Phase 12 — Notifications page (linked from the TopBar bell dropdown)
-import { Notifications } from './pages/notifications/Notifications.jsx';
-// Phase 13 — Schedule + Procurement real pages (replace the Phase-5 placeholders)
-import { SchedulePage }    from './pages/schedule/SchedulePage.jsx';
-import { ProcurementPage } from './pages/procurement/ProcurementPage.jsx';
-// Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only viewer
-// over audit_log + user_role_history + status-history tables.
-import { AuditViewer }     from './pages/audit/AuditViewer.jsx';
-// Phase 15 — Profile Module (any logged-in user can access)
-import { Profile }         from './pages/profile/Profile.jsx';
-import { AboutUs }         from './pages/about/AboutUs.jsx';
+// Lazy load all page components to enable chunk-splitting
+const Login = lazy(() => import('./pages/Login.jsx').then(m => ({ default: m.Login })));
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard.jsx').then(m => ({ default: m.Dashboard })));
+const Inquiry = lazy(() => import('./pages/inquiry/Inquiry.jsx').then(m => ({ default: m.Inquiry })));
+const EquipmentList = lazy(() => import('./pages/equipment/EquipmentList.jsx').then(m => ({ default: m.EquipmentList })));
+const EquipmentForm = lazy(() => import('./pages/equipment/EquipmentForm.jsx').then(m => ({ default: m.EquipmentForm })));
+const EquipmentDetailPlaceholder = lazy(() => import('./pages/equipment/EquipmentDetailPlaceholder.jsx').then(m => ({ default: m.EquipmentDetailPlaceholder })));
+const JobRequestList = lazy(() => import('./pages/jobRequests/JobRequestList.jsx').then(m => ({ default: m.JobRequestList })));
+const JobRequestNew = lazy(() => import('./pages/jobRequests/JobRequestNew.jsx').then(m => ({ default: m.JobRequestNew })));
+const JobRequestDetail = lazy(() => import('./pages/jobRequests/JobRequestDetail.jsx').then(m => ({ default: m.JobRequestDetail })));
+const JobCardList = lazy(() => import('./pages/jobCards/JobCardList.jsx').then(m => ({ default: m.JobCardList })));
+const JobCardDetail = lazy(() => import('./pages/jobCards/JobCardDetail.jsx').then(m => ({ default: m.JobCardDetail })));
+const Conversion = lazy(() => import('./pages/conversion/Conversion.jsx').then(m => ({ default: m.Conversion })));
+const UserList = lazy(() => import('./pages/admin/users/UserList.jsx').then(m => ({ default: m.UserList })));
+const EmployeeList = lazy(() => import('./pages/admin/employees/EmployeeList.jsx').then(m => ({ default: m.EmployeeList })));
+const EmployeeForm = lazy(() => import('./pages/admin/employees/EmployeeForm.jsx').then(m => ({ default: m.EmployeeForm })));
+const EquipmentVerification = lazy(() => import('./pages/admin/equipment/EquipmentVerification.jsx').then(m => ({ default: m.EquipmentVerification })));
+const ReportsLanding = lazy(() => import('./pages/reports/ReportsLanding.jsx').then(m => ({ default: m.ReportsLanding })));
+const Analytics = lazy(() => import('./pages/analytics/Analytics.jsx').then(m => ({ default: m.Analytics })));
+const Notifications = lazy(() => import('./pages/notifications/Notifications.jsx').then(m => ({ default: m.Notifications })));
+const SchedulePage = lazy(() => import('./pages/schedule/SchedulePage.jsx').then(m => ({ default: m.SchedulePage })));
+const ProcurementPage = lazy(() => import('./pages/procurement/ProcurementPage.jsx').then(m => ({ default: m.ProcurementPage })));
+const AuditViewer = lazy(() => import('./pages/audit/AuditViewer.jsx').then(m => ({ default: m.AuditViewer })));
+const Profile = lazy(() => import('./pages/profile/Profile.jsx').then(m => ({ default: m.Profile })));
+const AboutUs = lazy(() => import('./pages/about/AboutUs.jsx').then(m => ({ default: m.AboutUs })));
 
 const SHOW_PROCUREMENT_MODULE = false;
 
@@ -78,251 +67,260 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <BrowserTitle />
-        <Routes>
-          {/* ── Public ─────────────────────────────────────────── */}
-          <Route path="/login" element={<Login />} />
+        <Suspense fallback={
+          <div className="flex h-screen items-center justify-center bg-slate-50">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-sky-600"></div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest animate-pulse">Loading module...</p>
+            </div>
+          </div>
+        }>
+          <Routes>
+            {/* ── Public ─────────────────────────────────────────── */}
+            <Route path="/login" element={<Login />} />
 
-          {/* ── Dashboard (Phase 8 Slice 1) ─────────────────────── */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute requiredPermission="dashboard:view">
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Profile (Phase 15 implemented for all roles) ────── */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Layout><Profile /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <ProtectedRoute>
-                <Layout><AboutUs /></Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Equipment module (Phase 5 implemented) ─────────── */}
-          <Route
-            path="/equipment"
-            element={
-              <ProtectedRoute requiredPermission="equipment:read-list">
-                <Layout><EquipmentList /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/equipment/new"
-            element={
-              <ProtectedRoute requiredPermission="equipment:create">
-                <Layout><EquipmentForm /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/equipment/:id"
-            element={
-              <ProtectedRoute requiredPermission="equipment:read-detail">
-                <Layout><EquipmentDetailPlaceholder /></Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Job Requests module (Phase 6 Slice 1) ──────────── */}
-          <Route
-            path="/job-requests"
-            element={
-              <ProtectedRoute requiredPermission="job_request:read-own">
-                <Layout><JobRequestList /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/job-requests/new"
-            element={
-              <ProtectedRoute requiredPermission="job_request:create">
-                <Layout><JobRequestNew /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 7 Slice 2 — JR Detail (RBAC-scoped). Gate uses read-own;
-              if the caller only has read-own they'll see ONLY their own JRs
-              (the BE returns 404 for foreign IDs, see service §getJobRequestDetail). */}
-          <Route
-            path="/job-requests/:id"
-            element={
-              <ProtectedRoute requiredPermission="job_request:read-own">
-                <Layout><JobRequestDetail /></Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Phase 7 Slice 2 · Conversion workspace (LIC + SA) ─── */}
-          <Route
-            path="/conversion"
-            element={
-              <ProtectedRoute requiredPermission="job_request:approve">
-                <Layout><Conversion /></Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Job Cards module (Phase 6 Slice 1 + Phase 9) ────── */}
-          <Route
-            path="/job-cards"
-            element={
-              <ProtectedRoute requiredPermission="job_card:read-list">
-                <Layout><JobCardList /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 9 — JC Detail (13 tabs). Section_job_no is the route param,
-              e.g. /job-cards/J00024215. Permission gate: read-detail (kept
-              away from Normal users; everyone else can read with role/status
-              determining write access on the page). */}
-          <Route
-            path="/job-cards/:id"
-            element={
-              <ProtectedRoute requiredPermission="job_card:read-detail">
-                <Layout><JobCardDetail /></Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ── Phase 13 — Schedule + Procurement (real CRUD) ─────── */}
-          <Route
-            path="/schedule"
-            element={
-              <ProtectedRoute requiredPermission="schedule:read-list">
-                <Layout><SchedulePage /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          {SHOW_PROCUREMENT_MODULE ? (
+            {/* ── Dashboard (Phase 8 Slice 1) ─────────────────────── */}
             <Route
-              path="/procurement"
+              path="/dashboard"
               element={
-                <ProtectedRoute requiredPermission="procurement:read-list">
-                  <Layout><ProcurementPage /></Layout>
+                <ProtectedRoute requiredPermission="dashboard:view">
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
-          ) : null}
-          {/* ── Inquiry (Phase 8 Slice 1) ───────────────────────── */}
-          {/* Gate: any of the 4 inquiry permissions opens the page; the
-              tab strip inside is permission-aware per-tab. We gate on
-              `inquiry:search-vendors` (all 5 roles hold it, including
-              View-Only) so the page itself is always reachable. */}
-          <Route
-            path="/inquiry"
-            element={
-              <ProtectedRoute requiredPermission="inquiry:search-vendors">
-                <Inquiry />
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 10 — Reports & Analytics. Gate uses the broadest of the
-              new perms (reports:view-analytics — every role except none).
-              Per-card visibility is handled inside ReportsLanding by checking
-              each card's `requires` against the user's permission set; the
-              BE re-enforces the same gates on every /api/v1/reports/* and
-              /api/v1/analytics/* endpoint independently. */}
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute requiredPermission="reports:view-analytics">
-                <ReportsLanding />
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 11 Slice 2 — standalone Analytics dashboard. Shares the
-              underlying chart endpoints with Reports but lives at its own
-              /analytics sidebar destination. Gated by analytics:view (all
-              5 roles hold it per mig 420). */}
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute requiredPermission="analytics:view">
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 12 — Notifications inbox. View-Only users do NOT hold
-              notifications:read-own (per mig 431) so they cannot reach this
-              URL even if they type it directly — ProtectedRoute redirects
-              them to /forbidden. */}
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute requiredPermission="notifications:read-own">
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 7 Slice 1 — real Admin module routes */}
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute requiredPermission="user:read-list">
-                <Layout><UserList /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees"
-            element={
-              <ProtectedRoute requiredPermission="master:employees:manage">
-                <Layout><EmployeeList /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees/new"
-            element={
-              <ProtectedRoute requiredPermission="master:employees:manage">
-                <Layout><EmployeeForm mode="new" /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/employees/:id/edit"
-            element={
-              <ProtectedRoute requiredPermission="master:employees:manage">
-                <Layout><EmployeeForm mode="edit" /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/equipment-verification"
-            element={
-              <ProtectedRoute requiredPermission="equipment:verify" requiredRole="SUPER_ADMIN">
-                <Layout><EquipmentVerification /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          {/* Phase 14 — Audit Log Viewer. Gate: audit:read-list (mig 600,
-              SUPER_ADMIN-only). Strictly read-only — no mutation controls
-              anywhere on the page. */}
-          <Route
-            path="/audit"
-            element={
-              <ProtectedRoute requiredPermission="audit:read-list">
-                <Layout><AuditViewer /></Layout>
-              </ProtectedRoute>
-            }
-          />
 
-          {/* ── Catch-all ────────────────────────────────────── */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            {/* ── Profile (Phase 15 implemented for all roles) ────── */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout><Profile /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <ProtectedRoute>
+                  <Layout><AboutUs /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Equipment module (Phase 5 implemented) ─────────── */}
+            <Route
+              path="/equipment"
+              element={
+                <ProtectedRoute requiredPermission="equipment:read-list">
+                  <Layout><EquipmentList /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/equipment/new"
+              element={
+                <ProtectedRoute requiredPermission="equipment:create">
+                  <Layout><EquipmentForm /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/equipment/:id"
+              element={
+                <ProtectedRoute requiredPermission="equipment:read-detail">
+                  <Layout><EquipmentDetailPlaceholder /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Job Requests module (Phase 6 Slice 1) ──────────── */}
+            <Route
+              path="/job-requests"
+              element={
+                <ProtectedRoute requiredPermission="job_request:read-own">
+                  <Layout><JobRequestList /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/job-requests/new"
+              element={
+                <ProtectedRoute requiredPermission="job_request:create">
+                  <Layout><JobRequestNew /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 7 Slice 2 — JR Detail (RBAC-scoped). Gate uses read-own;
+                if the caller only has read-own they'll see ONLY their own JRs
+                (the BE returns 404 for foreign IDs, see service §getJobRequestDetail). */}
+            <Route
+              path="/job-requests/:id"
+              element={
+                <ProtectedRoute requiredPermission="job_request:read-own">
+                  <Layout><JobRequestDetail /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Phase 7 Slice 2 · Conversion workspace (LIC + SA) ─── */}
+            <Route
+              path="/conversion"
+              element={
+                <ProtectedRoute requiredPermission="job_request:approve">
+                  <Layout><Conversion /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Job Cards module (Phase 6 Slice 1 + Phase 9) ────── */}
+            <Route
+              path="/job-cards"
+              element={
+                <ProtectedRoute requiredPermission="job_card:read-list">
+                  <Layout><JobCardList /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 9 — JC Detail (13 tabs). Section_job_no is the route param,
+                e.g. /job-cards/J00024215. Permission gate: read-detail (kept
+                away from Normal users; everyone else can read with role/status
+                determining write access on the page). */}
+            <Route
+              path="/job-cards/:id"
+              element={
+                <ProtectedRoute requiredPermission="job_card:read-detail">
+                  <Layout><JobCardDetail /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Phase 13 — Schedule + Procurement (real CRUD) ─────── */}
+            <Route
+              path="/schedule"
+              element={
+                <ProtectedRoute requiredPermission="schedule:read-list">
+                  <Layout><SchedulePage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {SHOW_PROCUREMENT_MODULE ? (
+              <Route
+                path="/procurement"
+                element={
+                  <ProtectedRoute requiredPermission="procurement:read-list">
+                    <Layout><ProcurementPage /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+            ) : null}
+            {/* ── Inquiry (Phase 8 Slice 1) ───────────────────────── */}
+            {/* Gate: any of the 4 inquiry permissions opens the page; the
+                tab strip inside is permission-aware per-tab. We gate on
+                `inquiry:search-vendors` (all 5 roles hold it, including
+                View-Only) so the page itself is always reachable. */}
+            <Route
+              path="/inquiry"
+              element={
+                <ProtectedRoute requiredPermission="inquiry:search-vendors">
+                  <Inquiry />
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 10 — Reports & Analytics. Gate uses the broadest of the
+                new perms (reports:view-analytics — every role except none).
+                Per-card visibility is handled inside ReportsLanding by checking
+                each card's `requires` against the user's permission set; the
+                BE re-enforces the same gates on every /api/v1/reports/* and
+                /api/v1/analytics/* endpoint independently. */}
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute requiredPermission="reports:view-analytics">
+                  <ReportsLanding />
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 11 Slice 2 — standalone Analytics dashboard. Shares the
+                underlying chart endpoints with Reports but lives at its own
+                /analytics sidebar destination. Gated by analytics:view (all
+                5 roles hold it per mig 420). */}
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute requiredPermission="analytics:view">
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 12 — Notifications inbox. View-Only users do NOT hold
+                notifications:read-own (per mig 431) so they cannot reach this
+                URL even if they type it directly — ProtectedRoute redirects
+                them to /forbidden. */}
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute requiredPermission="notifications:read-own">
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 7 Slice 1 — real Admin module routes */}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requiredPermission="user:read-list">
+                  <Layout><UserList /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees"
+              element={
+                <ProtectedRoute requiredPermission="master:employees:manage">
+                  <Layout><EmployeeList /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees/new"
+              element={
+                <ProtectedRoute requiredPermission="master:employees:manage">
+                  <Layout><EmployeeForm mode="new" /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/employees/:id/edit"
+              element={
+                <ProtectedRoute requiredPermission="master:employees:manage">
+                  <Layout><EmployeeForm mode="edit" /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/equipment-verification"
+              element={
+                <ProtectedRoute requiredPermission="equipment:verify" requiredRole="SUPER_ADMIN">
+                  <Layout><EquipmentVerification /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* Phase 14 — Audit Log Viewer. Gate: audit:read-list (mig 600,
+                SUPER_ADMIN-only). Strictly read-only — no mutation controls
+                anywhere on the page. */}
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute requiredPermission="audit:read-list">
+                  <Layout><AuditViewer /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Catch-all ────────────────────────────────────── */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

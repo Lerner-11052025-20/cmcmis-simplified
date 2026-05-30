@@ -54,9 +54,27 @@ export default defineConfig({
   },
 
   build: {
-    sourcemap: true,      // useful for debugging in staging
+    sourcemap: false,      // Disabled for production performance (saves overhead & build times)
     target: 'es2020',
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Put recharts and d3 in their own dedicated bundle
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3')) {
+            return 'vendor-charts';
+          }
+          // Put core framework stuff in a main vendor bundle
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'vendor-core';
+          }
+          // Put form/validation modules together
+          if (id.includes('node_modules/react-hook-form') || id.includes('node_modules/zod') || id.includes('node_modules/@hookform/resolvers')) {
+            return 'vendor-forms';
+          }
+        }
+      }
+    }
   },
 });
