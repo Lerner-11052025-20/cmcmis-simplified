@@ -57,6 +57,7 @@ function StatusBadge({ status }) {
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
@@ -577,6 +578,7 @@ export function EquipmentList() {
 
       {/* ── Export PDF Modal ───────────────────────────────── */}
       {isExportModalOpen ? (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div 
@@ -727,6 +729,7 @@ export function EquipmentList() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </div>
   );

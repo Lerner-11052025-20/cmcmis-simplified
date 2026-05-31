@@ -21,6 +21,7 @@ import { X, Plus, Trash2, AlertTriangle } from 'lucide-react';
 
 import { Button }  from '../../components/ui/Button.jsx';
 import { Input }   from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { Select }  from '../../components/ui/Select.jsx';
 import { usePurchaseOrder, useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 import { searchVendors } from '../../lib/api/procurement.js';
@@ -138,6 +139,7 @@ export function NewPurchaseOrderModal({ po, onClose }) {
 
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form
         onSubmit={onSubmit}
@@ -332,6 +334,7 @@ export function NewPurchaseOrderModal({ po, onClose }) {
         </div>
       </form>
     </div>
+    </ModalPortal>
   );
 }
 

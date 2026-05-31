@@ -77,6 +77,7 @@ function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
 
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
+import { ModalPortal } from '../../../components/ui/ModalPortal.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import { DataTable } from '../../../components/DataTable.jsx';
 import { Pagination } from '../../../components/Pagination.jsx';
@@ -304,6 +305,7 @@ export function EmployeeList() {
 
 function Modal({ title, onClose, children, footer }) {
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
       <div className="bg-white rounded-lg shadow-card border border-border w-full max-w-md p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -314,6 +316,7 @@ function Modal({ title, onClose, children, footer }) {
         <div className="flex justify-end gap-2 pt-2">{footer}</div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

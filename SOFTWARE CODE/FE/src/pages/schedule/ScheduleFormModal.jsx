@@ -21,6 +21,7 @@ import { X, AlertTriangle, Trash2 } from 'lucide-react';
 
 import { Button }   from '../../components/ui/Button.jsx';
 import { Input }    from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { Select }   from '../../components/ui/Select.jsx';
 import { useAuth }  from '../../lib/auth-context.jsx';
 import { useScheduleMutations } from '../../lib/hooks/useSchedule.js';
@@ -143,6 +144,7 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
 
   // ── Render ───────────────────────────────────────────────────────────
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form
         onSubmit={onSubmit}
@@ -290,6 +292,7 @@ export function ScheduleFormModal({ defaultType, schedule, onClose }) {
         </div>
       </form>
     </div>
+    </ModalPortal>
   );
 }
 

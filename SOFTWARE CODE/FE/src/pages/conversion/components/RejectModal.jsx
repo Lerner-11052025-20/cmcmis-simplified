@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X, XCircle, AlertTriangle } from 'lucide-react';
 
 import { Button } from '../../../components/ui/Button.jsx';
+import { ModalPortal } from '../../../components/ui/ModalPortal.jsx';
 import { jobRequestRejectSchema } from '../../../lib/schemas/jobRequestSchemas.js';
 import { rejectJobRequest } from '../../../lib/api/jobRequests.js';
 
@@ -63,6 +64,7 @@ export function RejectModal({ jr, onClose, onSuccess }) {
   }, []);
 
   return (
+    <ModalPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2"
       role="dialog"
@@ -151,5 +153,6 @@ export function RejectModal({ jr, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

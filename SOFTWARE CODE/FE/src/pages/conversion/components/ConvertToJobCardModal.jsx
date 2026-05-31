@@ -44,6 +44,7 @@ import { X, CheckCircle2, Users, Calendar, FileText, Wrench, AlertTriangle } fro
 
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
+import { ModalPortal } from '../../../components/ui/ModalPortal.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import {
   jobRequestConvertSchema,
@@ -142,6 +143,7 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
   const plannedStart = watch('planned_start_date');
 
   return (
+    <ModalPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2"
       role="dialog"
@@ -415,5 +417,6 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

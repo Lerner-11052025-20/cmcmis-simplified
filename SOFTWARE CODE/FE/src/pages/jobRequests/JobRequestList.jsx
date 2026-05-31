@@ -35,6 +35,7 @@ import { CheckCircle, Download, Filter, Plus, Search as SearchIcon, X } from 'lu
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import { DataTable } from '../../components/DataTable.jsx';
 import { Pagination } from '../../components/Pagination.jsx';
@@ -377,6 +378,7 @@ export function JobRequestList() {
 
       {/* ── Range Selector Modal ── */}
       {isExportModalOpen ? (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-[fadeIn_150ms_ease-out]">
           {/* Backdrop */}
           <div 
@@ -527,6 +529,7 @@ export function JobRequestList() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </div>
   );

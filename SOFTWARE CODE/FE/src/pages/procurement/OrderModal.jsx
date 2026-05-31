@@ -15,6 +15,7 @@ import { X, AlertTriangle, ShoppingCart, CheckCircle2 } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input }  from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -53,6 +54,7 @@ export function OrderModal({ spare, onClose }) {
   };
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form onSubmit={onSubmit} className="bg-white rounded-lg shadow-xl w-[500px]">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
@@ -133,6 +135,7 @@ export function OrderModal({ spare, onClose }) {
         </div>
       </form>
     </div>
+    </ModalPortal>
   );
 }
 

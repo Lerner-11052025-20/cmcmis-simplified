@@ -18,6 +18,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/Button.jsx';
+import { ModalPortal } from '../../../components/ui/ModalPortal.jsx';
 import { jobCardReopenSchema } from '../../../lib/schemas/jobCardSchemas.js';
 import { reopenJobCard } from '../../../lib/api/jobCards.js';
 
@@ -51,6 +52,7 @@ export function ReopenModal({ jc, onClose, onSuccess }) {
   const willClearClosure = jc.status === 'VERIFIED_CLOSED';
 
   return (
+    <ModalPortal>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2"
       role="dialog"
@@ -127,5 +129,6 @@ export function ReopenModal({ jc, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

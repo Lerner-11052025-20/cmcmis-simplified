@@ -13,6 +13,7 @@ import { X, AlertTriangle } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button.jsx';
 import { Input }  from '../../components/ui/Input.jsx';
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 import { searchVendors } from '../../lib/api/procurement.js';
 
@@ -76,6 +77,7 @@ export function SparePartFormModal({ spare, onClose }) {
   };
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <form
         onSubmit={onSubmit}
@@ -173,6 +175,7 @@ export function SparePartFormModal({ spare, onClose }) {
         </div>
       </form>
     </div>
+    </ModalPortal>
   );
 }
 

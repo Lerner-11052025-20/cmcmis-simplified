@@ -32,6 +32,7 @@
 import { X as XIcon, ExternalLink, Code2 } from 'lucide-react';
 import dayjs from 'dayjs';
 
+import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { useAuditDetail } from '../../lib/hooks/useAuditLog.js';
 
 
@@ -46,6 +47,7 @@ export function AuditDetailDrawer({ row, onClose }) {
   const r = fresh || row;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
       {/* Backdrop — close on click */}
       <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden="true" />
@@ -126,6 +128,7 @@ export function AuditDetailDrawer({ row, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
