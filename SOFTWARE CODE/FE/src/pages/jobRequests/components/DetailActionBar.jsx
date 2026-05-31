@@ -53,7 +53,7 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
   }
 
   return (
-    <div className="space-y-2 sticky bottom-2">
+    <div className="space-y-2">
       {blockingReason ? (
         <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex items-start gap-2">
           <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" className="text-amber-700 shrink-0 mt-0.5" />
@@ -63,12 +63,12 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
           </div>
         </div>
       ) : null}
-      <div className="bg-base-elev border border-border rounded-lg p-3 flex items-center justify-between gap-3">
+      <div className="bg-base-elev border border-border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="text-xs text-ink-soft">
           <RefreshCw size={12} strokeWidth={1.75} aria-hidden="true" className="inline mr-1" />
           Pending review — choose an action below.
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {canReject ? (
             <Button variant="secondary" size="md" onClick={onRejectClick}>
               <XCircle size={16} strokeWidth={1.75} aria-hidden="true" className="text-danger" />
