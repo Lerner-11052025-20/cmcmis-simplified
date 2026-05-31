@@ -4,13 +4,7 @@
 // Redesigned with modern styling matching the project DataTable aesthetics.
 // ============================================================================
 
-import { useMemo } from 'react';
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
@@ -61,17 +55,45 @@ function toTanColumn(col) {
   };
 }
 
-export function ReportTable({ columns, rows, total, page, pageSize, onPage, loading, error }) {
-  const tanColumns = useMemo(() => columns.map(toTanColumn), [columns]);
+function compareValues(a, b) {
+  if (a === b) return 0;
+  if (a === null || a === undefined || a === '') return 1;
+  if (b === null || b === undefined || b === '') return -1;
 
-  const table = useReactTable({
-    data: rows || [],
-    columns: tanColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  const aDate = dayjs(a);
+  const bDate = dayjs(b);
+  if (aDate.isValid() && bDate.isValid()) return aDate.valueOf() - bDate.valueOf();
+
+  if (typeof a === 'number' || typeof b === 'number') {
+    return Number(a) - Number(b);
+  }
+
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+export function ReportTable({ columns, rows, total, page, pageSize, onPage, loading, error }) {
+  const [sort, setSort] = useState({ id: null, dir: null });
+  const tanColumns = useMemo(() => columns.map(toTanColumn), [columns]);
+  const sortedRows = useMemo(() => {
+    const source = rows || [];
+    if (!sort.id || !sort.dir) return source;
+    const column = columns.find((col) => col.id === sort.id);
+    if (!column) return source;
+    const accessor = column.accessorKey;
+    const direction = sort.dir === 'asc' ? 1 : -1;
+    return [...source].sort((a, b) => compareValues(a?.[accessor], b?.[accessor]) * direction);
+  }, [columns, rows, sort]);
 
   const totalPages = Math.max(1, Math.ceil((total || 0) / (pageSize || 1)));
+
+  function toggleSort(column) {
+    if (column.enableSorting === false) return;
+    setSort((current) => {
+      if (current.id !== column.id) return { id: column.id, dir: 'asc' };
+      if (current.dir === 'asc') return { id: column.id, dir: 'desc' };
+      return { id: null, dir: null };
+    });
+  }
 
   return (
     <div className="relative rounded-xl border border-slate-200/70 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)] overflow-hidden">
@@ -88,30 +110,31 @@ export function ReportTable({ columns, rows, total, page, pageSize, onPage, load
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="bg-indigo-50/30 border-b border-slate-100">
-                <th className="px-4 py-3.5 text-left text-[13px] font-semibold text-slate-500 font-sans w-12 select-none">
-                  #
-                </th>
-                {hg.headers.map((h) => {
-                  const dir = h.column.getIsSorted();
-                  return (
-                    <th
-                      key={h.id}
-                      style={{ width: h.getSize() }}
-                      className="px-4 py-3.5 text-left text-[13px] font-semibold text-slate-500 font-sans select-none cursor-pointer hover:text-slate-700 transition-colors duration-150"
-                      onClick={h.column.getToggleSortingHandler()}
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                        {dir === 'asc' ? <ArrowUp size={13} strokeWidth={2} className="text-accent" /> : null}
-                        {dir === 'desc' ? <ArrowDown size={13} strokeWidth={2} className="text-accent" /> : null}
-                      </span>
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
+            <tr className="bg-indigo-50/30 border-b border-slate-100">
+              <th className="px-4 py-3.5 text-left text-[13px] font-semibold text-slate-500 font-sans w-12 select-none">
+                #
+              </th>
+              {tanColumns.map((column) => {
+                const dir = sort.id === column.id ? sort.dir : null;
+                return (
+                  <th
+                    key={column.id}
+                    style={{ width: column.size }}
+                    className={clsx(
+                      'px-4 py-3.5 text-left text-[13px] font-semibold text-slate-500 font-sans select-none transition-colors duration-150',
+                      column.enableSorting === false ? 'cursor-default' : 'cursor-pointer hover:text-slate-700',
+                    )}
+                    onClick={() => toggleSort(column)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {column.header}
+                      {dir === 'asc' ? <ArrowUp size={13} strokeWidth={2} className="text-accent" /> : null}
+                      {dir === 'desc' ? <ArrowDown size={13} strokeWidth={2} className="text-accent" /> : null}
+                    </span>
+                  </th>
+                );
+              })}
+            </tr>
           </thead>
           <tbody>
             {loading ? (
@@ -126,10 +149,10 @@ export function ReportTable({ columns, rows, total, page, pageSize, onPage, load
                   Could not load report: {error.response?.data?.error?.message || error.message}
                 </td>
               </tr>
-            ) : (rows && rows.length > 0) ? (
-              table.getRowModel().rows.map((r, rowIndex) => (
+            ) : (sortedRows && sortedRows.length > 0) ? (
+              sortedRows.map((row, rowIndex) => (
                 <tr
-                  key={r.id}
+                  key={row.id || row.request_code || row.equipment_code || rowIndex}
                   className={clsx(
                     'border-b border-slate-100/70 last:border-b-0 transition-all duration-200 group cursor-pointer',
                     'border-l-[3px] border-l-transparent hover:border-l-accent',
@@ -142,9 +165,9 @@ export function ReportTable({ columns, rows, total, page, pageSize, onPage, load
                       {((page - 1) * pageSize) + rowIndex + 1}
                     </span>
                   </td>
-                  {r.getVisibleCells().map((c) => (
-                    <td key={c.id} className="px-4 py-3 align-middle text-[13px] font-medium text-slate-600 font-sans">
-                      {flexRender(c.column.columnDef.cell, c.getContext())}
+                  {tanColumns.map((column) => (
+                    <td key={column.id} className="px-4 py-3 align-middle text-[13px] font-medium text-slate-600 font-sans">
+                      {column.cell({ getValue: () => row?.[column.accessorKey] })}
                     </td>
                   ))}
                 </tr>
