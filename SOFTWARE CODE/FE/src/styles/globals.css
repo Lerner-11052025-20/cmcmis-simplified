@@ -22,6 +22,17 @@
     @apply bg-base text-ink font-sans antialiased;
     /* Tabular numerals so timestamps, IDs, and counts align in tables. */
     font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: 0;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+    letter-spacing: 0;
   }
 
   /* Native focus ring for keyboard accessibility — same accent color as
@@ -29,6 +40,69 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-base;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Global UI typography readability pass.
+ * The application uses Inter from Google Fonts; these overrides keep labels,
+ * table text, pills, and helper copy readable even when older components use
+ * tiny sizes, all-caps, wide tracking, or overly heavy font weights.
+ * --------------------------------------------------------------------------- */
+.uppercase {
+  text-transform: none !important;
+}
+
+.tracking-tight,
+.tracking-wide,
+.tracking-wider,
+.tracking-widest {
+  letter-spacing: 0 !important;
+}
+
+.font-black,
+.font-extrabold {
+  font-weight: 700 !important;
+}
+
+.font-bold {
+  font-weight: 600 !important;
+}
+
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+.text-\[9px\],
+.text-\[10px\],
+.text-\[10\.5px\],
+.text-\[11px\] {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.text-\[12px\],
+.text-xs {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+}
+
+.text-\[13px\],
+.text-\[14px\],
+.text-sm {
+  line-height: 1.45 !important;
+}
+
+.leading-none,
+.leading-tight {
+  line-height: 1.2 !important;
+}
+
+.text-slate-400,
+.text-slate-450,
+.text-ink-soft\/70,
+.text-ink-soft\/75,
+.text-ink-soft\/80 {
+  color: #64748b !important;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
