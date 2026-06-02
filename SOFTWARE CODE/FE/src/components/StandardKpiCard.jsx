@@ -34,15 +34,15 @@ export function StandardKpiCard({
     return (
       <div
         className={clsx(
-          'min-h-[190px] rounded-2xl border border-slate-200 bg-white p-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)]',
+          'min-h-[150px] rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]',
           'animate-pulse font-sans',
           className
         )}
       >
-        <div className="h-16 w-16 rounded-2xl bg-slate-100" />
-        <div className="mt-8 h-9 w-24 rounded bg-slate-100" />
-        <div className="mt-4 h-5 w-36 rounded bg-slate-100" />
-        <div className="mt-3 h-4 w-28 rounded bg-slate-100" />
+        <div className="h-12 w-12 rounded-2xl bg-slate-100" />
+        <div className="mt-6 h-7 w-20 rounded bg-slate-100" />
+        <div className="mt-3 h-4 w-32 rounded bg-slate-100" />
+        <div className="mt-2 h-3 w-28 rounded bg-slate-100" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function StandardKpiCard({
       {...surfaceProps}
       aria-label={ariaLabel || `${label}: ${value}${subtitle ? `. ${subtitle}` : ''}`}
       className={clsx(
-        'group block min-h-[190px] rounded-2xl border border-slate-200 bg-white p-8 font-sans antialiased',
+        'group block min-h-[150px] rounded-2xl border border-slate-200 bg-white p-5 font-sans antialiased',
         'shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all duration-200',
         to && 'hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
         className
@@ -60,24 +60,24 @@ export function StandardKpiCard({
     >
       <div
         className={clsx(
-          'flex h-16 w-16 items-center justify-center rounded-2xl transition-transform duration-200',
+          'flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-200',
           color.bg,
           to && 'group-hover:scale-[1.03]'
         )}
       >
-        {Icon ? <Icon size={31} strokeWidth={2.25} className={color.text} aria-hidden="true" /> : null}
+        {Icon ? <Icon size={24} strokeWidth={2.2} className={color.text} aria-hidden="true" /> : null}
       </div>
 
-      <div className="mt-8 text-[34px] font-bold leading-none tracking-normal text-slate-950 tabular-nums">
+      <div className="mt-6 text-[28px] font-bold leading-none tracking-normal text-slate-950 tabular-nums">
         {value}
       </div>
 
-      <div className="mt-4 text-lg font-medium leading-tight tracking-normal text-slate-600">
+      <div className="mt-3 text-base font-medium leading-tight tracking-normal text-slate-600">
         {label}
       </div>
 
       {subtitle ? (
-        <div className="mt-3 flex items-start gap-2 text-base font-normal leading-relaxed tracking-normal text-slate-500">
+        <div className="mt-2 flex items-start gap-2 text-sm font-normal leading-relaxed tracking-normal text-slate-500">
           <span className={clsx('mt-[0.7em] h-1.5 w-1.5 shrink-0 rounded-full', color.dot)} />
           <span>{subtitle}</span>
         </div>
