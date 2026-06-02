@@ -22,7 +22,6 @@ import {
   Wrench, 
   User, 
   FileText, 
-  Check, 
   AlertTriangle,
   ChevronRight
 } from 'lucide-react';
@@ -540,11 +539,11 @@ export function JobRequestNew() {
                       isActive
                         ? "bg-accent border-accent text-white shadow-md scale-105"
                         : isPast
-                        ? "bg-emerald-500 border-emerald-500 text-white"
+                        ? "bg-accent border-accent text-white"
                         : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
                     )}
                   >
-                    {isPast ? <Check size={13} strokeWidth={3} /> : i + 1}
+                    {i + 1}
                   </button>
                   <span className={clsx(
                     "text-[10px] sm:text-xs font-bold uppercase tracking-wider font-sans hidden sm:block transition-colors",
@@ -1123,11 +1122,11 @@ export function JobRequestNew() {
                         isActive
                           ? "bg-accent border-accent text-white shadow-md scale-105"
                           : isPast
-                          ? "bg-emerald-500 border-emerald-500 text-white"
+                          ? "bg-accent border-accent text-white"
                           : "bg-white border-slate-200 text-slate-400 group-hover:border-slate-350"
                       )}
                     >
-                      {isPast ? <Check size={13} strokeWidth={3} className="shrink-0" /> : i + 1}
+                      {i + 1}
                     </button>
                     <span className={clsx(
                       "text-xs font-bold uppercase tracking-wider font-sans transition-colors duration-150",

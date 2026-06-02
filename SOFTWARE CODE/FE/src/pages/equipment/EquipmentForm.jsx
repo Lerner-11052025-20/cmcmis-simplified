@@ -17,7 +17,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  ArrowLeft, Info, Plus, Save, Send, Trash2, AlertCircle, Lock, Wrench, User, FileText, Check, AlertTriangle, ClipboardList
+  ArrowLeft, Info, Plus, Save, Send, Trash2, AlertCircle, Lock, Wrench, User, FileText, AlertTriangle, ClipboardList
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -299,11 +299,11 @@ export function EquipmentForm() {
                       isActive
                         ? "bg-accent border-accent text-white shadow-md scale-105"
                         : isPast
-                        ? "bg-emerald-500 border-emerald-500 text-white"
+                        ? "bg-accent border-accent text-white"
                         : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
                     )}
                   >
-                    {isPast ? <Check size={13} strokeWidth={3} /> : i + 1}
+                    {i + 1}
                   </button>
                   <span className={clsx(
                     "text-[10px] sm:text-xs font-bold uppercase tracking-wider font-sans hidden sm:block transition-colors",
@@ -836,11 +836,11 @@ export function EquipmentForm() {
                           isActive
                             ? "bg-accent border-accent text-white shadow-md scale-105"
                             : isPast
-                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            ? "bg-accent border-accent text-white"
                             : "bg-white border-slate-200 text-slate-400 group-hover:border-slate-350"
                         )}
                       >
-                        {isPast ? <Check size={13} strokeWidth={3} className="shrink-0" /> : i + 1}
+                        {i + 1}
                       </button>
                       <span className={clsx(
                         "text-xs font-bold uppercase tracking-wider font-sans transition-colors duration-150",
