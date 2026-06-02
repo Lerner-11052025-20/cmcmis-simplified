@@ -17,6 +17,7 @@ import {
 import clsx from 'clsx';
 import { toast } from 'sonner';
 
+import { StandardKpiCard } from '../../../components/StandardKpiCard.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { FormField } from '../../../components/ui/FormField.jsx';
@@ -26,59 +27,6 @@ import { DataTable } from '../../../components/DataTable.jsx';
 import {
   fetchAllTerms, createTerm, updateTerm, deleteTerm
 } from '../../../lib/api/terms.js';
-
-// ── Custom Local KPI Card (Matches Admin Style) ──────────────────────
-function LocalKpiCard({ label, value, icon: Icon, accent, subtitle, loading }) {
-  const ACCENT_COLORS = {
-    indigo:  { bg: 'bg-indigo-50/60',   text: 'text-indigo-600',   topBorder: 'border-t-indigo-500/80',  glow: 'hover:shadow-[0_20px_25px_-5px_rgba(79,93,255,0.06)] hover:border-indigo-200', indicator: 'bg-indigo-500' },
-    emerald: { bg: 'bg-emerald-50/60', text: 'text-emerald-600', topBorder: 'border-t-emerald-500/80', glow: 'hover:shadow-[0_20px_25px_-5px_rgba(16,185,129,0.06)] hover:border-emerald-200', indicator: 'bg-emerald-500' },
-    amber:   { bg: 'bg-amber-50/60',   text: 'text-amber-600',   topBorder: 'border-t-amber-500/80',   glow: 'hover:shadow-[0_20px_25px_-5px_rgba(245,158,11,0.06)] hover:border-amber-200', indicator: 'bg-amber-500' },
-  };
-
-  const color = ACCENT_COLORS[accent] || ACCENT_COLORS.indigo;
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200/40 border-t-[4px] border-t-slate-200 p-5 animate-pulse flex flex-col font-sans">
-        <div className="w-10 h-10 rounded-xl bg-slate-100/80" />
-        <div className="mt-4 h-7 w-16 bg-slate-100 rounded" />
-        <div className="mt-2.5 h-3 w-28 bg-slate-100 rounded" />
-        <div className="mt-2 h-2.5 w-32 bg-slate-100 rounded" />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={clsx(
-        'group bg-white rounded-2xl border border-slate-200/50 p-5 border-t-[4px] transition-all duration-300 shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg font-sans antialiased',
-        color.topBorder,
-        color.glow,
-        'hover:-translate-y-0.5'
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div className={clsx('inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-100/60 shadow-[0_1px_2px_rgba(0,0,0,0.01)] transition-all duration-300 group-hover:scale-105', color.bg)}>
-          <Icon size={18} strokeWidth={2} className={color.text} />
-        </div>
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-200 group-hover:bg-slate-400 transition-colors duration-300" />
-      </div>
-
-      <div className="mt-4 text-2xl font-bold tracking-tight text-slate-800 font-sans leading-none transition-colors duration-300">
-        {value}
-      </div>
-      
-      <div className="mt-2 text-xs font-semibold text-slate-500 font-sans">
-        {label}
-      </div>
-      
-      <div className="mt-1.5 text-xs text-slate-400 font-medium font-sans flex items-center gap-1.5 leading-relaxed">
-        <span className={clsx("h-1 w-1 rounded-full shrink-0", color.indicator)} />
-        {subtitle}
-      </div>
-    </div>
-  );
-}
 
 export function TermsManagement() {
   const [terms, setTerms] = useState([]);
@@ -387,7 +335,7 @@ export function TermsManagement() {
 
       {/* ── KPI Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 select-none">
-        <LocalKpiCard
+        <StandardKpiCard
           loading={loading && !terms.length}
           label="Total Checklist Items"
           value={totalCount}
@@ -395,7 +343,7 @@ export function TermsManagement() {
           accent="indigo"
           subtitle="Database registered statements"
         />
-        <LocalKpiCard
+        <StandardKpiCard
           loading={loading && !terms.length}
           label="Active Checklist Terms"
           value={activeCount}
@@ -403,7 +351,7 @@ export function TermsManagement() {
           accent="emerald"
           subtitle="Actively rendered on creator page"
         />
-        <LocalKpiCard
+        <StandardKpiCard
           loading={loading && !terms.length}
           label="Schema Integrity"
           value="v1"

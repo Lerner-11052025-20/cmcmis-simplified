@@ -2,6 +2,18 @@
 // src/pages/reports/SummaryTiles.jsx  —  KPI summary tiles (premium)
 // ============================================================================
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  FileText,
+  Gauge,
+  Settings,
+  Users,
+} from 'lucide-react';
+import { StandardKpiCard } from '../../components/StandardKpiCard.jsx';
+
 const LABELS = {
   total:           ['Total Equipment',  'in scope'],
   due_soon:        ['Due Soon',         'within window'],
@@ -27,13 +39,15 @@ const LABELS = {
   rejected:        ['Rejected',         'terminal'],
 };
 
-const TILE_ACCENTS = [
-  { bg: 'bg-indigo-50/60', border: 'border-indigo-100/50', valueColor: 'text-indigo-600' },
-  { bg: 'bg-emerald-50/60', border: 'border-emerald-100/50', valueColor: 'text-emerald-600' },
-  { bg: 'bg-amber-50/60', border: 'border-amber-100/50', valueColor: 'text-amber-600' },
-  { bg: 'bg-rose-50/60', border: 'border-rose-100/50', valueColor: 'text-rose-600' },
-  { bg: 'bg-sky-50/60', border: 'border-sky-100/50', valueColor: 'text-sky-600' },
-  { bg: 'bg-violet-50/60', border: 'border-violet-100/50', valueColor: 'text-violet-600' },
+const TILE_META = [
+  { accent: 'indigo', icon: ClipboardList },
+  { accent: 'emerald', icon: CheckCircle2 },
+  { accent: 'amber', icon: Clock },
+  { accent: 'rose', icon: AlertTriangle },
+  { accent: 'blue', icon: Gauge },
+  { accent: 'violet', icon: Settings },
+  { accent: 'slate', icon: Users },
+  { accent: 'orange', icon: FileText },
 ];
 
 export function SummaryTiles({ summary, keys }) {
@@ -43,23 +57,19 @@ export function SummaryTiles({ summary, keys }) {
     : Object.keys(summary).filter((k) => LABELS[k] !== undefined);
 
   return (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {renderKeys.map((k, i) => {
         const [label, sub] = LABELS[k] || [k, ''];
-        const accent = TILE_ACCENTS[i % TILE_ACCENTS.length];
+        const meta = TILE_META[i % TILE_META.length];
         return (
-          <div
+          <StandardKpiCard
             key={k}
-            className={`rounded-xl border ${accent.border} ${accent.bg} p-4 transition-all duration-200 hover:shadow-sm`}
-          >
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 font-sans leading-none">
-              {label}
-            </div>
-            <div className={`mt-2.5 text-2xl font-bold ${accent.valueColor} tabular-nums font-sans`}>
-              {typeof summary[k] === 'number' ? summary[k].toLocaleString() : summary[k]}
-            </div>
-            {sub ? <div className="mt-1 text-[10px] text-slate-400 font-sans">{sub}</div> : null}
-          </div>
+            label={label}
+            value={typeof summary[k] === 'number' ? summary[k].toLocaleString() : summary[k]}
+            icon={meta.icon}
+            accent={meta.accent}
+            subtitle={sub}
+          />
         );
       })}
     </div>
