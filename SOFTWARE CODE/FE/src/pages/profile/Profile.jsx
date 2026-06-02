@@ -2,10 +2,8 @@ import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import {
   Activity,
-  Award,
   BadgeCheck,
   Building2,
-  CheckCircle2,
   Clipboard,
   Fingerprint,
   History,
@@ -16,30 +14,30 @@ import {
   MapPinned,
   Phone,
   ShieldCheck,
-  Sparkles,
   UserRound,
 } from 'lucide-react';
+import clsx from 'clsx';
 
 import { useAuth } from '../../lib/auth-context.jsx';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: UserRound },
-  { key: 'records', label: 'Records', icon: IdCard },
-  { key: 'security', label: 'Security', icon: ShieldCheck },
+  { key: 'access', label: 'Access', icon: ShieldCheck },
+  { key: 'security', label: 'Security', icon: History },
 ];
 
-function initialsOf(source) {
-  if (!source) return '--';
-  const parts = source.replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return source.slice(0, 2).toUpperCase();
+function initialsOf(value) {
+  if (!value) return '--';
+  const parts = String(value).replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/);
+  if (parts.length > 1) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return String(value).slice(0, 2).toUpperCase();
 }
 
 function humanize(value) {
   if (!value) return '-';
   return String(value)
     .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(' ');
 }
 
@@ -64,17 +62,17 @@ function outcomeTone(outcome) {
   return 'bg-rose-50 text-rose-700 border-rose-200';
 }
 
-function FieldTile({ icon: Icon, label, value, mono = false, onCopy }) {
+function InfoTile({ icon: Icon, label, value, onCopy, mono = false }) {
   return (
-    <div className="group rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
+    <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 ring-1 ring-sky-100">
-            <Icon size={18} strokeWidth={2.1} />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <Icon size={20} strokeWidth={2.1} />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-400">{label}</p>
-            <p className={`mt-1 truncate text-sm font-semibold text-slate-800 ${mono ? 'font-mono' : ''}`}>
+            <p className="text-sm font-medium text-slate-500">{label}</p>
+            <p className={clsx('mt-1 truncate text-base font-semibold text-slate-950', mono && 'font-mono')}>
               {value || '-'}
             </p>
           </div>
@@ -83,11 +81,11 @@ function FieldTile({ icon: Icon, label, value, mono = false, onCopy }) {
           <button
             type="button"
             onClick={onCopy}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-slate-50 hover:text-sky-600 group-hover:opacity-100"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 opacity-0 transition hover:bg-slate-50 hover:text-indigo-600 group-hover:opacity-100"
             title="Copy"
             aria-label={`Copy ${label}`}
           >
-            <Clipboard size={15} strokeWidth={2} />
+            <Clipboard size={16} />
           </button>
         ) : null}
       </div>
@@ -95,16 +93,16 @@ function FieldTile({ icon: Icon, label, value, mono = false, onCopy }) {
   );
 }
 
-function StatTile({ label, value, icon: Icon, tone }) {
+function Metric({ label, value, icon: Icon, tone }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-slate-400">{label}</p>
-          <p className="mt-0.5 text-base font-bold tracking-tight text-slate-900">{value}</p>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p>
         </div>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone}`}>
-          <Icon size={16} strokeWidth={2.2} />
+        <span className={clsx('flex h-11 w-11 items-center justify-center rounded-xl', tone)}>
+          <Icon size={21} />
         </span>
       </div>
     </div>
@@ -132,8 +130,8 @@ export function Profile() {
       roomPhone: user.room_phone || '-',
       laneScopes: user.laneScopes || [],
       tokenVersion: user.token_version || 1,
-      createdAt: user.created_at || null,
       lastLoginAt: user.last_login_at || null,
+      createdAt: user.created_at || null,
       isLocked: Number(user.is_locked || 0),
       isActive: Number(user.is_active || 0),
       loginHistory: user.login_history || [],
@@ -150,7 +148,7 @@ export function Profile() {
 
   if (!profile) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-sm font-semibold text-slate-500">
+      <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-500">
         No active user session found. Please log in.
       </div>
     );
@@ -160,60 +158,59 @@ export function Profile() {
   const accountStatus = profile.isLocked ? 'Locked' : profile.isActive ? 'Active' : 'Secure';
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 font-sans antialiased">
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
-        <div className="relative bg-white px-6 py-6 text-slate-900 md:px-8">
-          <div className="absolute inset-0 opacity-80 technical-grid-bg" />
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-500 via-blue-600 to-emerald-500" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-5">
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+        <div className="grid gap-0 lg:grid-cols-[1fr_360px]">
+          <div className="p-6 md:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <div className="relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-2xl font-extrabold text-white shadow-lg ring-4 ring-sky-50">
+                <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 via-blue-600 to-sky-500 text-3xl font-semibold text-white shadow-lg">
                   {initialsOf(profile.displayName)}
                 </div>
-                <span className="absolute -bottom-1.5 -right-1.5 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white ring-4 ring-white">
-                  <CheckCircle2 size={16} strokeWidth={2.5} />
+                <span className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-white ring-4 ring-white">
+                  <BadgeCheck size={19} strokeWidth={2.4} />
                 </span>
               </div>
-              <div>
-                <p className="inline-flex items-center gap-2 text-xs font-bold text-sky-700">
-                  <Sparkles size={14} strokeWidth={2.4} />
-                  Digital Identity Profile
-                </p>
-                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{profile.displayName}</h1>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex rounded-lg border px-3 py-1.5 text-xs font-bold ${roleTone(profile.role)}`}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-indigo-600">Signed-in identity</p>
+                <h1 className="mt-1 truncate text-3xl font-semibold text-slate-950 md:text-4xl">{profile.displayName}</h1>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className={clsx('rounded-full border px-3 py-1.5 text-sm font-medium', roleTone(profile.role))}>
                     {humanize(profile.role)}
                   </span>
-                  <span className="inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700">
                     {profile.designation}
                   </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="grid min-w-[280px] grid-cols-2 gap-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold text-slate-400">Employee ID</p>
-                <p className="mt-1 font-mono text-sm font-bold text-slate-900">{profile.employeeId}</p>
+          <div className="border-t border-slate-200 bg-slate-50 p-6 lg:border-l lg:border-t-0">
+            <p className="text-sm font-medium text-slate-500">Last activity</p>
+            <p className="mt-2 text-lg font-semibold text-slate-950">{formatDate(profile.lastLoginAt, 'No login record')}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-sm text-slate-500">Employee ID</p>
+                <p className="mt-1 font-mono text-sm font-semibold text-slate-950">{profile.employeeId}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-                <p className="text-xs font-semibold text-slate-400">Last Login</p>
-                <p className="mt-1 text-sm font-bold text-slate-900">{formatDate(profile.lastLoginAt, 'No login record')}</p>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-sm text-slate-500">Session</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">Version {profile.tokenVersion}</p>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="grid gap-3 border-t border-slate-200 bg-slate-50/60 p-3 md:grid-cols-4">
-          <StatTile label="Account" value={accountStatus} icon={BadgeCheck} tone="bg-emerald-50 text-emerald-600" />
-          <StatTile label="Permissions" value={profile.permissionsCount} icon={KeyRound} tone="bg-sky-50 text-sky-600" />
-          <StatTile label="Session Key" value={`V${profile.tokenVersion}`} icon={Fingerprint} tone="bg-violet-50 text-violet-600" />
-          <StatTile label="Audit Logs" value={profile.loginHistory.length} icon={History} tone="bg-orange-50 text-orange-600" />
-        </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Metric label="Account" value={accountStatus} icon={BadgeCheck} tone="bg-emerald-50 text-emerald-600" />
+        <Metric label="Permissions" value={profile.permissionsCount} icon={KeyRound} tone="bg-sky-50 text-sky-600" />
+        <Metric label="Audit events" value={profile.loginHistory.length} icon={History} tone="bg-violet-50 text-violet-600" />
+        <Metric label="User ID" value={profile.userId} icon={Fingerprint} tone="bg-amber-50 text-amber-600" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-card">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
@@ -222,126 +219,88 @@ export function Profile() {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-all ${
-                active
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-sky-700'
-              }`}
+              className={clsx(
+                'inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition',
+                active ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+              )}
             >
-              <Icon size={16} strokeWidth={2.2} />
+              <Icon size={17} strokeWidth={2.1} />
               {tab.label}
             </button>
           );
         })}
         {copied ? (
-          <span className="ml-auto rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+          <span className="ml-auto rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
             Copied {copied}
           </span>
         ) : null}
       </div>
 
       {activeTab === 'overview' ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <InfoTile icon={Mail} label="Email" value={profile.email} onCopy={() => copyValue('email', profile.email)} />
+          <InfoTile icon={Building2} label="Division code" value={profile.divisionCode} />
+          <InfoTile icon={MapPinned} label="Division name" value={profile.divisionName} />
+          <InfoTile icon={Phone} label="Lab phone" value={profile.labPhone} onCopy={() => copyValue('lab phone', profile.labPhone)} />
+          <InfoTile icon={Phone} label="Room phone" value={profile.roomPhone} onCopy={() => copyValue('room phone', profile.roomPhone)} />
+          <InfoTile icon={IdCard} label="Employee ID" value={profile.employeeId} mono onCopy={() => copyValue('employee id', profile.employeeId)} />
+        </section>
+      ) : null}
+
+      {activeTab === 'access' ? (
         <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
-                <UserRound size={21} strokeWidth={2.2} />
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <ShieldCheck size={23} />
               </span>
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">Profile Snapshot</h2>
-                <p className="text-xs font-medium text-slate-400">Primary user information from the active session.</p>
+                <h2 className="text-xl font-semibold text-slate-950">Access boundary</h2>
+                <p className="text-sm text-slate-500">Role and lane authorization for the current session.</p>
               </div>
             </div>
-
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <FieldTile icon={Mail} label="Email" value={profile.email} onCopy={() => copyValue('email', profile.email)} />
-              <FieldTile icon={Award} label="Designation" value={profile.designation} />
-              <FieldTile icon={Building2} label="Division Code" value={profile.divisionCode} />
-              <FieldTile icon={MapPinned} label="Division Name" value={profile.divisionName} />
-              <FieldTile icon={Phone} label="Laboratory Phone" value={profile.labPhone} onCopy={() => copyValue('lab phone', profile.labPhone)} />
-              <FieldTile icon={Phone} label="Room Phone" value={profile.roomPhone} onCopy={() => copyValue('room phone', profile.roomPhone)} />
+              <InfoTile icon={ShieldCheck} label="Role" value={humanize(profile.role)} />
+              <InfoTile icon={KeyRound} label="Permission count" value={profile.permissionsCount} />
+              <InfoTile icon={Fingerprint} label="Token version" value={`Version ${profile.tokenVersion}`} />
+              <InfoTile icon={Activity} label="Created at" value={formatDate(profile.createdAt)} />
             </div>
           </div>
 
-          <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">Access Scope</h2>
-                <p className="text-xs font-medium text-slate-400">Authorized lanes and role boundary.</p>
-              </div>
-              <ShieldCheck className="text-sky-600" size={24} strokeWidth={2.2} />
-            </div>
-
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold text-slate-400">Current Role</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{humanize(profile.role)}</p>
-            </div>
-
-            <div className="mt-5">
-              <p className="text-xs font-semibold text-slate-400">Lane Scopes</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profile.laneScopes.length > 0 ? (
-                  profile.laneScopes.map((scope) => (
-                    <span key={scope} className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-700">
-                      {scope}
-                    </span>
-                  ))
-                ) : (
-                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500">
-                    No scoped lane restriction
+          <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+            <h2 className="text-xl font-semibold text-slate-950">Lane scopes</h2>
+            <p className="mt-1 text-sm text-slate-500">Operational lanes available to this identity.</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {profile.laneScopes.length > 0 ? (
+                profile.laneScopes.map((scope) => (
+                  <span key={scope} className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700">
+                    {humanize(scope)}
                   </span>
-                )}
-              </div>
+                ))
+              ) : (
+                <span className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-500">
+                  No scoped lane restriction
+                </span>
+              )}
             </div>
           </aside>
         </section>
       ) : null}
 
-      {activeTab === 'records' ? (
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-              <IdCard size={21} strokeWidth={2.2} />
-            </span>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-900">Legacy Database Records</h2>
-              <p className="text-xs font-medium text-slate-400">Mapped values from employee, user, and section master records.</p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <FieldTile icon={UserRound} label="Full Name" value={profile.displayName} />
-            <FieldTile icon={IdCard} label="Employee ID" value={profile.employeeId} mono onCopy={() => copyValue('employee id', profile.employeeId)} />
-            <FieldTile icon={Fingerprint} label="User DB ID" value={profile.userId} mono onCopy={() => copyValue('user id', profile.userId)} />
-            <FieldTile icon={Mail} label="EMM Email" value={profile.email} />
-            <FieldTile icon={Award} label="EMM Designation" value={profile.designation} />
-            <FieldTile icon={Building2} label="SM Shortname" value={profile.divisionCode} />
-            <FieldTile icon={MapPinned} label="Section Name" value={profile.divisionName} />
-            <FieldTile icon={Phone} label="EMM PH1" value={profile.labPhone} />
-            <FieldTile icon={Phone} label="EMM PH2" value={profile.roomPhone} />
-          </div>
-        </section>
-      ) : null}
-
       {activeTab === 'security' ? (
         <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
-                  <History size={21} strokeWidth={2.2} />
-                </span>
-                <div>
-                  <h2 className="text-lg font-bold tracking-tight text-slate-900">Session Audit Timeline</h2>
-                  <p className="text-xs font-medium text-slate-400">Recent authentication events associated with this user.</p>
-                </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">Authentication history</h2>
+                <p className="mt-1 text-sm text-slate-500">Recent login and session events for your account.</p>
               </div>
-              <span className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700">
+              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700">
                 Session V{profile.tokenVersion}
               </span>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-5 space-y-3">
               {profile.loginHistory.length > 0 ? (
                 profile.loginHistory.map((log, index) => {
                   const active = index === selectedAudit;
@@ -350,53 +309,49 @@ export function Profile() {
                       key={log.audit_id || index}
                       type="button"
                       onClick={() => setSelectedAudit(index)}
-                      className={`flex w-full items-center justify-between gap-4 rounded-lg border p-4 text-left transition-all ${
-                        active
-                          ? 'border-sky-200 bg-sky-50/70 shadow-sm'
-                          : 'border-slate-200 bg-white hover:border-sky-200 hover:bg-slate-50'
-                      }`}
+                      className={clsx(
+                        'flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left transition',
+                        active ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50'
+                      )}
                     >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${log.outcome === 'SUCCESS' ? 'bg-emerald-500' : 'bg-sky-500'}`} />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-800">{humanize(log.outcome)}</p>
-                          <p className="mt-0.5 text-xs font-medium text-slate-400">{formatDate(log.attempt_at)}</p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900">{humanize(log.outcome)}</p>
+                        <p className="mt-1 text-sm text-slate-500">{formatDate(log.attempt_at)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${outcomeTone(log.outcome)}`}>
-                        {log.outcome || 'EVENT'}
+                      <span className={clsx('shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium', outcomeTone(log.outcome))}>
+                        {humanize(log.outcome)}
                       </span>
                     </button>
                   );
                 })
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-400">
-                  No authentication records found in audit logs.
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm font-medium text-slate-500">
+                  No authentication records found.
                 </div>
               )}
             </div>
           </div>
 
-          <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-card">
+          <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-900 text-white">
-                <Laptop size={21} strokeWidth={2.2} />
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <Laptop size={23} />
               </span>
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">Selected Event</h2>
-                <p className="text-xs font-medium text-slate-400">Audit metadata preview.</p>
+                <h2 className="text-xl font-semibold text-slate-950">Selected event</h2>
+                <p className="text-sm text-slate-500">Audit metadata preview.</p>
               </div>
             </div>
 
             {audit ? (
-              <div className="mt-6 space-y-3">
-                <FieldTile icon={Activity} label="Outcome" value={humanize(audit.outcome)} />
-                <FieldTile icon={History} label="Attempt Time" value={formatDate(audit.attempt_at)} />
-                <FieldTile icon={Laptop} label="IP Address" value={audit.ip_address || '-'} mono />
-                <FieldTile icon={Clipboard} label="Notes" value={audit.notes || '-'} />
+              <div className="mt-5 space-y-4">
+                <InfoTile icon={Activity} label="Outcome" value={humanize(audit.outcome)} />
+                <InfoTile icon={History} label="Attempt time" value={formatDate(audit.attempt_at)} />
+                <InfoTile icon={Laptop} label="IP address" value={audit.ip_address || '-'} mono />
+                <InfoTile icon={Clipboard} label="Notes" value={audit.notes || '-'} />
               </div>
             ) : (
-              <div className="mt-6 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-6 text-sm font-semibold text-slate-400">
+              <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm font-medium text-slate-500">
                 Select an audit record to inspect.
               </div>
             )}

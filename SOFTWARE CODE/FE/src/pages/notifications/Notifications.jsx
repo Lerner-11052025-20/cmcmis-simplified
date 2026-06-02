@@ -1,297 +1,265 @@
-// ============================================================================
-// src/pages/notifications/Notifications.jsx  —  Full notifications page
-// ----------------------------------------------------------------------------
-// PHASE 12 — Notifications
-//
-// Long-form view of the bell dropdown. Adds:
-//   • pagination
-//   • unread-only toggle
-//   • per-row mark-read + bulk mark-all-read
-//   • deep-link navigation on click
-//
-// Permission gate is applied at the route level (App.jsx) via
-// requiredPermission='notifications:read-own', so View-Only users can't
-// even reach this URL. The hook re-checks defensively.
-// ============================================================================
-
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Bell, 
-  CheckCheck, 
-  ChevronLeft, 
+import {
+  Bell,
+  CheckCheck,
+  ChevronLeft,
   ChevronRight,
-  FileText,
   ClipboardList,
-  Wrench
+  FileText,
+  Inbox,
+  RefreshCw,
+  Search,
+  Wrench,
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import clsx from 'clsx';
 
 import { Layout } from '../../components/Layout.jsx';
+import { Button } from '../../components/ui/Button.jsx';
 import {
-  useNotificationList,
   useNotificationActions,
+  useNotificationList,
 } from '../../lib/hooks/useNotifications.js';
 
 dayjs.extend(relativeTime);
 
 const PAGE_SIZE = 25;
 
-/**
- * Classifies a notification into a visual category based on content and link.
- */
-function getNotificationCategory(n) {
-  const link = n.deep_link || '';
-  const title = (n.title || '').toLowerCase();
-  
-  if (link.startsWith('/job-requests') || link.startsWith('/conversion') || title.includes('request') || title.includes('submit')) {
+function categoryOf(notification) {
+  const link = notification.deep_link || '';
+  const title = String(notification.title || '').toLowerCase();
+
+  if (link.startsWith('/job-requests') || link.startsWith('/conversion') || title.includes('request')) {
     return {
-      type: 'job_request',
-      label: 'Job Request',
-      colorClass: 'text-sky-700 bg-sky-50 border-sky-100/50',
-      iconBg: 'bg-sky-50 text-sky-600 border border-sky-100/50',
-      indicatorColor: 'bg-sky-500',
+      label: 'Job request',
+      icon: FileText,
+      chip: 'bg-sky-50 text-sky-700 border-sky-200',
+      iconClass: 'bg-sky-50 text-sky-600',
+      line: 'border-l-sky-500',
     };
   }
+
   if (link.startsWith('/job-cards') || title.includes('card') || title.includes('calib') || title.includes('repair')) {
     return {
-      type: 'job_card',
-      label: 'Job Card',
-      colorClass: 'text-violet-700 bg-violet-50 border-violet-100/50',
-      iconBg: 'bg-violet-50 text-violet-600 border border-violet-100/50',
-      indicatorColor: 'bg-violet-500',
+      label: 'Job card',
+      icon: ClipboardList,
+      chip: 'bg-violet-50 text-violet-700 border-violet-200',
+      iconClass: 'bg-violet-50 text-violet-600',
+      line: 'border-l-violet-500',
     };
   }
+
   if (link.startsWith('/equipment') || title.includes('equip') || title.includes('instrument') || title.includes('verify')) {
     return {
-      type: 'equipment',
       label: 'Equipment',
-      colorClass: 'text-emerald-700 bg-emerald-50 border-emerald-100/50',
-      iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100/50',
-      indicatorColor: 'bg-emerald-500',
+      icon: Wrench,
+      chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      iconClass: 'bg-emerald-50 text-emerald-600',
+      line: 'border-l-emerald-500',
     };
   }
+
   return {
-    type: 'general',
-    label: 'Notification',
-    colorClass: 'text-amber-700 bg-amber-50 border-amber-100/50',
-    iconBg: 'bg-amber-50 text-amber-600 border border-amber-100/50',
-    indicatorColor: 'bg-amber-500',
+    label: 'General',
+    icon: Bell,
+    chip: 'bg-amber-50 text-amber-700 border-amber-200',
+    iconClass: 'bg-amber-50 text-amber-600',
+    line: 'border-l-amber-500',
   };
+}
+
+function StatCard({ label, value, icon: Icon, tone }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-card">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p>
+        </div>
+        <span className={clsx('flex h-11 w-11 items-center justify-center rounded-xl', tone)}>
+          <Icon size={21} strokeWidth={2.1} />
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function Notifications() {
   const navigate = useNavigate();
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const { rows, total, unread, loading, error } = useNotificationList({
-    unreadOnly, page, page_size: PAGE_SIZE,
+
+  const { rows, total, unread, loading, error, refetch } = useNotificationList({
+    unreadOnly,
+    page,
+    page_size: PAGE_SIZE,
   });
   const { markOne, markAll, marking } = useNotificationActions();
 
   const totalPages = Math.max(1, Math.ceil((total || 0) / PAGE_SIZE));
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((row) => (
+      String(row.title || '').toLowerCase().includes(q)
+      || String(row.body || '').toLowerCase().includes(q)
+      || String(row.actor_employee_id || '').toLowerCase().includes(q)
+    ));
+  }, [query, rows]);
 
-  function activate(n) {
-    if (!n.is_read) markOne.mutate(n.id);
-    if (n.deep_link) navigate(n.deep_link);
+  function activate(notification) {
+    if (!notification.is_read) markOne.mutate(notification.id);
+    if (notification.deep_link) navigate(notification.deep_link);
   }
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-4xl mx-auto font-sans">
-        {/* ── Page Header ───────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
-          <div>
-            <h1 className="text-2xl font-bold text-ink flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shrink-0">
-                <Bell size={20} strokeWidth={2} aria-hidden="true" />
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <Inbox size={28} strokeWidth={2.1} />
+              </span>
+              <div>
+                <h1 className="text-3xl font-semibold text-slate-950">Notifications</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                  Review system events, jump to related records, and clear completed updates from one focused inbox.
+                </p>
               </div>
-              Notifications Inbox
-            </h1>
-            <p className="mt-2 text-xs font-medium text-ink-soft/90 max-w-2xl leading-relaxed">
-              Real-time workspace logs and event telemetry. Click any record card to interact directly with the related Job Request, Card, or Equipment detail.
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Premium segmented control for filtering */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/40 select-none">
-              <button
-                type="button"
-                onClick={() => { setUnreadOnly(false); setPage(1); }}
-                className={clsx(
-                  'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                  !unreadOnly
-                    ? 'bg-white text-ink shadow-sm'
-                    : 'text-ink-soft/85 hover:text-ink'
-                )}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUnreadOnly(true); setPage(1); }}
-                className={clsx(
-                  'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5',
-                  unreadOnly
-                    ? 'bg-white text-sky-700 shadow-sm'
-                    : 'text-ink-soft/85 hover:text-ink'
-                )}
-              >
-                Unread
-                {unread > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-danger text-white text-[9px] font-bold h-4 min-w-[16px] px-1 leading-none">
-                    {unread}
-                  </span>
-                )}
-              </button>
             </div>
 
-            {/* Mark All Read Action */}
-            <button
-              type="button"
-              onClick={() => markAll.mutate()}
-              disabled={marking || unread === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-40 shadow-sm transition"
-            >
-              <CheckCheck size={14} strokeWidth={2} aria-hidden="true" />
-              Mark All Read
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => refetch()}
+                disabled={loading}
+                className="rounded-xl"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : undefined} />
+                Refresh
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => markAll.mutate()}
+                disabled={marking || unread === 0}
+                className="rounded-xl"
+              >
+                <CheckCheck size={16} />
+                Mark all read
+              </Button>
+            </div>
           </div>
+        </section>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard label="Total records" value={(total || 0).toLocaleString()} icon={Bell} tone="bg-sky-50 text-sky-600" />
+          <StatCard label="Unread" value={(unread || 0).toLocaleString()} icon={Inbox} tone="bg-rose-50 text-rose-600" />
+          <StatCard label="Current page" value={`${page} / ${totalPages}`} icon={ClipboardList} tone="bg-emerald-50 text-emerald-600" />
         </div>
 
-        {/* ── Dynamic Grouped List with Spaced Out Cards ──────────────────────────────── */}
-        {loading ? (
-          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-16 text-center text-xs font-bold text-ink-soft flex items-center justify-center gap-2.5 font-sans">
-            <svg className="animate-spin h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Retrieving Notifications...
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-12 text-center text-xs font-bold text-danger font-sans">
-            {error.response?.data?.error?.message || error.message || 'Failed to load notifications.'}
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="rounded-2xl border border-slate-100 shadow-sm bg-white px-6 py-20 text-center font-sans">
-            <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-ink-soft/45 border border-slate-100 mb-4">
-              <Bell size={22} strokeWidth={1.5} aria-hidden="true" />
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative min-w-0 flex-1">
+              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search title, message, or employee ID"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100/60"
+              />
             </div>
-            <div className="text-xs font-bold text-ink-soft">
-              {unreadOnly ? 'No unread notifications to review.' : 'Your inbox is empty.'}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {rows.map((n, idx) => {
-              const isEven = idx % 2 === 0;
-              const cat = getNotificationCategory(n);
-              const Icon = cat.type === 'job_request' ? FileText :
-                           cat.type === 'job_card' ? ClipboardList :
-                           cat.type === 'equipment' ? Wrench : Bell;
 
-              // High contrast alternating backgrounds for read/unread entries
-              let rowBg = '';
-              if (n.is_read) {
-                rowBg = isEven 
-                  ? 'bg-slate-100/90 hover:bg-slate-200/60' 
-                  : 'bg-white hover:bg-slate-100/50';
-              } else {
-                if (cat.type === 'job_request') {
-                  rowBg = isEven 
-                    ? 'bg-sky-100/70 hover:bg-sky-200/60' 
-                    : 'bg-sky-50/40 hover:bg-sky-100/40';
-                } else if (cat.type === 'job_card') {
-                  rowBg = isEven 
-                    ? 'bg-violet-100/70 hover:bg-violet-200/60' 
-                    : 'bg-violet-50/40 hover:bg-violet-100/40';
-                } else if (cat.type === 'equipment') {
-                  rowBg = isEven 
-                    ? 'bg-emerald-100/70 hover:bg-emerald-200/60' 
-                    : 'bg-emerald-50/40 hover:bg-emerald-100/40';
-                } else {
-                  rowBg = isEven 
-                    ? 'bg-amber-100/70 hover:bg-amber-200/60' 
-                    : 'bg-amber-50/40 hover:bg-amber-100/40';
-                }
-              }
-
-              return (
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
+              {[
+                { label: 'All', value: false },
+                { label: 'Unread', value: true },
+              ].map((item) => (
                 <button
-                  key={n.id}
+                  key={item.label}
                   type="button"
-                  onClick={() => activate(n)}
+                  onClick={() => {
+                    setUnreadOnly(item.value);
+                    setPage(1);
+                  }}
                   className={clsx(
-                    'group relative w-full text-left px-6 py-5 flex items-start gap-4 transition-all duration-200 border border-slate-200/80 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.002] border-l-[5px] font-sans antialiased',
-                    rowBg,
-                    n.is_read ? 'border-l-transparent' : (
-                      cat.type === 'job_request' ? 'border-l-sky-500' :
-                      cat.type === 'job_card' ? 'border-l-violet-500' :
-                      cat.type === 'equipment' ? 'border-l-emerald-500' : 'border-l-amber-500'
-                    )
+                    'rounded-lg px-4 py-2 text-sm font-medium transition',
+                    unreadOnly === item.value
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-950'
                   )}
                 >
-                  {/* Category icon with color light contrast + pulsing status indicator dot */}
-                  <div className="relative shrink-0">
-                    <div className={clsx(
-                      'h-9 w-9 rounded-lg flex items-center justify-center transition-all',
-                      cat.iconBg
-                    )}>
-                      <Icon size={16} strokeWidth={2} />
-                    </div>
-                    {!n.is_read && (
-                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                        <span className={clsx(
-                          'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
-                          cat.indicatorColor
-                        )}></span>
-                        <span className={clsx(
-                          'relative inline-flex rounded-full h-2.5 w-2.5',
-                          cat.indicatorColor
-                        )}></span>
-                      </span>
-                    )}
-                  </div>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Unified font-sans typography */}
-                      <span className={clsx(
-                        'text-sm tracking-tight font-sans',
-                        n.is_read ? 'text-ink-soft/90 font-medium' : 'text-ink font-bold',
-                      )}>
-                        {n.title}
-                      </span>
-                      
-                      {/* Category Pill Tag */}
-                      <span className={clsx(
-                        'px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-sans border',
-                        cat.colorClass
-                      )}>
-                        {cat.label}
-                      </span>
-                    </div>
-
-                    {n.body ? (
-                      <div className="text-xs text-ink-soft/85 mt-1.5 leading-relaxed font-medium font-sans">
-                        {n.body}
-                      </div>
-                    ) : null}
-
-                    {/* Metadata telemetry details - strictly font-sans */}
-                    <div className="flex items-center gap-2.5 text-[11px] text-ink-soft/50 font-bold mt-2.5 font-sans">
-                      <span>{dayjs(n.created_at).format('YYYY-MM-DD HH:mm')}</span>
-                      <span>·</span>
-                      <span>{dayjs(n.created_at).fromNow()}</span>
-                      {n.actor_employee_id ? (
-                        <>
-                          <span>·</span>
-                          <span className="text-sky-600/80 font-semibold">by {n.actor_employee_id}</span>
-                        </>
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm font-medium text-slate-500 shadow-card">
+            Loading notifications...
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+            {error.response?.data?.error?.message || error.message || 'Failed to load notifications.'}
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-card">
+            <Bell className="mx-auto text-slate-300" size={34} />
+            <p className="mt-4 text-base font-medium text-slate-700">
+              {query ? 'No notifications match your search.' : unreadOnly ? 'No unread notifications.' : 'Your inbox is empty.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visibleRows.map((notification) => {
+              const category = categoryOf(notification);
+              const Icon = category.icon;
+              return (
+                <button
+                  key={notification.id}
+                  type="button"
+                  onClick={() => activate(notification)}
+                  className={clsx(
+                    'group w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md',
+                    'border-l-4',
+                    notification.is_read ? 'border-l-slate-200' : category.line
+                  )}
+                >
+                  <div className="flex gap-4">
+                    <span className={clsx('relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl', category.iconClass)}>
+                      <Icon size={22} strokeWidth={2.1} />
+                      {!notification.is_read ? (
+                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
                       ) : null}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className={clsx('text-base font-semibold', notification.is_read ? 'text-slate-700' : 'text-slate-950')}>
+                          {notification.title}
+                        </h2>
+                        <span className={clsx('rounded-full border px-2.5 py-1 text-xs font-medium', category.chip)}>
+                          {category.label}
+                        </span>
+                      </div>
+                      {notification.body ? (
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{notification.body}</p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>{dayjs(notification.created_at).format('MMM DD, YYYY HH:mm')}</span>
+                        <span>-</span>
+                        <span>{dayjs(notification.created_at).fromNow()}</span>
+                        {notification.actor_employee_id ? (
+                          <>
+                            <span>-</span>
+                            <span>By {notification.actor_employee_id}</span>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -300,29 +268,30 @@ export function Notifications() {
           </div>
         )}
 
-        {/* ── Pagination controls ───────────────────────────────── */}
         {total > PAGE_SIZE ? (
-          <div className="flex items-center justify-between text-xs font-bold text-ink-soft px-1 select-none">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-card sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()} records
+              Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
             </span>
-            <div className="inline-flex items-center gap-2">
-              <button
-                type="button"
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
                 disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => p - 1)}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition"
+                onClick={() => setPage((value) => value - 1)}
+                className="rounded-xl"
               >
-                <ChevronLeft size={14} strokeWidth={2} /> Prev
-              </button>
-              <button
-                type="button"
+                <ChevronLeft size={16} />
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
                 disabled={page >= totalPages || loading}
-                onClick={() => setPage((p) => p + 1)}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 transition"
+                onClick={() => setPage((value) => value + 1)}
+                className="rounded-xl"
               >
-                Next <ChevronRight size={14} strokeWidth={2} />
-              </button>
+                Next
+                <ChevronRight size={16} />
+              </Button>
             </div>
           </div>
         ) : null}
