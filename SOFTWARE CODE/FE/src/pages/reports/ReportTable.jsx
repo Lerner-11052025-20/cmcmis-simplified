@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { formatIstDate } from '../../lib/time.js';
 
 const STATUS_BADGE = {
   VALID:    'bg-emerald-50 text-emerald-700',
@@ -43,7 +44,7 @@ function toTanColumn(col) {
       if (v === null || v === undefined || v === '') return <span className="text-slate-300">—</span>;
       if (col.kind === 'date') {
         const d = dayjs(v);
-        return d.isValid() ? d.format('YYYY-MM-DD') : String(v);
+        return d.isValid() ? formatIstDate(v) : String(v);
       }
       if (col.kind === 'number') return <span className="tabular-nums">{Number(v).toLocaleString()}</span>;
       if (col.kind === 'badge') {

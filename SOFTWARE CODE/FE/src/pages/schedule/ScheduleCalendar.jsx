@@ -16,6 +16,7 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useSchedules } from '../../lib/hooks/useSchedule.js';
+import { todayIstIsoDate } from '../../lib/time.js';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -30,6 +31,9 @@ function isoDate(d) {
 }
 function monthLabel(d) {
   return d.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+}
+function todayIstDate() {
+  return new Date(`${todayIstIsoDate()}T00:00:00+05:30`);
 }
 
 
@@ -53,10 +57,10 @@ function buildMonthGrid(anchorDate) {
 
 export function ScheduleCalendar({ tab, onEdit }) {
   // Anchor = the month we're showing. Starts on today's month.
-  const [anchor, setAnchor] = useState(() => startOfMonth(new Date()));
+  const [anchor, setAnchor] = useState(() => startOfMonth(todayIstDate()));
 
   const { cells, monthStart, monthEnd } = useMemo(() => buildMonthGrid(anchor), [anchor]);
-  const todayIso = isoDate(new Date());
+  const todayIso = todayIstIsoDate();
 
   // Fetch every schedule in the visible 6-week range (cells[0] to cells[41]).
   const fromIso = isoDate(cells[0]);
@@ -100,7 +104,7 @@ export function ScheduleCalendar({ tab, onEdit }) {
           </button>
           <button
             type="button"
-            onClick={() => setAnchor(startOfMonth(new Date()))}
+            onClick={() => setAnchor(startOfMonth(todayIstDate()))}
             className="px-2 py-1 text-xs text-ink-soft hover:text-ink"
           >
             Today

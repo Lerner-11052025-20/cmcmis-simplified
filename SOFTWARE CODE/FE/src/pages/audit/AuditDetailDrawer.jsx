@@ -30,10 +30,10 @@
 // ============================================================================
 
 import { X as XIcon, ExternalLink, Code2 } from 'lucide-react';
-import dayjs from 'dayjs';
 
 import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { useAuditDetail } from '../../lib/hooks/useAuditLog.js';
+import { formatIstTimestamp } from '../../lib/time.js';
 
 
 export function AuditDetailDrawer({ row, onClose }) {
@@ -90,7 +90,7 @@ export function AuditDetailDrawer({ row, onClose }) {
                 : <span className="font-medium">{r.entity_id || '—'}</span>
             } />
             {r.entity_label ? <Pair label="Entity Name" value={r.entity_label} /> : null}
-            <Pair label="When" value={r.occurred_at ? dayjs(typeof r.occurred_at === 'string' ? r.occurred_at.replace('Z', '') : r.occurred_at).format('MMM DD, YYYY · hh:mm A') : '—'} />
+            <Pair label="Date" value={formatIstTimestamp(r.occurred_at, '—')} />
           </Section>
 
           {/* ── Diff / Transition ──────────────────────────────────── */}

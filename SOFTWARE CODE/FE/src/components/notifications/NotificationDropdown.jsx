@@ -7,10 +7,10 @@
 //   │ Notifications                  Mark all read │
 //   ├─────────────────────────────────────────────┤
 //   │ [●] Job Card complete · JC-2026-24219       │
-//   │     Awaiting verification        5 min ago   │
+//   │     Awaiting verification        02 Jun 2026 │
 //   │ ─────────────────────────────────────────── │
 //   │ [ ] Draft saved · JR-2026-24287             │
-//   │     Your Job Request was saved   1 h ago     │
+//   │     Your Job Request was saved   02 Jun 2026 │
 //   ├─────────────────────────────────────────────┤
 //   │            See all notifications →           │
 //   └─────────────────────────────────────────────┘
@@ -34,16 +34,13 @@ import {
   Wrench,
   Bell
 } from 'lucide-react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import clsx from 'clsx';
 
 import {
   useNotificationList,
   useNotificationActions,
 } from '../../lib/hooks/useNotifications.js';
-
-dayjs.extend(relativeTime);
+import { formatIstTimestamp } from '../../lib/time.js';
 
 /**
  * Classifies a notification into a visual category based on content and link.
@@ -221,7 +218,7 @@ export function NotificationDropdown({ onClose }) {
                     </div>
                   ) : null}
                   <div className="text-[9px] text-slate-400 font-bold mt-2 font-sans tracking-wider uppercase">
-                    {dayjs(n.created_at).fromNow()}
+                    {formatIstTimestamp(n.created_at)}
                   </div>
                 </div>
                 {!n.is_read ? (

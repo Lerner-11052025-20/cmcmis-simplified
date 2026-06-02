@@ -12,7 +12,7 @@
 //
 // CAPSULE
 //   Pill-shaped (fully rounded ends), single-line message + optional
-//   sub-line, HH:mm:ss timestamp on the right, × close button. Variants
+//   sub-line, date stamp on the right, × close button. Variants
 //   colour the background + ring; text uses the darkest shade of the
 //   same family (not plain black) per spec §4.1.
 //
@@ -22,9 +22,9 @@
 
 import { X } from 'lucide-react';
 import clsx from 'clsx';
-import dayjs from 'dayjs';
 
 import { useTokenStore } from '../../lib/tokens/tokenStore.js';
+import { formatIstDate } from '../../lib/time.js';
 
 // Variant → colour classes. We pick from Tailwind's palette so the
 // capsule reads correctly on both light and (future) dark themes.
@@ -83,7 +83,7 @@ export function TokenHost() {
             <span className="opacity-70 text-xs truncate max-w-xs">{t.sub}</span>
           ) : null}
           <span className="opacity-60 text-[11px] tabular-nums shrink-0">
-            {dayjs(t.at).format('HH:mm:ss')}
+            {formatIstDate(t.at)}
           </span>
           <button
             type="button"

@@ -2,7 +2,7 @@
 // pages/jobCards/components/TabSaveBar.jsx
 // ----------------------------------------------------------------------------
 // Sticky bottom save bar shared across all 9 data tabs. Renders:
-//   • Auto-save status pill ("Saved 2s ago" / "Saving…" / "Save failed")
+//   • Auto-save status pill ("Saved <date>" / "Saving…" / "Save failed")
 //   • Auto-save preference toggle (chevron) — D-9.2, Q-1 default ON
 //   • "Save as Draft" button (silent)
 //   • "Save Changes" button (primary CTA)
@@ -21,14 +21,10 @@
 import { ChevronUp, Save, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button.jsx';
 import clsx from 'clsx';
+import { formatIstDate } from '../../../lib/time.js';
 
-function relTime(d) {
-  if (!d) return '';
-  const sec = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-  if (sec < 5)   return 'just now';
-  if (sec < 60)  return `${sec}s ago`;
-  if (sec < 3600)return `${Math.floor(sec / 60)}m ago`;
-  return new Date(d).toLocaleTimeString();
+function savedDate(d) {
+  return formatIstDate(d);
 }
 
 export function TabSaveBar({
@@ -58,7 +54,7 @@ export function TabSaveBar({
     pill = (
       <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
         <CheckCircle2 size={12} strokeWidth={1.75} aria-hidden="true" />
-        Saved {relTime(lastSavedAt)}
+        Saved {savedDate(lastSavedAt)}
       </span>
     );
   } else if (autoSaveStatus === 'pending') {

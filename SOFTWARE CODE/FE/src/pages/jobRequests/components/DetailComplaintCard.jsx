@@ -16,28 +16,28 @@ export function DetailComplaintCard({ accessories }) {
       accent="rose"
     >
       {accessories && accessories.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200/50 shadow-[0_1px_2px_rgba(0,0,0,0.01)]">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+          <table className="w-full border-collapse text-left text-sm">
             <thead className="bg-slate-50/80 border-b border-slate-100">
-              <tr className="text-[10px] font-semibold text-slate-500 font-sans uppercase tracking-wider">
-                <th className="px-3 py-2">Type</th>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Serial No</th>
+              <tr className="font-medium text-slate-500">
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Serial No</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {accessories.map((a, i) => (
-                <tr key={i} className="hover:bg-slate-50/40 transition-colors duration-150 text-[12px] font-medium text-slate-600 font-sans">
-                  <td className="px-3 py-1.5">{a.type}</td>
-                  <td className="px-3 py-1.5">{a.name}</td>
-                  <td className="px-3 py-1.5 text-slate-400 font-normal">{a.serial_no || '—'}</td>
+                <tr key={i} className="font-medium text-slate-700 transition-colors duration-150 hover:bg-slate-50/60">
+                  <td className="px-4 py-3">{a.type}</td>
+                  <td className="px-4 py-3">{a.name}</td>
+                  <td className="px-4 py-3 font-mono text-slate-500">{a.serial_no || '-'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="text-[11px] font-semibold text-slate-400 italic font-sans">No accessories.</div>
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-medium text-slate-500">No accessories.</div>
       )}
     </SectionCard>
   );

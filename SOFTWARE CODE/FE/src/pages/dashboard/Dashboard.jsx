@@ -24,6 +24,7 @@ import { QuickActions } from './QuickActions.jsx';
 import { KpiGrid } from './KpiGrid.jsx';
 import { QuickRecap } from './QuickRecap.jsx';
 import { DashboardCharts } from './DashboardCharts.jsx';
+import { parseIstDateTime } from '../../lib/time.js';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -34,7 +35,8 @@ export function Dashboard() {
   // effectively "now() - cacheAgeMs".
   const lastFetchedAt = useMemo(() => {
     if (!data) return null;
-    return new Date(Date.parse(data.generatedAt) + (data.cacheAgeMs || 0));
+    const generatedAt = parseIstDateTime(data.generatedAt);
+    return generatedAt ? new Date(generatedAt.getTime() + (data.cacheAgeMs || 0)) : null;
   }, [data]);
 
   // ProtectedRoute already guarantees `user` is non-null, but be defensive.

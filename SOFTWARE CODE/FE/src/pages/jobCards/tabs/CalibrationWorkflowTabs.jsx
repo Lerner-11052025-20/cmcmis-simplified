@@ -55,6 +55,7 @@ import {
 } from '../../../lib/schemas/jobCardSchemas.js';
 import { TabSaveBar } from '../components/TabSaveBar.jsx';
 import { ClosureTab } from './ClosureTab.jsx';
+import { todayIstIsoDate } from '../../../lib/time.js';
 
 function Label({ htmlFor, children, required = false }) {
   return (
@@ -764,7 +765,7 @@ function GateRow({ label, ok, hint }) {
   );
 }
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return todayIstIsoDate(); }
 
 export function CalibrationJobClosingTab(props) {
   const { jc, canWrite, invalidateAll, refetch } = props;

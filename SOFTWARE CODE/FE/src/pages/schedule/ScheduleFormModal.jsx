@@ -26,6 +26,7 @@ import { Select }   from '../../components/ui/Select.jsx';
 import { useAuth }  from '../../lib/auth-context.jsx';
 import { useScheduleMutations } from '../../lib/hooks/useSchedule.js';
 import { api } from '../../lib/api-client.js';
+import { todayIstIsoDate } from '../../lib/time.js';
 
 
 // ── Constants ────────────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ const TYPES        = ['PREVENTIVE_MAINTENANCE', 'CALIBRATION'];
 const RECURRENCES  = ['NONE', 'MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'YEARLY'];
 const TRANSITIONS  = ['PLANNED', 'SCHEDULED', 'DUE', 'COMPLETED', 'CANCELLED'];
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return todayIstIsoDate(); }
 
 
 export function ScheduleFormModal({ defaultType, schedule, onClose }) {

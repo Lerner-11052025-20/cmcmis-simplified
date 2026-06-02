@@ -33,6 +33,7 @@ import { jobCardMarkCompleteSchema } from '../../../lib/schemas/jobCardSchemas.j
 import { markCompleteJobCard } from '../../../lib/api/jobCards.js';
 import { useJobCardTasks } from '../../../lib/hooks/useJobCardTasks.js';
 import { useJobCardDocuments } from '../../../lib/hooks/useJobCardDocuments.js';
+import { todayIstIsoDate } from '../../../lib/time.js';
 
 /**
  * Gate row component.
@@ -69,7 +70,7 @@ function GateRow({ label, ok, hint, actionLabel, onAction }) {
   );
 }
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return todayIstIsoDate(); }
 
 export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
   const isRepair = jc.work_type === 'REPAIR'

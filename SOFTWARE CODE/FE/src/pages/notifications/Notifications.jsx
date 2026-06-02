@@ -12,8 +12,6 @@ import {
   Search,
   Wrench,
 } from 'lucide-react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import clsx from 'clsx';
 
 import { Layout } from '../../components/Layout.jsx';
@@ -22,8 +20,7 @@ import {
   useNotificationActions,
   useNotificationList,
 } from '../../lib/hooks/useNotifications.js';
-
-dayjs.extend(relativeTime);
+import { formatIstTimestamp } from '../../lib/time.js';
 
 const PAGE_SIZE = 25;
 
@@ -250,9 +247,7 @@ export function Notifications() {
                         <p className="mt-2 text-sm leading-6 text-slate-600">{notification.body}</p>
                       ) : null}
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                        <span>{dayjs(notification.created_at).format('MMM DD, YYYY HH:mm')}</span>
-                        <span>-</span>
-                        <span>{dayjs(notification.created_at).fromNow()}</span>
+                        <span>{formatIstTimestamp(notification.created_at)}</span>
                         {notification.actor_employee_id ? (
                           <>
                             <span>-</span>

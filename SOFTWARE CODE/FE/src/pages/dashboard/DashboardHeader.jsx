@@ -1,13 +1,12 @@
 // ============================================================================
 // src/pages/dashboard/DashboardHeader.jsx  —  Title + greeting + refresh pill
 // ----------------------------------------------------------------------------
-// Title block + a "Last updated Xs ago" pill + a manual Refresh button.
-// The pill ticks every second so the user has live feedback on freshness.
+// Title block + a last-updated date pill + a manual Refresh button.
 // ============================================================================
 
-import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
+import { formatIstDate } from '../../lib/time.js';
 
 /**
  * @param {Object} props
@@ -17,27 +16,12 @@ import clsx from 'clsx';
  * @param {() => void}   props.onRefresh
  */
 export function DashboardHeader({ variant, lastFetchedAt, loading, onRefresh }) {
-  // Re-render every second so the "Xs ago" stays accurate even when the
-  // hook isn't fetching.
-  const [, force] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => force((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const title    = variant === 'my' ? 'My Dashboard' : 'Dashboard';
   const subtitle = variant === 'my'
     ? 'Track your equipment and service requests'
     : 'Overview of calibration and maintenance activities';
 
-  const ageS = lastFetchedAt
-    ? Math.max(0, Math.floor((Date.now() - lastFetchedAt.getTime()) / 1000))
-    : null;
-  const ageLabel = ageS === null
-    ? '—'
-    : ageS < 5  ? 'Just now'
-    : ageS < 60 ? `${ageS}s ago`
-    :              `${Math.floor(ageS / 60)}m ago`;
+  const updatedLabel = formatIstDate(lastFetchedAt, '—');
 
   return (
     <div className="flex items-start justify-between gap-4">
@@ -49,7 +33,7 @@ export function DashboardHeader({ variant, lastFetchedAt, loading, onRefresh }) 
       {/* Right cluster: freshness pill + manual refresh */}
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-xs text-ink-soft hidden sm:inline">
-          Last updated <span className="font-medium text-ink">{ageLabel}</span>
+          Last updated date <span className="font-medium text-ink">{updatedLabel}</span>
         </span>
         <button
           type="button"

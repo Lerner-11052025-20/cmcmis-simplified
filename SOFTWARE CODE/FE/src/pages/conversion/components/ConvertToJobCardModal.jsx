@@ -53,9 +53,10 @@ import {
 } from '../../../lib/schemas/jobRequestSchemas.js';
 import { useEngineersLookup } from '../../../lib/hooks/useEngineersLookup.js';
 import { convertJobRequest } from '../../../lib/api/jobRequests.js';
+import { todayIstIsoDate } from '../../../lib/time.js';
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return todayIstIsoDate();
 }
 
 /**

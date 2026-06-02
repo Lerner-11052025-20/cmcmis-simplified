@@ -21,8 +21,9 @@ import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { jobCardVerifyCloseSchema } from '../../../lib/schemas/jobCardSchemas.js';
 import { verifyCloseJobCard } from '../../../lib/api/jobCards.js';
+import { formatIstTimestamp, todayIstIsoDate } from '../../../lib/time.js';
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return todayIstIsoDate(); }
 
 export function ClosureTab({ jc, canWrite, invalidateAll }) {
   const {
@@ -201,7 +202,7 @@ export function ClosureTab({ jc, canWrite, invalidateAll }) {
         <div role="status" className="rounded-md border border-emerald-300 bg-emerald-50 p-3 flex items-start gap-2 text-xs text-ink">
           <CheckCircle2 size={14} strokeWidth={1.75} className="text-emerald-700 shrink-0 mt-0.5" aria-hidden="true" />
           <div>
-            <span className="font-semibold text-emerald-700">Closed on {jc.verified_closed_at ? new Date(jc.verified_closed_at).toLocaleString() : ''}</span>
+            <span className="font-semibold text-emerald-700">Closed on {formatIstTimestamp(jc.verified_closed_at, '')}</span>
             {jc.verified_closed_by?.name ? <> by <span className="font-medium">{jc.verified_closed_by.name}</span></> : null}.
             Reopen this card from the action bar above if the customer reports issues later.
           </div>

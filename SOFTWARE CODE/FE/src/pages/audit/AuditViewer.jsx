@@ -51,7 +51,7 @@ import { useAuth }   from '../../lib/auth-context.jsx';
 import { useAuditList, useAuditFilters } from '../../lib/hooks/useAuditLog.js';
 import { downloadAuditCsv } from '../../lib/api/audit.js';
 import { AuditDetailDrawer } from './AuditDetailDrawer.jsx';
-import dayjs from 'dayjs';
+import { formatIstTimestamp } from '../../lib/time.js';
 
 const SOURCES = [
   { value: 'audit_log',   label: 'All Actions' },
@@ -179,7 +179,7 @@ export function AuditViewer() {
       accessor: 'occurred_at',
       className: 'whitespace-nowrap text-ink',
       format: (v) => v
-        ? dayjs(typeof v === 'string' ? v.replace('Z', '') : v).format('MMM DD, YYYY · hh:mm A')
+        ? formatIstTimestamp(v)
         : <span className="text-ink-soft">—</span>,
     },
     {

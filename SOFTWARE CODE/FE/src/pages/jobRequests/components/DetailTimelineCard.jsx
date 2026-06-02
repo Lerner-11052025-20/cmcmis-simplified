@@ -3,22 +3,14 @@ import clsx from 'clsx';
 import { SectionCard } from './detailPrimitives.jsx';
 import { StatusPill } from '../../../components/StatusPill.jsx';
 import { useJobRequestHistory } from '../../../lib/hooks/useJobRequestHistory.js';
+import { formatIstDate, formatIstTimestamp } from '../../../lib/time.js';
 
 function relTime(iso) {
-  if (!iso) return '';
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return '';
-  const diffSec = Math.floor((Date.now() - t) / 1000);
-  if (diffSec < 60)         return 'just now';
-  if (diffSec < 3600)       return `${Math.floor(diffSec / 60)} min ago`;
-  if (diffSec < 86_400)     return `${Math.floor(diffSec / 3600)} hr ago`;
-  if (diffSec < 30 * 86400) return `${Math.floor(diffSec / 86_400)} days ago`;
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return formatIstDate(iso, '');
 }
 
 function absTime(iso) {
-  if (!iso) return '';
-  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+  return formatIstTimestamp(iso, '');
 }
 
 const STATUS_THEME = {

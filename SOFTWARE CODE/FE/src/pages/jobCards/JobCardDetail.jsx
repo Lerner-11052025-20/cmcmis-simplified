@@ -28,6 +28,7 @@ import { invalidateJobCardHistory } from '../../lib/hooks/useJobCardHistory.js';
 import { invalidateJobCardTasks } from '../../lib/hooks/useJobCardTasks.js';
 import { invalidateJobCardDocuments } from '../../lib/hooks/useJobCardDocuments.js';
 import { startWorkJobCard } from '../../lib/api/jobCards.js';
+import { formatIstTimestamp } from '../../lib/time.js';
 
 import { DetailHeader } from './components/DetailHeader.jsx';
 import { DetailTabBar, CALIBRATION_TABS, REPAIR_TABS } from './components/DetailTabBar.jsx';
@@ -302,7 +303,7 @@ export function JobCardDetail() {
             <span className="font-semibold text-orange-700">This job card was reopened.</span>{' '}
             Total reopens: {jc.reopen_count}. Last reopened by{' '}
             <span className="font-medium">{jc.last_reopened_by?.name || jc.last_reopened_by?.employee_id || '—'}</span>
-            {' '}on {new Date(jc.last_reopened_at).toLocaleString()}.
+            {' '}on {formatIstTimestamp(jc.last_reopened_at)}.
             Review the rejection reason in the Status Timeline before continuing.
           </div>
         </div>

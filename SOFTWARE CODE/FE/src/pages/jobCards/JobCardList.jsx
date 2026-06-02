@@ -38,6 +38,7 @@ import { StatusPill } from '../../components/StatusPill.jsx';
 import { useJobCardList } from '../../lib/hooks/useJobCardList.js';
 import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 import { downloadJobCardsPdf } from '../../lib/api/jobCards.js';
+import { formatIstDate } from '../../lib/time.js';
 
 const STATUS_OPTIONS = [
   { value: 'ASSIGNED',        label: 'Assigned' },
@@ -164,12 +165,12 @@ export function JobCardList() {
       {
         header: 'Start Date',
         accessor: 'start_date',
-        format: (v) => v || <span className="text-ink-soft">—</span>,
+        format: (v) => formatIstDate(v, <span className="text-ink-soft">—</span>),
       },
       {
         header: 'Due Date',
         accessor: 'due_date',
-        format: (v) => v || <span className="text-ink-soft">—</span>,
+        format: (v) => formatIstDate(v, <span className="text-ink-soft">—</span>),
       },
     ],
     [],

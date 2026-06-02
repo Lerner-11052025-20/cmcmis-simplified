@@ -28,16 +28,16 @@ export function SectionCard({ icon, title, action, children, accent = 'indigo', 
   const color = ACCENT_COLORS[accent] || ACCENT_COLORS.slate;
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 space-y-5 transition-all duration-300 hover:shadow-md hover:border-slate-200/80">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
       <header 
         className="flex items-center justify-between border-b border-slate-100 pb-4 select-none cursor-pointer group/header" 
         onClick={() => setExpanded(!expanded)}
       >
-        <h2 className="flex items-center gap-3 text-sm font-semibold text-slate-800 tracking-tight">
+        <h2 className="flex items-center gap-3 text-base font-medium text-slate-950">
           <span className={clsx("inline-flex items-center justify-center w-8 h-8 rounded-xl border shrink-0 transition-transform duration-300 group-hover/header:scale-105", color.bg, color.border, color.text)} aria-hidden="true">
             {icon}
           </span>
-          <span className="text-base font-bold text-slate-800 tracking-tight group-hover/header:text-slate-900 transition-colors font-sans">{title}</span>
+          <span className="text-lg font-semibold text-slate-950 transition-colors group-hover/header:text-indigo-700">{title}</span>
         </h2>
         <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
           {action ? <div className="transition-all duration-200">{action}</div> : null}
@@ -92,7 +92,7 @@ export function DetailRow({ label, value, multiline = false, copyable = true }) 
       )}
     >
       <div className="flex justify-between items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-sans leading-none">
+        <span className="text-sm font-medium text-slate-500">
           {label}
         </span>
         {copyable && !isPlaceholder && (
@@ -111,7 +111,7 @@ export function DetailRow({ label, value, multiline = false, copyable = true }) 
         )}
       </div>
       <div className={clsx(
-        'text-sm font-semibold text-slate-900 leading-relaxed font-sans break-words',
+        'text-base font-medium text-slate-950 leading-relaxed font-sans break-words',
         multiline ? 'whitespace-pre-wrap' : 'line-clamp-2 md:line-clamp-none',
         isPlaceholder ? 'text-slate-400 font-normal italic' : '',
       )}>

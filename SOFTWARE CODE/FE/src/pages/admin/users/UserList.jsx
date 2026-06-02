@@ -26,7 +26,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search as SearchIcon, RefreshCw, Power, Shield, LogOut, Users, ShieldAlert, Key } from 'lucide-react';
 import clsx from 'clsx';
-import dayjs from 'dayjs';
 
 import { StandardKpiCard } from '../../../components/StandardKpiCard.jsx';
 import { Button } from '../../../components/ui/Button.jsx';
@@ -41,6 +40,7 @@ import { ROLE_LABELS, ROLE_CODES } from '../../../lib/schemas/adminUserSchemas.j
 import {
   changeUserRole, activateUser, deactivateUser, forceLogoutUser,
 } from '../../../lib/api/adminUsers.js';
+import { formatIstTimestamp } from '../../../lib/time.js';
 
 const STATUS_OPTIONS = [
   { value: '1', label: 'Active' },
@@ -97,10 +97,10 @@ export function UserList() {
     },
     { header: 'Division', accessor: 'division_code', className: 'text-xs uppercase' },
     {
-      header: 'Last Login',
+      header: 'Last Login Date',
       accessor: 'last_login_at',
       format: (v) => v
-        ? dayjs(typeof v === 'string' ? v.replace('Z', '') : v).format('MMM DD, YYYY · hh:mm A')
+        ? formatIstTimestamp(v)
         : <span className="text-ink-soft">never</span>,
     },
     {

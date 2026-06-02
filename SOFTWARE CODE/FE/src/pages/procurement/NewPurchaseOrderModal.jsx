@@ -25,11 +25,12 @@ import { ModalPortal } from '../../components/ui/ModalPortal.jsx';
 import { Select }  from '../../components/ui/Select.jsx';
 import { usePurchaseOrder, useProcurementMutations } from '../../lib/hooks/useProcurement.js';
 import { searchVendors } from '../../lib/api/procurement.js';
+import { todayIstIsoDate } from '../../lib/time.js';
 
 const STATUSES = ['ACTIVE', 'COMPLETED', 'EXPIRED'];
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 
-function todayIso() { return new Date().toISOString().slice(0, 10); }
+function todayIso() { return todayIstIsoDate(); }
 
 
 export function NewPurchaseOrderModal({ po, onClose }) {

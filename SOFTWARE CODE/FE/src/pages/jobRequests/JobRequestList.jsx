@@ -44,6 +44,7 @@ import { useJobRequestList } from '../../lib/hooks/useJobRequestList.js';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { bulkVerifyAllJobRequests, downloadJobRequestsPdf } from '../../lib/api/jobRequests.js';
 import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
+import { formatIstTimestamp } from '../../lib/time.js';
 
 // ── Filter dropdown option sets (locked to backend enums) ──────────────
 const TYPE_OPTIONS = [
@@ -209,7 +210,7 @@ export function JobRequestList() {
       {
         header: 'Date',
         accessor: (row) => row.submitted_at || row.created_at,
-        format: (v) => v || <span className="text-ink-soft">—</span>,
+        format: (v) => formatIstTimestamp(v, <span className="text-ink-soft">—</span>),
       },
       {
         header: 'Status',

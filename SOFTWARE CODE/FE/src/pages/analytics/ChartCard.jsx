@@ -12,7 +12,7 @@
 //   │           ResponsiveContainer (chart)                │
 //   │                                                      │
 //   ├──────────────────────────────────────────────────────┤
-//   │ Updated 6s ago                            [refresh]   │
+//   │ Updated 02 Jun 2026                       [refresh]   │
 //   └──────────────────────────────────────────────────────┘
 //
 // FEATURES
@@ -20,22 +20,17 @@
 //   • Error state with the BE message.
 //   • Optional header "stat" badge (e.g. "Total 240" / "↑12% MoM") for
 //     glanceable summary numbers.
-//   • Footer "Updated Xs ago" + per-card refresh button so users can
+//   • Footer update date + per-card refresh button so users can
 //     force-reload one card without re-fetching the rest.
 //   • CSV download icon — disabled for users without reports:export.
 // ============================================================================
 
 import { Download, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context.jsx';
+import { formatIstDate } from '../../lib/time.js';
 
-/** Human-friendly "Updated 5s ago" string. */
-function formatAgo(ts) {
-  if (!ts) return '—';
-  const ms = Date.now() - ts;
-  if (ms < 5_000)    return 'just now';
-  if (ms < 60_000)   return `${Math.floor(ms / 1000)}s ago`;
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
-  return `${Math.floor(ms / 3_600_000)}h ago`;
+function formatUpdatedDate(ts) {
+  return formatIstDate(ts, '—');
 }
 
 export function ChartCard({
@@ -113,7 +108,7 @@ export function ChartCard({
               refreshing…
             </span>
           ) : (
-            <>Updated {formatAgo(dataUpdatedAt)}</>
+            <>Updated {formatUpdatedDate(dataUpdatedAt)}</>
           )}
         </span>
         {onRefresh ? (

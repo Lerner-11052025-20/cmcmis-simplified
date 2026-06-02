@@ -38,7 +38,7 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
 
   if (!isSubmitted || (!canConvert && !canReject)) {
     return (
-      <div className="bg-base-elev border border-border rounded-lg p-3 text-center text-xs text-ink-soft">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-medium text-slate-500 shadow-card">
         {jr.status === 'REJECTED' ? (
           <>This request was <span className="font-medium text-ink">rejected</span>{jr.rejection_reason ? ` — "${jr.rejection_reason}"` : ''}. Submit a new request to retry.</>
         ) : jr.status === 'ASSIGNED' ? (
@@ -53,24 +53,26 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {blockingReason ? (
-        <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex items-start gap-2">
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-card">
           <AlertTriangle size={14} strokeWidth={1.75} aria-hidden="true" className="text-amber-700 shrink-0 mt-0.5" />
-          <div className="text-xs text-ink">
+          <div className="text-sm text-slate-700">
             <span className="font-semibold text-amber-700">Cannot convert yet.</span>{' '}
             {blockingReason}
           </div>
         </div>
       ) : null}
-      <div className="bg-base-elev border border-border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="text-xs text-ink-soft">
-          <RefreshCw size={12} strokeWidth={1.75} aria-hidden="true" className="inline mr-1" />
-          Pending review — choose an action below.
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <RefreshCw size={17} strokeWidth={2} aria-hidden="true" />
+          </span>
+          Pending review - choose an action below.
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {canReject ? (
-            <Button variant="secondary" size="md" onClick={onRejectClick}>
+            <Button variant="secondary" size="md" className="rounded-xl" onClick={onRejectClick}>
               <XCircle size={16} strokeWidth={1.75} aria-hidden="true" className="text-danger" />
               Reject
             </Button>
@@ -79,6 +81,7 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
             <Button
               variant="primary"
               size="md"
+              className="rounded-xl"
               onClick={onConvertClick}
               disabled={!hasEquipmentRef}
               title={blockingReason || undefined}

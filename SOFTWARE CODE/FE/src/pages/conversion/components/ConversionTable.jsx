@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Eye, X, AlertTriangle } from 'lucide-react';
 import { DataTable } from '../../../components/DataTable.jsx';
 import { StatusPill } from '../../../components/StatusPill.jsx';
+import { formatIstTimestamp } from '../../../lib/time.js';
 
 const TYPE_BADGES = {
   CALIBRATION:  'Pending Conversion',
@@ -72,7 +73,7 @@ export function ConversionTable({ rows, loading, onConvert, onReject }) {
     {
       header: 'Date',
       accessor: (row) => row.submitted_at || row.created_at,
-      format: (v) => v || '—',
+      format: (v) => formatIstTimestamp(v, '—'),
     },
     {
       header: 'Status',

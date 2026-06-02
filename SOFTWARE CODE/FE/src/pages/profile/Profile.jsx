@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
 import {
   Activity,
   BadgeCheck,
@@ -19,6 +18,7 @@ import {
 import clsx from 'clsx';
 
 import { useAuth } from '../../lib/auth-context.jsx';
+import { formatIstTimestamp } from '../../lib/time.js';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: UserRound },
@@ -42,8 +42,7 @@ function humanize(value) {
 }
 
 function formatDate(value, fallback = 'Not available') {
-  if (!value) return fallback;
-  return dayjs(typeof value === 'string' ? value.replace('Z', '') : value).format('MMM DD, YYYY - hh:mm A');
+  return formatIstTimestamp(value, fallback);
 }
 
 function roleTone(role) {
@@ -263,7 +262,7 @@ export function Profile() {
               <InfoTile icon={ShieldCheck} label="Role" value={humanize(profile.role)} />
               <InfoTile icon={KeyRound} label="Permission count" value={profile.permissionsCount} />
               <InfoTile icon={Fingerprint} label="Token version" value={`Version ${profile.tokenVersion}`} />
-              <InfoTile icon={Activity} label="Created at" value={formatDate(profile.createdAt)} />
+              <InfoTile icon={Activity} label="Created Date" value={formatDate(profile.createdAt)} />
             </div>
           </div>
 
@@ -346,7 +345,7 @@ export function Profile() {
             {audit ? (
               <div className="mt-5 space-y-4">
                 <InfoTile icon={Activity} label="Outcome" value={humanize(audit.outcome)} />
-                <InfoTile icon={History} label="Attempt time" value={formatDate(audit.attempt_at)} />
+                <InfoTile icon={History} label="Attempt Date" value={formatDate(audit.attempt_at)} />
                 <InfoTile icon={Laptop} label="IP address" value={audit.ip_address || '-'} mono />
                 <InfoTile icon={Clipboard} label="Notes" value={audit.notes || '-'} />
               </div>

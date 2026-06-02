@@ -35,6 +35,7 @@
 
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { CheckCircle2, Clock, FileText, Wrench } from 'lucide-react';
 
 import { useJobRequestDetail, invalidateJobRequestDetail } from '../../lib/hooks/useJobRequestDetail.js';
 import { invalidateJobRequestHistory } from '../../lib/hooks/useJobRequestHistory.js';
@@ -52,6 +53,22 @@ import { DetailActionBar }         from './components/DetailActionBar.jsx';
 
 import { ConvertToJobCardModal } from '../conversion/components/ConvertToJobCardModal.jsx';
 import { RejectModal }            from '../conversion/components/RejectModal.jsx';
+
+function DetailMetric({ label, value, icon: Icon, tone }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
+      <div className="flex items-center gap-3">
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+          <Icon size={21} strokeWidth={2.1} aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-0.5 truncate text-lg font-semibold text-slate-950">{value || '-'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function JobRequestDetail() {
   const { id } = useParams();
@@ -109,6 +126,33 @@ export function JobRequestDetail() {
   return (
     <div className="space-y-6 pb-8">
       <DetailHeader jr={jr} />
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <DetailMetric
+          label="Request type"
+          value={jr.job_type}
+          icon={FileText}
+          tone="bg-indigo-50 text-indigo-600"
+        />
+        <DetailMetric
+          label="Category"
+          value={jr.job_category}
+          icon={Wrench}
+          tone="bg-sky-50 text-sky-600"
+        />
+        <DetailMetric
+          label="Status"
+          value={jr.status}
+          icon={CheckCircle2}
+          tone="bg-emerald-50 text-emerald-600"
+        />
+        <DetailMetric
+          label="Timeline"
+          value="Live history"
+          icon={Clock}
+          tone="bg-amber-50 text-amber-600"
+        />
+      </div>
 
       {/* Status Timeline — directly below header */}
       <DetailTimelineCard jrId={jrNo} />

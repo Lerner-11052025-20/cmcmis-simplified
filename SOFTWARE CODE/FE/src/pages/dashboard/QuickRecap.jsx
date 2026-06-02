@@ -17,19 +17,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { formatIstDate } from '../../lib/time.js';
 
 // ── Relative timestamp helper ─────────────────────────────────────────
 function relTime(isoStr) {
-  if (!isoStr) return '—';
-  const diff = Date.now() - new Date(isoStr).getTime();
-  if (isNaN(diff)) return '—';
-  const min = Math.floor(diff / 60_000);
-  if (min < 1)   return 'just now';
-  if (min < 60)  return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24)   return `${hr}h ago`;
-  const d = Math.floor(hr / 24);
-  return `${d}d ago`;
+  return formatIstDate(isoStr, '—');
 }
 
 // ── Stripe-style border status tags ──────────────────────────────────
