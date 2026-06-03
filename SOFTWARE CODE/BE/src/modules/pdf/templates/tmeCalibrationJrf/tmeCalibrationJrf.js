@@ -107,7 +107,7 @@ function sectionTitle(doc, title, y) {
   return y + 16;
 }
 
-function header(doc) {
+function header(doc, title) {
   const y = 24;
   if (ISRO_LOGO) {
     doc.image(ISRO_LOGO, M + 2, y, { fit: [60, 52], align: 'center', valign: 'center' });
@@ -123,23 +123,18 @@ function header(doc) {
   doc.font('Helvetica-Bold').fontSize(11)
     .text('TIMCD', cx, y + 22, { width: cw, align: 'center' });
   doc.font('Helvetica-Bold').fontSize(13)
-    .text('JOB REQUEST OF T&ME FOR CALIBRATION', cx, y + 43, { width: cw, align: 'center' });
+    .text(title, cx, y + 43, { width: cw, align: 'center' });
 
   doc.moveTo(M, y + 70).lineTo(PAGE_W - M, y + 70).strokeColor(LINE).lineWidth(0.6).stroke();
   return y + 78;
 }
 
-function instructionBox(doc, y) {
-  const h = 66;
+function instructionBox(doc, y, lines, title = 'Instructions for User:') {
+  const h = Math.max(36, 18 + lines.length * 13 + 10);
   doc.save().rect(M, y, CONTENT_W, h).fillAndStroke(SECTION_BG, LINE).restore();
   doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.title)
-    .text('Instructions for User:', M + 6, y + 5);
+    .text(title, M + 6, y + 5);
   doc.font('Helvetica').fontSize(7.3);
-  const lines = [
-    "1. At the time of submission of equipment for calibration and receiving equipment after calibration, the user's representative shall demonstrate / ensure the equipment is in working condition.",
-    '2. Equipment must accompany the operation and service manual(s) and accessory kit (if any).',
-    '3. Please fill up a separate Job Card for each equipment.',
-  ];
   let yy = y + 18;
   lines.forEach((line) => {
     doc.text(line, M + 10, yy, { width: CONTENT_W - 20, height: 12, ellipsis: true });
@@ -217,7 +212,7 @@ function drawAccessoryRow(doc, y, item) {
   return y + 18;
 }
 
-function renderTmeCalibrationJrf(payload, stream) {
+function renderTmeJrf(payload, stream, config) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
@@ -235,7 +230,7 @@ function renderTmeCalibrationJrf(payload, stream) {
     return yPos + neededHeight > CONTENT_BOTTOM_Y ? newContentPage() : yPos;
   }
 
-  let y = header(doc);
+  let y = header(doc, config.title);
 
   y = ensureSpace(y, 25);
   labelValueRow(doc, M, y, [
@@ -274,12 +269,21 @@ function renderTmeCalibrationJrf(payload, stream) {
   });
   y += 4;
 
-  y = ensureSpace(y, 16 + 18 + 23);
-  y = sectionTitle(doc, 'CALIBRATION INFORMATION', y);
-  labelValueRow(doc, M, y, [
-    { label: 'Equipment is being sent after Repairs', value: boolText(payload.equipment_sent_after_repair), lw: 190, vw: CONTENT_W - 190 },
-  ]);
-  y += 23;
+  if (config.kind === 'calibration') {
+    y = ensureSpace(y, 16 + 18 + 23);
+    y = sectionTitle(doc, 'CALIBRATION INFORMATION', y);
+    labelValueRow(doc, M, y, [
+      { label: 'Equipment is being sent after Repairs', value: boolText(payload.equipment_sent_after_repair), lw: 190, vw: CONTENT_W - 190 },
+    ]);
+    y += 23;
+  } else {
+    y = ensureSpace(y, 16 + 25 + 23);
+    y = sectionTitle(doc, 'COMPLAINT DETAILS', y);
+    labelValueRow(doc, M, y, [
+      { label: 'Complaints / Symptoms', value: payload.complaint_description, lw: 130, vw: CONTENT_W - 130 },
+    ], 25);
+    y += 30;
+  }
 
   y = ensureSpace(y, 16 + 24 + 18 + 18 + 90 + 6);
   y = sectionTitle(doc, 'REQUEST DETAILS', y);
@@ -322,8 +326,8 @@ function renderTmeCalibrationJrf(payload, stream) {
   cell(doc, approvalX + sigLabelW, y, colW - sigLabelW, sigH, '', { size: 7.6 });
   y += sigH + 6;
 
-  y = ensureSpace(y, 66 + 5);
-  y = instructionBox(doc, y);
+  y = ensureSpace(y, Math.max(36, 18 + config.instructions.length * 13 + 10) + 5);
+  y = instructionBox(doc, y, config.instructions, config.instructionTitle);
 
   y = ensureSpace(y, 16 + 18 * 5 + 23);
   y = sectionTitle(doc, 'FOR TIMCD USE ONLY', y);
@@ -354,7 +358,7 @@ function renderTmeCalibrationJrf(payload, stream) {
 
   y = ensureSpace(y, 16 + 25 + 29 + 23 + 18);
   y = sectionTitle(doc, 'EQUIPMENT RECEIPT ACKNOWLEDGEMENT', y);
-  cell(doc, M, y, CONTENT_W, 25, 'The Equipment is Received from Calibration Lab', { bold: true, size: 8 });
+  cell(doc, M, y, CONTENT_W, 25, config.receiptText, { bold: true, size: 8 });
   y += 29;
   labelValueRow(doc, M, y, [
     { label: 'Date', value: dateText(payload.linked_customer_received_date), lw: 58, vw: 190 },
@@ -385,6 +389,21 @@ function renderTmeCalibrationJrf(payload, stream) {
   doc.end();
 }
 
+function renderTmeCalibrationJrf(payload, stream) {
+  renderTmeJrf(payload, stream, {
+    kind: 'calibration',
+    title: 'JOB REQUEST OF T&ME FOR CALIBRATION',
+    instructionTitle: 'Instructions for User:',
+    instructions: [
+      "1. At the time of submission of equipment for calibration and receiving equipment after calibration, the user's representative shall demonstrate / ensure the equipment is in working condition.",
+      '2. Equipment must accompany the operation and service manual(s) and accessory kit (if any).',
+      '3. Please fill up a separate Job Card for each equipment.',
+    ],
+    receiptText: 'The Equipment is Received from Calibration Lab',
+  });
+}
+
 module.exports = {
   renderTmeCalibrationJrf,
+  renderTmeJrf,
 };
