@@ -34,6 +34,8 @@ const { renderTmeCalibrationJrf }   = require('./templates/tmeCalibrationJrf/tme
 const { renderTmeRepairJrf }        = require('./templates/tmeRepairJrf/tmeRepairJrf');
 const { renderFpeCalibrationJrf }   = require('./templates/fpeCalibrationJrf/fpeCalibrationJrf');
 const { renderFpeRepairJrf }        = require('./templates/fpeRepairJrf/fpeRepairJrf');
+const { renderTmeCalibrationJobClosingForm } = require('./templates/tmeCalibrationJobClosingForm/tmeCalibrationJobClosingForm');
+const { renderTmeRepairJobClosingForm } = require('./templates/tmeRepairJobClosingForm/tmeRepairJobClosingForm');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -75,10 +77,28 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
     );
   }
 
-  const filename = `${jcCode(payload)}_certificate.pdf`;
+  const isTmeCalibration = (payload.job_category || payload.jr_job_category) === 'TME'
+    && (payload.work_type || payload.jr_job_type) === 'CALIBRATION';
+  const isTmeRepair = (payload.job_category || payload.jr_job_category) === 'TME'
+    && (payload.work_type || payload.jr_job_type) === 'REPAIR';
+  const filename = isTmeCalibration
+    ? `${jcCode(payload)}_TME_Calibration_JobClosingForm.pdf`
+    : isTmeRepair
+      ? `${jcCode(payload)}_TME_Repair_JobClosingForm.pdf`
+      : `${jcCode(payload)}_certificate.pdf`;
   return {
     filename,
-    render: (stream) => renderJobCardCertificate(payload, stream, { generated_by: actor }),
+    render: (stream) => {
+      if (isTmeCalibration) {
+        renderTmeCalibrationJobClosingForm(payload, stream, { generated_by: actor });
+        return;
+      }
+      if (isTmeRepair) {
+        renderTmeRepairJobClosingForm(payload, stream, { generated_by: actor });
+        return;
+      }
+      renderJobCardCertificate(payload, stream, { generated_by: actor });
+    },
   };
 }
 

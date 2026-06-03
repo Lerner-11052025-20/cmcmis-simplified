@@ -130,9 +130,7 @@ export function DetailHeader({ jc }) {
                 {busy === 'details' ? 'Preparing…' : 'Download Full Details'}
               </Button>
             ) : null}
-            {/* Certificate button is the canonical "Download Report" CTA
-                shown in the attached UI screenshot. We keep the label
-                'Download Report' for continuity. */}
+            {/* Certificate/report endpoint is the canonical JobClosingForm CTA. */}
             <Button
               variant={certDisabled ? 'secondary' : 'primary'}
               size="sm"
@@ -141,7 +139,7 @@ export function DetailHeader({ jc }) {
               onClick={onDownloadCert}
             >
               <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
-              {busy === 'cert' ? 'Preparing…' : 'Download Report'}
+              {busy === 'cert' ? 'Preparing…' : 'JobClosingForm'}
             </Button>
           </div>
         </div>

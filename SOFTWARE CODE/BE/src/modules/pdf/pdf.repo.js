@@ -92,6 +92,8 @@ async function loadJobCardFull(sectionJobNo) {
        jc.JM_SPECIAL_INSTRUCTIONS        AS special_instructions,
        jc.JM_COMPLAINTANDSYMPTOMS        AS complaint_description,
        jc.JM_Remarks                     AS legacy_remarks,
+       jc.JM_JOB_CATEGORY                AS job_category,
+       jc.JM_JOB_TYPE                    AS work_type,
        /* Phase-9 tab fields (snake_case columns ADDed by mig 300) */
        jc.plug_in_accessories,
        jc.equipment_submitted_date,    jc.submitted_by,
@@ -117,6 +119,27 @@ async function loadJobCardFull(sectionJobNo) {
        jc.customer_acknowledged, jc.final_closure_notes,
        jc.verified_closed_by_employee_id, jc.verified_closed_at,
        jc.last_reopened_at, jc.last_reopened_by_employee_id, jc.reopen_count,
+       jc.cal_job_started_date, jc.cal_job_completed_date,
+       jc.cal_calibration_status, jc.cal_temperature_c,
+       jc.cal_relative_humidity, jc.cal_ref_no, jc.cal_due_date,
+       jc.calibrated_by_employee_id, emp_cal.EMM_NAME AS calibrated_by_name,
+       jc.cal_equipment_received_status, jc.cal_repair_carried_out_by,
+       jc.cal_sent_to_lab_date, jc.cal_received_from_lab_date,
+       jc.cal_adjustment_status, jc.cal_limited_reason, jc.cal_remarks,
+       jc.cal_incharge_employee_id, emp_cal_inc.EMM_NAME AS cal_incharge_name,
+       jc.cal_incharge_date,
+       jc.repair_accessory_selected, jc.repair_job_received_date,
+       jc.repair_job_start_planned_date, jc.repair_maintenance_type,
+       jc.repair_faulty_section, jc.repair_fault_category,
+       jc.repair_attended_by_employee_id, emp_rep_att.EMM_NAME AS repair_attended_by_name,
+       jc.repair_fault_description, jc.repair_action_taken_description,
+       jc.repair_sent_to_cal_lab_on, jc.repair_equipment_received_from_cal_lab,
+       jc.repair_job_complete_date, jc.repair_status,
+       jc.repair_not_repairable_reason, jc.repair_remarks,
+       jc.repair_sent_to_store_on, jc.repair_store_ref_number,
+       jc.repair_transport_charge, jc.repair_invoice_cleared_on,
+       jc.repair_fault_analysis_description, jc.repair_fault_analysis_action_taken,
+       jc.repair_fault_analysis_sections, jc.repair_fault_analysis_category,
        /* equipment (joined from cmms_eqip_mst) */
        e.EQM_NAME                        AS equipment_name,
        e.EQM_MODELNO                     AS equipment_model_no,
@@ -166,6 +189,9 @@ async function loadJobCardFull(sectionJobNo) {
      LEFT JOIN cmms_emp_mst        emp_vc   ON emp_vc.EMM_ID = jc.verified_closed_by_employee_id
      LEFT JOIN cmms_emp_mst        emp_ro   ON emp_ro.EMM_ID = jc.last_reopened_by_employee_id
      LEFT JOIN cmms_emp_mst        emp_appr ON emp_appr.EMM_ID = jr.JR_APPROVED_BY
+     LEFT JOIN cmms_emp_mst        emp_cal  ON emp_cal.EMM_ID = jc.calibrated_by_employee_id
+     LEFT JOIN cmms_emp_mst        emp_cal_inc ON emp_cal_inc.EMM_ID = jc.cal_incharge_employee_id
+     LEFT JOIN cmms_emp_mst        emp_rep_att ON emp_rep_att.EMM_ID = jc.repair_attended_by_employee_id
      WHERE jc.JM_SectionJobNo = ?
      LIMIT 1`,
     [sectionJobNo],
@@ -195,6 +221,9 @@ async function loadJobCardFull(sectionJobNo) {
     [observations],
     [history],
     [parentAccessories],
+    [calibrationEquipment],
+    [calibrationAdjustments],
+    [repairEquipment],
   ] = await Promise.all([
     pool.query(
       `SELECT sr_no, defect_description, observation, action_taken, remarks,
@@ -255,6 +284,28 @@ async function loadJobCardFull(sectionJobNo) {
           [main.parent_jr_no],
         )
       : Promise.resolve([[]]),
+    pool.query(
+      `SELECT id, sr_no, equipment_id, equipment_name
+         FROM jc_calibration_equipment_used
+        WHERE jc_section_no = ?
+        ORDER BY sr_no ASC, id ASC`,
+      [sectionJobNo],
+    ),
+    pool.query(
+      `SELECT id, sr_no, parameter_name, test_value,
+              specifications_limits, observation_before, observation_after
+         FROM jc_calibration_adjustments
+        WHERE jc_section_no = ?
+        ORDER BY sr_no ASC, id ASC`,
+      [sectionJobNo],
+    ),
+    pool.query(
+      `SELECT id, sr_no, equipment_id, equipment_name
+         FROM jc_repair_equipment_used
+        WHERE jc_section_no = ?
+        ORDER BY sr_no ASC, id ASC`,
+      [sectionJobNo],
+    ),
   ]);
 
   return {
@@ -267,6 +318,9 @@ async function loadJobCardFull(sectionJobNo) {
       observations,
       history,
       parent_accessories: parentAccessories,
+      calibration_equipment: calibrationEquipment,
+      calibration_adjustments: calibrationAdjustments,
+      repair_equipment: repairEquipment,
     },
   };
 }
