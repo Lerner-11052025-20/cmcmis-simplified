@@ -134,4 +134,11 @@ router.post('/:id/cancel',
   ctrl.postCancelDraft,
 );
 
+// DELETE /:id — delete a Job Request (permanent deletion of request, accessories, history, and audit log).
+router.delete('/:id',
+  authenticate,
+  authorize('job_request:reject'),
+  ctrl.deleteJobRequest,
+);
+
 module.exports = router;

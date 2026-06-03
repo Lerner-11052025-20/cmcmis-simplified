@@ -299,6 +299,30 @@ async function exportPdf(req, res, next) {
   } catch (e) { next(e); }
 }
 
+async function deleteJobRequest(req, res, next) {
+  try {
+    const jrNo = parseInt(req.params.id, 10);
+    if (!Number.isFinite(jrNo) || jrNo <= 0) {
+      return res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Invalid job request id', details: null },
+      });
+    }
+    const data = await service.deleteJobRequest({
+      jrNo,
+      actor: {
+        employeeId:  req.user.employeeId,
+        role:        req.user.role,
+        userId:      req.user.userId,
+        permissions: req.user.permissions,
+        laneScopes:  req.user.laneScopes || [],
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+    return res.json({ data });
+  } catch (e) { return next(e); }
+}
+
 module.exports = {
   list,
   create,
@@ -314,4 +338,5 @@ module.exports = {
   // Phase 15 addition:
   postBulkVerifyAll,
   exportPdf,
+  deleteJobRequest,
 };

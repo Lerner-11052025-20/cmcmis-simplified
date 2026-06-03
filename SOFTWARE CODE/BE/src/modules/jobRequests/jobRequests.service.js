@@ -1162,6 +1162,47 @@ async function prepareJobRequestPdfExport({ startId, endId, actor }) {
   };
 }
 
+async function deleteJobRequest({ jrNo, actor, ipAddress, userAgent }) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const jr = await repo.findForMutation(conn, jrNo);
+    if (!jr) throw errors.notFound(`Job request ${jrNo} not found`);
+
+    if (!canAccessLane(actor, jr.lane_code)) {
+      throw errors.forbidden('Cannot delete a Job Request outside your assigned lane');
+    }
+
+    if (!actor.permissions.includes('job_request:reject')) {
+      throw errors.forbidden('Missing required permission: job_request:reject');
+    }
+
+    if (jr.status === 'ASSIGNED') {
+      throw errors.conflict('Cannot delete Job Request: it has already been converted to a Job Card.');
+    }
+
+    await conn.query('DELETE FROM job_request_accessories WHERE jr_no = ?', [jrNo]);
+    await conn.query('DELETE FROM job_request_status_history WHERE jr_no = ?', [jrNo]);
+    await conn.query('DELETE FROM audit_log WHERE entity_type = "job_request" AND entity_id = ?', [String(jrNo)]);
+    await conn.query('DELETE FROM cmms_jobrequest_mst WHERE JR_JOBREQUESTNO = ?', [jrNo]);
+
+    await conn.commit();
+
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
+    if (jr.submitted_by_employee_id) {
+      kpiCache.invalidate(KPI_KEYS.personal(jr.submitted_by_employee_id));
+    }
+
+    return { id: jrNo, deleted: true };
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   listJobRequests,
   createJobRequest,
@@ -1177,4 +1218,5 @@ module.exports = {
   // Phase 15 addition:
   bulkVerifyAllJobRequests,
   prepareJobRequestPdfExport,
+  deleteJobRequest,
 };

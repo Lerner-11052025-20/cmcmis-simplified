@@ -36,6 +36,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Clock, FileText, Wrench } from 'lucide-react';
+import { toast } from 'sonner';
+
 
 import { useJobRequestDetail, invalidateJobRequestDetail } from '../../lib/hooks/useJobRequestDetail.js';
 import { invalidateJobRequestHistory } from '../../lib/hooks/useJobRequestHistory.js';
@@ -50,6 +52,7 @@ import { DetailComplaintCard }     from './components/DetailComplaintCard.jsx';
 import { DetailTimelineCard }      from './components/DetailTimelineCard.jsx';
 import { DetailLinkedJobCardCard } from './components/DetailLinkedJobCardCard.jsx';
 import { DetailActionBar }         from './components/DetailActionBar.jsx';
+import { deleteJobRequest }        from '../../lib/api/jobRequests.js';
 
 import { ConvertToJobCardModal } from '../conversion/components/ConvertToJobCardModal.jsx';
 import { RejectModal }            from '../conversion/components/RejectModal.jsx';
@@ -123,6 +126,23 @@ export function JobRequestDetail() {
     refetch();
   }
 
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete Job Request ${jr.request_code}? This action cannot be undone and will delete all accessories, history, and audit log entries.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteJobRequest(jrNo);
+      toast.success(`Job request ${jr.request_code} has been successfully deleted.`);
+      invalidateJobRequestCache();
+      navigate('/job-requests');
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message || e?.message || 'Failed to delete Job Request';
+      toast.error(msg);
+    }
+  }
+
   return (
     <div className="space-y-6 pb-8">
       <DetailHeader jr={jr} />
@@ -184,6 +204,7 @@ export function JobRequestDetail() {
         jr={jr}
         onConvertClick={() => setConvertOpen(true)}
         onRejectClick={()  => setRejectOpen(true)}
+        onDeleteClick={handleDelete}
       />
 
       {/* ── Modals (rendered conditionally to keep the DOM lean) ──── */}

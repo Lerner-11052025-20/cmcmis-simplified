@@ -171,7 +171,7 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
         </div>
 
         {/* ── Scrollable body ────────────────────────────────────────── */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
           {/* Missing-equipment banner — clearer than the BE 500 the user
               would otherwise see if we let the request through. */}
           {equipmentRefMissing ? (

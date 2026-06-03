@@ -157,3 +157,16 @@ export async function downloadJobRequestsPdf(startId, endId) {
   });
   return response.data;
 }
+
+/**
+ * DELETE /api/v1/job-requests/:id — delete a Job Request and associated rows.
+ * Gated by job_request:reject permission.
+ *
+ * @param {number} id
+ * @returns {Promise<{ id: number, deleted: boolean }>}
+ */
+export async function deleteJobRequest(id) {
+  const r = await api.delete(`/job-requests/${encodeURIComponent(id)}`);
+  return r.data.data;
+}
+

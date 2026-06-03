@@ -14,6 +14,7 @@ import {
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
+import { ModalPortal } from '../../../components/ui/ModalPortal.jsx';
 import { formatIstDate } from '../../../lib/time.js';
 
 const TASK_TYPES = ['NABL', 'NON-NABL', 'BOTH'];
@@ -368,161 +369,163 @@ function ChecklistModal({ initial, taskMaster, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8">
-      <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6">
-          <div className="flex items-center gap-4">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
-              <ClipboardList size={24} />
-            </span>
-            <h2 className="text-2xl font-semibold text-slate-950">{form.id ? 'Edit Checklist' : 'New Checklist'}</h2>
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6 shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+                <ClipboardList size={24} />
+              </span>
+              <h2 className="text-2xl font-semibold text-slate-950">{form.id ? 'Edit Checklist' : 'New Checklist'}</h2>
+            </div>
+            <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+              <X size={28} />
+            </button>
           </div>
-          <button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-            <X size={28} />
-          </button>
-        </div>
 
-        <div className="space-y-6 px-8 py-7">
-          <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
-            <div className="mb-4 flex items-center gap-2 text-indigo-700">
-              <Info size={20} />
-              <h3 className="text-base font-semibold">Equipment</h3>
-            </div>
-            <label className="text-sm font-semibold text-slate-700">Equipment ID <span className="text-red-500">*</span></label>
-            <div className="mt-2 flex gap-2">
-              <Input
-                value={form.equipment_code}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, equipment_code: event.target.value }));
-                  setEquipment(null);
-                }}
-                onBlur={resolveEquipment}
-                placeholder="e.g. EQ-SA-9000"
-                className="h-12 rounded-xl border-slate-300 bg-white text-sm"
-              />
-              <Button type="button" variant="secondary" onClick={resolveEquipment} disabled={loadingEquipment || !form.equipment_code.trim()} className="h-12 rounded-xl">
-                {loadingEquipment ? <Spinner size={16} /> : 'Fetch'}
-              </Button>
-            </div>
-
-            {equipment ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <InfoPair label="Equipment Name" value={equipment.equipment_name} strong />
-                <InfoPair label="Model No." value={equipment.equipment_model_no} />
-                <InfoPair label="Serial No." value={equipment.equipment_serial_no} />
-                <InfoPair label="Division" value={equipment.equipment_division} />
-                <InfoPair label="Manufacturer" value={equipment.equipment_make} />
-                <InfoPair label="Category" value={equipment.equipment_category} />
+          <div className="space-y-6 px-8 py-7 overflow-y-auto flex-1 min-h-0">
+            <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+              <div className="mb-4 flex items-center gap-2 text-indigo-700">
+                <Info size={20} />
+                <h3 className="text-base font-semibold text-indigo-700">Equipment</h3>
               </div>
-            ) : (
-              <p className="mt-3 text-sm text-slate-500">Enter an equipment ID and fetch details to auto-fill equipment information.</p>
-            )}
-          </section>
-
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Checklist Name <span className="text-red-500">*</span></span>
-            <Input
-              value={form.checklist_name}
-              onChange={(event) => setForm((current) => ({ ...current, checklist_name: event.target.value }))}
-              placeholder="e.g. Spectrum Analyzer Full Calibration"
-              className="mt-2 h-12 rounded-xl border-slate-300 text-sm"
-            />
-          </label>
-
-          <section className="space-y-4">
-            <h3 className="text-sm font-semibold text-slate-700">Tasks <span className="text-red-500">*</span></h3>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-3 text-sm font-semibold text-slate-600">Add from Task Library</p>
-              <div className="flex gap-3">
-                <select
-                  value={selectedTaskId}
-                  onChange={(event) => setSelectedTaskId(event.target.value)}
-                  className="h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="">Select a task from master library...</option>
-                  {taskMaster.map((task) => (
-                    <option key={task.id} value={task.id}>[{task.type || 'Calibration'}] {task.name}</option>
-                  ))}
-                </select>
-                <Button type="button" variant="primary" onClick={addMasterTask} disabled={!selectedTaskId} className="h-12 rounded-xl">
-                  <Plus size={18} />
-                  Add
+              <label className="text-sm font-semibold text-slate-700">Equipment ID <span className="text-red-500">*</span></label>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={form.equipment_code}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, equipment_code: event.target.value }));
+                    setEquipment(null);
+                  }}
+                  onBlur={resolveEquipment}
+                  placeholder="e.g. EQ-SA-9000"
+                  className="h-12 rounded-xl border-slate-300 bg-white text-sm"
+                />
+                <Button type="button" variant="secondary" onClick={resolveEquipment} disabled={loadingEquipment || !form.equipment_code.trim()} className="h-12 rounded-xl">
+                  {loadingEquipment ? <Spinner size={16} /> : 'Fetch'}
                 </Button>
               </div>
-            </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70">
-              {!customOpen ? (
-                <button type="button" onClick={() => setCustomOpen(true)} className="flex w-full items-center gap-2 px-5 py-4 text-left text-base font-semibold text-emerald-700">
-                  <Plus size={20} />
-                  Add Custom Task
-                </button>
+              {equipment ? (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <InfoPair label="Equipment Name" value={equipment.equipment_name} strong />
+                  <InfoPair label="Model No." value={equipment.equipment_model_no} />
+                  <InfoPair label="Serial No." value={equipment.equipment_serial_no} />
+                  <InfoPair label="Division" value={equipment.equipment_division} />
+                  <InfoPair label="Manufacturer" value={equipment.equipment_make} />
+                  <InfoPair label="Category" value={equipment.equipment_category} />
+                </div>
               ) : (
-                <div className="space-y-4 p-4">
-                  <Input
-                    value={customText}
-                    onChange={(event) => setCustomText(event.target.value)}
-                    placeholder="Custom task description..."
-                    className="h-12 rounded-xl border-slate-950 bg-white text-sm"
-                    autoFocus
-                  />
-                  <div className="flex flex-wrap items-center gap-4">
-                    <span className="text-sm font-semibold text-slate-700">Task Type:</span>
-                    {TASK_TYPES.map((type) => (
-                      <label key={type} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                        <input type="radio" checked={customType === type} onChange={() => setCustomType(type)} />
-                        {type}
-                      </label>
+                <p className="mt-3 text-sm text-slate-500">Enter an equipment ID and fetch details to auto-fill equipment information.</p>
+              )}
+            </section>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Checklist Name <span className="text-red-500">*</span></span>
+              <Input
+                value={form.checklist_name}
+                onChange={(event) => setForm((current) => ({ ...current, checklist_name: event.target.value }))}
+                placeholder="e.g. Spectrum Analyzer Full Calibration"
+                className="mt-2 h-12 rounded-xl border-slate-300 text-sm"
+              />
+            </label>
+
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-700">Tasks <span className="text-red-500">*</span></h3>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-slate-600">Add from Task Library</p>
+                <div className="flex gap-3">
+                  <select
+                    value={selectedTaskId}
+                    onChange={(event) => setSelectedTaskId(event.target.value)}
+                    className="h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <option value="">Select a task from master library...</option>
+                    {taskMaster.map((task) => (
+                      <option key={task.id} value={task.id}>[{task.type || 'Calibration'}] {task.name}</option>
                     ))}
-                    <Button type="button" variant="primary" onClick={addCustomTask} disabled={customText.trim().length < 3} className="ml-auto h-10 rounded-xl">
-                      <Check size={16} />
-                      Add
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={() => setCustomOpen(false)} className="h-10 rounded-xl">
-                      <X size={16} />
-                    </Button>
+                  </select>
+                  <Button type="button" variant="primary" onClick={addMasterTask} disabled={!selectedTaskId} className="h-12 rounded-xl">
+                    <Plus size={18} />
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                {!customOpen ? (
+                  <button type="button" onClick={() => setCustomOpen(true)} className="flex w-full items-center gap-2 px-5 py-4 text-left text-base font-semibold text-emerald-700">
+                    <Plus size={20} />
+                    Add Custom Task
+                  </button>
+                ) : (
+                  <div className="space-y-4 p-4">
+                    <Input
+                      value={customText}
+                      onChange={(event) => setCustomText(event.target.value)}
+                      placeholder="Custom task description..."
+                      className="h-12 rounded-xl border-slate-950 bg-white text-sm"
+                      autoFocus
+                    />
+                    <div className="flex flex-wrap items-center gap-4">
+                      <span className="text-sm font-semibold text-slate-700">Task Type:</span>
+                      {TASK_TYPES.map((type) => (
+                        <label key={type} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                          <input type="radio" checked={customType === type} onChange={() => setCustomType(type)} />
+                          {type}
+                        </label>
+                      ))}
+                      <Button type="button" variant="primary" onClick={addCustomTask} disabled={customText.trim().length < 3} className="ml-auto h-10 rounded-xl">
+                        <Check size={16} />
+                        Add
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setCustomOpen(false)} className="h-10 rounded-xl">
+                        <X size={16} />
+                      </Button>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {form.tasks.length ? (
+                <ol className="space-y-3">
+                  {form.tasks.map((task, index) => (
+                    <TaskLine
+                      key={`${task.task_id || 'custom'}-${task.task_text}-${index}`}
+                      task={task}
+                      index={index}
+                      onTypeChange={(value) => setForm((current) => ({
+                        ...current,
+                        tasks: current.tasks.map((item, itemIndex) => itemIndex === index ? { ...item, task_type: value } : item),
+                      }))}
+                      onRemove={() => setForm((current) => ({
+                        ...current,
+                        tasks: current.tasks.filter((_, itemIndex) => itemIndex !== index),
+                      }))}
+                    />
+                  ))}
+                </ol>
+              ) : (
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
+                  <ListChecks className="mx-auto h-10 w-10 text-slate-300" />
+                  <p className="mt-4 text-sm font-medium text-slate-400">No tasks added yet. Add from the library or create custom tasks.</p>
                 </div>
               )}
-            </div>
+              <p className="text-sm text-slate-400">{form.tasks.length} tasks in checklist</p>
+            </section>
+          </div>
 
-            {form.tasks.length ? (
-              <ol className="space-y-3">
-                {form.tasks.map((task, index) => (
-                  <TaskLine
-                    key={`${task.task_id || 'custom'}-${task.task_text}-${index}`}
-                    task={task}
-                    index={index}
-                    onTypeChange={(value) => setForm((current) => ({
-                      ...current,
-                      tasks: current.tasks.map((item, itemIndex) => itemIndex === index ? { ...item, task_type: value } : item),
-                    }))}
-                    onRemove={() => setForm((current) => ({
-                      ...current,
-                      tasks: current.tasks.filter((_, itemIndex) => itemIndex !== index),
-                    }))}
-                  />
-                ))}
-              </ol>
-            ) : (
-              <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
-                <ListChecks className="mx-auto h-10 w-10 text-slate-300" />
-                <p className="mt-4 text-sm font-medium text-slate-400">No tasks added yet. Add from the library or create custom tasks.</p>
-              </div>
-            )}
-            <p className="text-sm text-slate-400">{form.tasks.length} tasks in checklist</p>
-          </section>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-8 py-5">
-          <Button type="button" variant="secondary" onClick={onClose} className="h-11 rounded-xl px-5">Cancel</Button>
-          <Button type="button" variant="primary" onClick={save} disabled={saving} className="h-11 rounded-xl bg-indigo-600 px-6 hover:bg-indigo-700">
-            {saving ? <Spinner size={16} /> : <Check size={18} />}
-            {form.id ? 'Update Checklist' : 'Create Checklist'}
-          </Button>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-8 py-5 shrink-0">
+            <Button type="button" variant="secondary" onClick={onClose} className="h-11 rounded-xl px-5">Cancel</Button>
+            <Button type="button" variant="primary" onClick={save} disabled={saving} className="h-11 rounded-xl bg-indigo-600 px-6 hover:bg-indigo-700">
+              {saving ? <Spinner size={16} /> : <Check size={18} />}
+              {form.id ? 'Update Checklist' : 'Create Checklist'}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 

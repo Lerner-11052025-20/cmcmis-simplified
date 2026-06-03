@@ -8,17 +8,27 @@
 //
 // Slice 2 buttons:
 //   • SUBMITTED + has approve+assign perms → "Convert" button (opens modal)
+// ============================================================================
+// pages/jobRequests/components/DetailActionBar.jsx
+// ----------------------------------------------------------------------------
+// Sticky bottom action bar — renders the buttons available to the current
+// user for the JR's current status. Permission AND state gates here are
+// MIRROR of the BE state machine (defence in depth — the BE will reject
+// any forbidden action anyway, but hiding the button keeps the UI honest).
+//
+// Slice 2 buttons:
+//   • SUBMITTED + has approve+assign perms → "Convert" button (opens modal)
 //   • SUBMITTED + has reject perm           → "Reject" button (opens modal)
 //   • Any other status                       → "View only" hint
 //
 // Slice 3+ will add re-open, edit, etc.
 // ============================================================================
 
-import { CheckCircle2, XCircle, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, RefreshCw, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button.jsx';
 import { useAuth } from '../../../lib/auth-context.jsx';
 
-export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
+export function DetailActionBar({ jr, onConvertClick, onRejectClick, onDeleteClick }) {
   const { hasPermission } = useAuth();
   const canApprove  = hasPermission('job_request:approve');
   const canAssign   = hasPermission('job_request:assign-engineer');
@@ -72,10 +82,21 @@ export function DetailActionBar({ jr, onConvertClick, onRejectClick }) {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {canReject ? (
-            <Button variant="secondary" size="md" className="rounded-xl" onClick={onRejectClick}>
-              <XCircle size={16} strokeWidth={1.75} aria-hidden="true" className="text-danger" />
-              Reject
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                size="md"
+                className="rounded-xl text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200"
+                onClick={onDeleteClick}
+              >
+                <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" className="text-red-500" />
+                Delete Request
+              </Button>
+              <Button variant="secondary" size="md" className="rounded-xl" onClick={onRejectClick}>
+                <XCircle size={16} strokeWidth={1.75} aria-hidden="true" className="text-danger" />
+                Reject
+              </Button>
+            </>
           ) : null}
           {canConvert ? (
             <Button

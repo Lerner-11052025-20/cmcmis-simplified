@@ -73,10 +73,10 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
   }, [tasks, isCalibration]);
 
   useEffect(() => {
-    if (!isCalibration || !jc.equipment_type || !jc.equipment_id) return;
+    if (!isCalibration || !jc.equipment?.type || !jc.equipment?.id) return;
     const ctrl = new AbortController();
     setChecklistsLoading(true);
-    fetchChecklistsForEquipment(jc.equipment_type, jc.equipment_id, ctrl.signal)
+    fetchChecklistsForEquipment(jc.equipment.type, jc.equipment.id, ctrl.signal)
       .then((items) => setAvailableChecklists(items || []))
       .catch((e) => {
         if (e.name === 'CanceledError' || e.code === 'ERR_CANCELED') return;
@@ -84,7 +84,7 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       })
       .finally(() => setChecklistsLoading(false));
     return () => ctrl.abort();
-  }, [isCalibration, jc.equipment_type, jc.equipment_id]);
+  }, [isCalibration, jc.equipment?.type, jc.equipment?.id]);
 
   const completedCount = useMemo(() => (tasks || []).filter((t) => t.is_completed).length, [tasks]);
   const totalCount = tasks?.length || 0;
@@ -433,9 +433,9 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
         <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
           <div className="mb-4 flex flex-wrap items-center gap-3 text-indigo-700">
             <ClipboardList size={22} />
-            <span className="text-base font-semibold">Select Checklist</span>
-            <span className="text-sm font-medium text-indigo-500">
-              filtered for Equipment: {jc.equipment_type}-{jc.equipment_id}
+            <span className="text-base font-semibold text-indigo-900">Select Checklist</span>
+            <span className="text-sm font-medium text-indigo-700">
+              filtered for Equipment: {jc.equipment?.type || '-'}-{jc.equipment?.id || '-'}
             </span>
           </div>
           <div className="flex flex-col gap-3 md:flex-row">
