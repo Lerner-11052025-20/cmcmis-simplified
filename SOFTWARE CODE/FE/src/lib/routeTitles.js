@@ -6,6 +6,8 @@ export const ROUTE_TITLES = [
   { path: '/profile', title: 'Profile', page: 'Profile', access: 'Signed-in user' },
   { path: '/about', title: 'About Us', page: 'About Us', access: 'Signed-in user' },
   { path: '/user-guide', title: 'User Guide', page: 'Normal User Guide', access: 'NORMAL_USER' },
+  { path: '/view-only-guide', title: 'View Only Guide', page: 'View Only Guide', access: 'VIEW_ONLY' },
+  { path: '/lab-incharge-guide', title: 'Lab In-Charge Guide', page: 'Lab In-Charge Guide', access: 'LAB_IN_CHARGE' },
   { path: '/equipment', title: 'Equipment', page: 'Equipment List', access: 'equipment:read-list' },
   { path: '/equipment/new', title: 'New Equipment', page: 'Equipment Form', access: 'equipment:create' },
   { path: '/equipment/:id', title: 'Equipment Detail', page: 'Equipment Detail', access: 'equipment:read-detail' },

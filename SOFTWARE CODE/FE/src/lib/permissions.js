@@ -99,6 +99,8 @@ export const ALL_NAV_ITEMS = [
   // longer consulted by the FE.
   { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
   { label: 'User Guide',   to: '/user-guide',   icon: BookOpen,       requires: 'dashboard:view' },
+  { label: 'View Only Guide', to: '/view-only-guide', icon: BookOpen, requires: 'dashboard:view' },
+  { label: 'Lab In-Charge Guide', to: '/lab-incharge-guide', icon: BookOpen, requires: 'dashboard:view' },
   { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
   { label: 'About Us',     to: '/about',        icon: Info,           requires: 'dashboard:view' },
 ];
@@ -127,6 +129,14 @@ const SUPER_ADMIN_ONLY_NAV_LABELS = new Set([
   'Admin · Equipment Verification',
 ]);
 
+const LAB_IN_CHARGE_GUIDE_ROLES = new Set([
+  'LAB_IN_CHARGE',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+]);
+
 /**
  * Returns the subset of nav items the given permissions array unlocks.
  *
@@ -139,7 +149,9 @@ export function visibleNavItems(permissions, role) {
   const owned = new Set(permissions);
   return ALL_NAV_ITEMS.filter((item) => {
     if (item.label === 'Profile' || item.label === 'About Us') return true; // Always visible to all signed-in roles.
-    if (item.label === 'User Guide' && role !== 'NORMAL_USER' && role !== 'SUPER_ADMIN') return false;
+    if (item.label === 'User Guide') return role === 'NORMAL_USER';
+    if (item.label === 'View Only Guide') return role === 'VIEW_ONLY';
+    if (item.label === 'Lab In-Charge Guide') return LAB_IN_CHARGE_GUIDE_ROLES.has(role);
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (item.label === 'Admin · Lab Capacity' && role !== 'SUPER_ADMIN' && role !== 'LAB_IN_CHARGE' && role !== 'LAB_IN_CHARGE_SCOPED') return false;
