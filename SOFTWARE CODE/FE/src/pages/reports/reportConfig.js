@@ -40,6 +40,7 @@ export const REPORTS = [
     requires: 'reports:view-calibration-due',
     accent:   'blue',
     statusEnum: ['VALID', 'DUE_SOON', 'OVERDUE'],
+    summaryKeys: ['total', 'overdue', 'due_soon', 'valid'],
     columns: [
       { id: 'equipment_id',       header: 'Equipment ID',      accessorKey: 'equipment_id',      size: 110 },
       { id: 'equipment_name',     header: 'Equipment Name',    accessorKey: 'equipment_name',    size: 220 },
@@ -59,11 +60,13 @@ export const REPORTS = [
     requires: 'reports:view-pending-jobs',
     accent:   'amber',
     statusEnum: ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED'],
+    summaryKeys: ['total_pending', 'new_requests', 'assigned', 'unassigned'],
     columns: [
       { id: 'request_code',           header: 'Job Request ID',     accessorKey: 'request_code',           size: 130 },
       { id: 'equipment_name',         header: 'Equipment Name',     accessorKey: 'equipment_name',         size: 220 },
       { id: 'job_type',               header: 'Job Type',           accessorKey: 'job_type',               size: 110 },
       { id: 'status',                 header: 'Status',             accessorKey: 'status',                 size: 130, kind: 'badge' },
+      { id: 'priority',               header: 'Priority',           accessorKey: 'priority',               size: 100, kind: 'badge' },
       { id: 'submitted_by_name',      header: 'Submitted By',       accessorKey: 'submitted_by_name',      size: 160 },
       { id: 'submitted_date',         header: 'Submitted On',       accessorKey: 'submitted_date',         size: 130, kind: 'date' },
       { id: 'division',               header: 'Division',           accessorKey: 'division',               size: 110 },
@@ -79,6 +82,7 @@ export const REPORTS = [
     accent:   'emerald',
     statusEnum: ['ACTIVE', 'UNDER_CALIBRATION', 'UNDER_REPAIR', 'OUT_OF_TOLERANCE',
                  'QUARANTINED', 'CONDEMNED', 'RETIRED', 'PENDING_VERIFICATION'],
+    summaryKeys: ['total_equipment', 'used_equipment', 'total_job_cards', 'inactive_low_use'],
     columns: [
       { id: 'equipment_id',     header: 'Equipment ID',   accessorKey: 'equipment_id',     size: 110 },
       { id: 'equipment_name',   header: 'Equipment Name', accessorKey: 'equipment_name',   size: 240 },
@@ -97,10 +101,12 @@ export const REPORTS = [
     requires: 'reports:view-engineer-summary',
     accent:   'indigo',
     // No status filter for engineer summary; the report is aggregation.
+    summaryKeys: ['engineers', 'assigned_jcs', 'completed', 'in_progress'],
     columns: [
       { id: 'engineer_employee_id', header: 'Engineer ID',       accessorKey: 'engineer_employee_id', size: 110 },
       { id: 'engineer_name',        header: 'Engineer Name',     accessorKey: 'engineer_name',        size: 220 },
       { id: 'total_assigned',       header: 'Total Assigned',    accessorKey: 'total_assigned',       size: 110, kind: 'number' },
+      { id: 'assigned',             header: 'Assigned',          accessorKey: 'assigned',             size: 100, kind: 'number' },
       { id: 'completed',            header: 'Completed',         accessorKey: 'completed',            size: 100, kind: 'number' },
       { id: 'in_progress',          header: 'In Progress',       accessorKey: 'in_progress',          size: 100, kind: 'number' },
       { id: 'verified_closed',      header: 'Verified/Closed',   accessorKey: 'verified_closed',      size: 120, kind: 'number' },
@@ -116,6 +122,7 @@ export const REPORTS = [
     requires: 'reports:view-job-card-summary',
     accent:   'sky',
     statusEnum: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED_CLOSED', 'REOPENED'],
+    summaryKeys: ['total', 'open_assigned', 'in_progress', 'completed'],
     columns: [
       { id: 'job_card_no',             header: 'Job Card No',     accessorKey: 'job_card_no',             size: 130 },
       { id: 'equipment_name',          header: 'Equipment Name',  accessorKey: 'equipment_name',          size: 220 },
@@ -126,6 +133,7 @@ export const REPORTS = [
       { id: 'completed_date',          header: 'Completed',       accessorKey: 'completed_date',          size: 130, kind: 'date' },
       { id: 'verified_date',           header: 'Verified',        accessorKey: 'verified_date',           size: 130, kind: 'date' },
       { id: 'division',                header: 'Division',        accessorKey: 'division',                size: 110 },
+      { id: 'workflow_type',           header: 'Workflow',        accessorKey: 'workflow_type',           size: 120 },
     ],
   },
   {
@@ -137,13 +145,16 @@ export const REPORTS = [
     accent:   'rose',
     statusEnum: ['DRAFT', 'SUBMITTED', 'ASSIGNED', 'IN_PROGRESS',
                  'COMPLETED', 'VERIFIED_CLOSED', 'REJECTED', 'REOPENED'],
+    summaryKeys: ['total', 'submitted', 'assigned', 'verified_closed'],
     columns: [
       { id: 'request_code',           header: 'Request ID',     accessorKey: 'request_code',           size: 130 },
       { id: 'equipment_name',         header: 'Equipment Name', accessorKey: 'equipment_name',         size: 220 },
       { id: 'job_type',               header: 'Job Type',       accessorKey: 'job_type',               size: 110 },
       { id: 'status',                 header: 'Status',         accessorKey: 'status',                 size: 140, kind: 'badge' },
+      { id: 'priority',               header: 'Priority',       accessorKey: 'priority',               size: 100, kind: 'badge' },
       { id: 'submitted_by_name',      header: 'Submitted By',   accessorKey: 'submitted_by_name',      size: 160 },
       { id: 'submitted_date',         header: 'Submitted On',   accessorKey: 'submitted_date',         size: 130, kind: 'date' },
+      { id: 'assigned_engineer_name', header: 'Engineer',       accessorKey: 'assigned_engineer_name', size: 150 },
       { id: 'approved_by_name',       header: 'Approved By',    accessorKey: 'approved_by_name',       size: 150 },
       { id: 'rejected_by_name',       header: 'Rejected By',    accessorKey: 'rejected_by_name',       size: 150 },
       { id: 'division',               header: 'Division',       accessorKey: 'division',               size: 110 },

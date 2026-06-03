@@ -17,25 +17,25 @@ import { StandardKpiCard } from '../../components/StandardKpiCard.jsx';
 const LABELS = {
   total:           ['Total Equipment',  'in scope'],
   due_soon:        ['Due Soon',         'within window'],
-  overdue:         ['Overdue',          'today > due date'],
+  overdue:         ['Overdue',          'past due date'],
   valid:           ['Valid',            'beyond alert window'],
   total_pending:   ['Total Pending',    'open requests'],
   new_requests:    ['New Requests',     'in range'],
   assigned:        ['Assigned',         'engineer present'],
   unassigned:      ['Unassigned',       'no engineer'],
-  total_equipment: ['Total Equipment',  'COUNT(EQM_ID)'],
-  used_equipment:  ['Used Equipment',   'with JCs in window'],
-  total_job_cards: ['Total Job Cards',  'aggregate count'],
-  inactive_low_use:['Inactive / Low',   '0 JCs in window'],
-  engineers:       ['Engineers',        'distinct assigned'],
-  assigned_jcs:    ['Assigned JCs',     'total assigned'],
+  total_equipment: ['Total Equipment',  'registered assets'],
+  used_equipment:  ['Used Equipment',   'with job cards'],
+  total_job_cards: ['Total Job Cards',  'in selected range'],
+  inactive_low_use:['Inactive / Low',   'no job cards'],
+  engineers:       ['Engineers',        'assigned staff'],
+  assigned_jcs:    ['Assigned JCs',     'workload total'],
   completed:       ['Completed',        'final state'],
   in_progress:     ['In Progress',      'being worked'],
-  verified_closed: ['Verified/Closed',  'final state'],
+  verified_closed: ['Verified Closed',  'final state'],
   open_assigned:   ['Open / Assigned',  'awaiting start'],
   reopened:        ['Reopened',         'returned for rework'],
   draft:           ['Draft',            'not yet submitted'],
-  submitted:       ['Submitted',        'awaiting approval'],
+  submitted:       ['Submitted',        'sent for action'],
   rejected:        ['Rejected',         'terminal'],
 };
 
@@ -57,7 +57,7 @@ export function SummaryTiles({ summary, keys }) {
     : Object.keys(summary).filter((k) => LABELS[k] !== undefined);
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {renderKeys.map((k, i) => {
         const [label, sub] = LABELS[k] || [k, ''];
         const meta = TILE_META[i % TILE_META.length];

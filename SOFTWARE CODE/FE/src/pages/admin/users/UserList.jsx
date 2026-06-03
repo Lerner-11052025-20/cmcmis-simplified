@@ -24,7 +24,7 @@
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search as SearchIcon, RefreshCw, Power, Shield, LogOut, Users, ShieldAlert, Key } from 'lucide-react';
+import { Search as SearchIcon, RefreshCw, Power, Shield, Users, ShieldAlert, Key } from 'lucide-react';
 import clsx from 'clsx';
 
 import { StandardKpiCard } from '../../../components/StandardKpiCard.jsx';
@@ -132,14 +132,6 @@ export function UserList() {
             title={row.is_active && row.id === me?.uid ? 'You cannot deactivate yourself' : (row.is_active ? 'Deactivate' : 'Activate')}
           >
             <Power size={14} strokeWidth={1.75} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal('force-logout', row)}
-            className="px-2 py-1 text-xs rounded hover:bg-base-elev text-warning"
-            title="Force logout all sessions"
-          >
-            <LogOut size={14} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
       ),
