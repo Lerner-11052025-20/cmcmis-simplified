@@ -13,14 +13,13 @@
 //   independently re-validates (returns 409 on ineligible status, 403
 //   on missing permission), so the FE gate is UX only.
 //
-//   A new "Download Full Details" button (PDF #2) appears next to it,
-//   gated by `job_card:download-details`. Available for any JC the
-//   user is already viewing.
+//   The JR form button downloads the parent Job Request PDF, which routes
+//   to the respective JRF template for that JR category/type.
 // ============================================================================
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileDown, FileText } from 'lucide-react';
+import { ArrowLeft, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { StatusPill } from '../../../components/StatusPill.jsx';
@@ -28,7 +27,7 @@ import { Button } from '../../../components/ui/Button.jsx';
 import { useAuth } from '../../../lib/auth-context.jsx';
 import {
   downloadJobCardCertificate,
-  downloadJobCardDetails,
+  downloadJobRequestDetails,
   isCertificateEligible,
 } from '../../../lib/api/pdf.js';
 
@@ -37,6 +36,7 @@ export function DetailHeader({ jc }) {
   const perms = user?.permissions || [];
   const canDownloadCert    = perms.includes('job_card:download-certificate');
   const canDownloadDetails = perms.includes('job_card:download-details');
+  const parentJrNo = jc.parent_jr_no || jc.jr_no;
 
   // Tooltip + disabled-reason logic — keep the UX explicit about WHY a
   // download is unavailable. The BE is the real gate; this is just a
@@ -71,14 +71,14 @@ export function DetailHeader({ jc }) {
 
   async function onDownloadDetails() {
     setBusy('details');
-    const id = toast.loading('Preparing Job Card Details PDF…');
+    const id = toast.loading('Preparing JR Form PDF…');
     try {
-      const { filename } = await downloadJobCardDetails(jc.section_job_no);
+      const { filename } = await downloadJobRequestDetails(parentJrNo);
       toast.success(`Downloaded ${filename}`, { id });
     } catch (e) {
       const msg = e.response?.data?.error?.message
               || e.message
-              || 'Failed to download details';
+              || 'Failed to download JR form';
       toast.error(msg, { id });
     } finally {
       setBusy(null);
@@ -122,12 +122,12 @@ export function DetailHeader({ jc }) {
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={busy === 'details'}
-                title={`Download full Job Card details (${jc.section_job_no})`}
+                disabled={busy === 'details' || !parentJrNo}
+                title={parentJrNo ? `Download JR form (${parentJrNo})` : 'No linked Job Request found for this Job Card'}
                 onClick={onDownloadDetails}
               >
-                <FileText size={14} strokeWidth={1.75} aria-hidden="true" />
-                {busy === 'details' ? 'Preparing…' : 'Download Full Details'}
+                <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                {busy === 'details' ? 'Preparing…' : 'JR form'}
               </Button>
             ) : null}
             {/* Certificate/report endpoint is the canonical JobClosingForm CTA. */}
