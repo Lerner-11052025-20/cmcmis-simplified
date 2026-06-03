@@ -68,7 +68,7 @@ function getGroupForItem(item) {
   if (path.startsWith('/equipment') || path === '/schedule' || path === '/inquiry' || path === '/procurement') return 'assets';
   if (path === '/analytics' || path === '/reports') return 'insights';
   if (path.startsWith('/admin') || path === '/audit') return 'admin';
-  if (path === '/profile' || path === '/about' || path === '/user-guide' || path === '/view-only-guide' || path === '/lab-incharge-guide') return 'account';
+  if (path === '/profile' || path === '/about' || path === '/user-guide' || path === '/view-only-guide' || path === '/lab-incharge-guide' || path === '/lab-engineer-guide') return 'account';
   return 'overview';
 }
 

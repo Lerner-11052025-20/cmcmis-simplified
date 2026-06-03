@@ -66,6 +66,7 @@ const AboutUs = lazy(() => import('./pages/about/AboutUs.jsx').then(m => ({ defa
 const UserGuide = lazy(() => import('./pages/help/UserGuide.jsx').then(m => ({ default: m.UserGuide })));
 const ViewOnlyGuide = lazy(() => import('./pages/help/UserGuide.jsx').then(m => ({ default: m.ViewOnlyGuide })));
 const LabInChargeGuide = lazy(() => import('./pages/help/UserGuide.jsx').then(m => ({ default: m.LabInChargeGuide })));
+const LabEngineerGuide = lazy(() => import('./pages/help/UserGuide.jsx').then(m => ({ default: m.LabEngineerGuide })));
 
 const SHOW_PROCUREMENT_MODULE = false;
 
@@ -135,6 +136,7 @@ export function App() {
               path="/lab-incharge-guide"
               element={
                 <ProtectedRoute requiredRole={[
+                  'SUPER_ADMIN',
                   'LAB_IN_CHARGE',
                   'TME_REPAIR_LAB_IN_CHARGE',
                   'TME_CAL_LAB_IN_CHARGE',
@@ -142,6 +144,21 @@ export function App() {
                   'FPE_CAL_LAB_IN_CHARGE',
                 ]}>
                   <Layout><LabInChargeGuide /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lab-engineer-guide"
+              element={
+                <ProtectedRoute requiredRole={[
+                  'SUPER_ADMIN',
+                  'LAB_ENGINEER',
+                  'TME_REPAIR_LAB_ENG',
+                  'TME_CAL_LAB_ENG',
+                  'FPE_REPAIR_LAB_ENG',
+                  'FPE_CAL_LAB_ENG',
+                ]}>
+                  <Layout><LabEngineerGuide /></Layout>
                 </ProtectedRoute>
               }
             />

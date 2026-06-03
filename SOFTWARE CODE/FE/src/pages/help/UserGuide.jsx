@@ -304,6 +304,101 @@ const labInChargeGuide = {
   ],
 };
 
+const labEngineerGuide = {
+  badge: 'Lab Engineer Guide',
+  roleLabel: 'LAB ENGINEER role',
+  title: 'How to handle assigned lab work',
+  description: 'A simple practical guide for Lab Engineer users. It explains how to find assigned job cards, update work progress, check equipment details, use schedules, and review reports when needed.',
+  quickNav: [
+    { label: 'Dashboard', id: 'dashboard-review' },
+    { label: 'Job Cards', id: 'job-cards' },
+    { label: 'Equipment', id: 'equipment-view' },
+    { label: 'Schedule', id: 'schedule' },
+  ],
+  flows: [
+    {
+      id: 'login',
+      title: 'Login',
+      subtitle: 'Enter the portal and confirm your Lab Engineer access.',
+      icon: KeyRound,
+      accent: 'bg-sky-50 text-sky-600',
+      cta: { label: 'Open Login', to: '/login' },
+      steps: [
+        'Open the CMCMIS portal link.',
+        'Enter your employee ID and password.',
+        'Select Sign In.',
+        'Confirm your profile and role badge in the top bar.',
+      ],
+      tips: ['Your visible job cards depend on your lab assignment.', 'If assigned work is missing, contact your Lab In-Charge.'],
+      visual: 'login',
+    },
+    {
+      id: 'dashboard-review',
+      title: 'Dashboard Review',
+      subtitle: 'Check current work and progress before opening details.',
+      icon: Monitor,
+      accent: 'bg-violet-50 text-violet-600',
+      cta: { label: 'Open Dashboard', to: '/dashboard' },
+      steps: [
+        'Open Dashboard from the sidebar.',
+        'Review assigned, in-progress, and completed work counts.',
+        'Use the status cards to decide which job card needs attention.',
+        'Move to Job Cards for detailed work updates.',
+      ],
+      tips: ['Use Dashboard for quick awareness.', 'Use Job Cards for actual work tracking.'],
+      visual: 'dashboard',
+    },
+    {
+      id: 'job-cards',
+      title: 'Job Cards Work',
+      subtitle: 'Open assigned job cards and maintain clear work progress.',
+      icon: ClipboardList,
+      accent: 'bg-emerald-50 text-emerald-600',
+      cta: { label: 'Open Job Cards', to: '/job-cards' },
+      steps: [
+        'Open Job Cards from the sidebar.',
+        'Filter or search for assigned and in-progress job cards.',
+        'Open a job card to review request details, equipment information, and instructions.',
+        'Update progress, remarks, documents, or completion details according to your access.',
+      ],
+      tips: ['Keep remarks clear and factual.', 'Attach required evidence before marking work complete.'],
+      visual: 'job-cards',
+    },
+    {
+      id: 'equipment-view',
+      title: 'Equipment Check',
+      subtitle: 'Confirm instrument details before starting work.',
+      icon: Wrench,
+      accent: 'bg-amber-50 text-amber-600',
+      cta: { label: 'Open Equipment', to: '/equipment' },
+      steps: [
+        'Open Equipment from the sidebar.',
+        'Search by equipment ID, name, or serial number.',
+        'Review status and basic details before recording work.',
+        'Use the correct equipment record when linking job work.',
+      ],
+      tips: ['Always verify the equipment identity.', 'Avoid working from incomplete or unclear equipment details.'],
+      visual: 'equipment',
+    },
+    {
+      id: 'schedule',
+      title: 'Schedule and Reports',
+      subtitle: 'Use schedule and reports to understand upcoming and completed work.',
+      icon: Calendar,
+      accent: 'bg-indigo-50 text-indigo-600',
+      cta: { label: 'Open Schedule', to: '/schedule' },
+      steps: [
+        'Open Schedule to view planned or upcoming work.',
+        'Use Reports or Analytics when you need broader work summaries.',
+        'Apply filters to find the exact date, status, or lab information.',
+        'Share report outputs only through the allowed export options.',
+      ],
+      tips: ['Schedule is useful for daily planning.', 'Reports help with review and follow-up.'],
+      visual: 'schedule',
+    },
+  ],
+};
+
 export function UserGuide() {
   return <GuidePage config={normalUserGuide} />;
 }
@@ -314,6 +409,10 @@ export function ViewOnlyGuide() {
 
 export function LabInChargeGuide() {
   return <GuidePage config={labInChargeGuide} />;
+}
+
+export function LabEngineerGuide() {
+  return <GuidePage config={labEngineerGuide} />;
 }
 
 function GuidePage({ config }) {
