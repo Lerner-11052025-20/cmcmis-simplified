@@ -102,6 +102,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'View Only Guide', to: '/view-only-guide', icon: BookOpen, requires: 'dashboard:view' },
   { label: 'Lab In-Charge Guide', to: '/lab-incharge-guide', icon: BookOpen, requires: 'dashboard:view' },
   { label: 'Lab Engineer Guide', to: '/lab-engineer-guide', icon: BookOpen, requires: 'dashboard:view' },
+  { label: 'Super Admin Guide', to: '/super-admin-guide', icon: BookOpen, requires: 'dashboard:view' },
   { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
   { label: 'About Us',     to: '/about',        icon: Info,           requires: 'dashboard:view' },
 ];
@@ -131,7 +132,6 @@ const SUPER_ADMIN_ONLY_NAV_LABELS = new Set([
 ]);
 
 const LAB_IN_CHARGE_GUIDE_ROLES = new Set([
-  'SUPER_ADMIN',
   'LAB_IN_CHARGE',
   'TME_REPAIR_LAB_IN_CHARGE',
   'TME_CAL_LAB_IN_CHARGE',
@@ -140,7 +140,6 @@ const LAB_IN_CHARGE_GUIDE_ROLES = new Set([
 ]);
 
 const LAB_ENGINEER_GUIDE_ROLES = new Set([
-  'SUPER_ADMIN',
   'LAB_ENGINEER',
   'TME_REPAIR_LAB_ENG',
   'TME_CAL_LAB_ENG',
@@ -164,6 +163,7 @@ export function visibleNavItems(permissions, role) {
     if (item.label === 'View Only Guide') return role === 'VIEW_ONLY';
     if (item.label === 'Lab In-Charge Guide') return LAB_IN_CHARGE_GUIDE_ROLES.has(role);
     if (item.label === 'Lab Engineer Guide') return LAB_ENGINEER_GUIDE_ROLES.has(role);
+    if (item.label === 'Super Admin Guide') return role === 'SUPER_ADMIN';
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (item.label === 'Admin · Lab Capacity' && role !== 'SUPER_ADMIN' && role !== 'LAB_IN_CHARGE' && role !== 'LAB_IN_CHARGE_SCOPED') return false;

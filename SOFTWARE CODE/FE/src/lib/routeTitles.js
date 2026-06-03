@@ -9,6 +9,7 @@ export const ROUTE_TITLES = [
   { path: '/view-only-guide', title: 'View Only Guide', page: 'View Only Guide', access: 'VIEW_ONLY' },
   { path: '/lab-incharge-guide', title: 'Lab In-Charge Guide', page: 'Lab In-Charge Guide', access: 'LAB_IN_CHARGE' },
   { path: '/lab-engineer-guide', title: 'Lab Engineer Guide', page: 'Lab Engineer Guide', access: 'LAB_ENGINEER' },
+  { path: '/super-admin-guide', title: 'Super Admin Guide', page: 'Super Admin Guide', access: 'SUPER_ADMIN' },
   { path: '/equipment', title: 'Equipment', page: 'Equipment List', access: 'equipment:read-list' },
   { path: '/equipment/new', title: 'New Equipment', page: 'Equipment Form', access: 'equipment:create' },
   { path: '/equipment/:id', title: 'Equipment Detail', page: 'Equipment Detail', access: 'equipment:read-detail' },
