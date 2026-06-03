@@ -238,36 +238,66 @@ function renderTmeJrf(payload, stream, config) {
   ], 20);
   y += 25;
 
-  y = ensureSpace(y, 16 + 18 * 3 + 23);
-  y = sectionTitle(doc, 'EQUIPMENT INFORMATION', y);
-  labelValueRow(doc, M, y, [
-    { label: 'Name of Equipment', value: payload.equipment_name, lw: 106, vw: 190 },
-    { label: 'Make', value: payload.make, lw: 52, vw: CONTENT_W - 106 - 190 - 52 },
-  ]);
-  y += 18;
-  labelValueRow(doc, M, y, [
-    { label: 'Identification of Equipment', value: payload.equipment_id, lw: 130, vw: 166 },
-    { label: 'Option(s) & Description', value: payload.options_description, lw: 118, vw: CONTENT_W - 130 - 166 - 118 },
-  ]);
-  y += 18;
-  labelValueRow(doc, M, y, [
-    { label: 'Model No.', value: payload.model_no, lw: 78, vw: 218 },
-    { label: 'Serial No.', value: payload.serial_no, lw: 70, vw: CONTENT_W - 78 - 218 - 70 },
-  ]);
-  y += 23;
+  if (config.equipmentLayout === 'fpe') {
+    y = ensureSpace(y, 16 + 18 * 2 + 23);
+    y = sectionTitle(doc, config.equipmentSectionTitle || 'EQUIPMENT DETAILS', y);
+    labelValueRow(doc, M, y, [
+      { label: 'Name of Equipment', value: payload.equipment_name, lw: 106, vw: 190 },
+      { label: 'Make', value: payload.make, lw: 52, vw: CONTENT_W - 106 - 190 - 52 },
+    ]);
+    y += 18;
+    labelValueRow(doc, M, y, [
+      { label: 'Model No.', value: payload.model_no, lw: 78, vw: 218 },
+      { label: 'Serial No.', value: payload.serial_no, lw: 70, vw: CONTENT_W - 78 - 218 - 70 },
+    ]);
+    y += 23;
+  } else {
+    y = ensureSpace(y, 16 + 18 * 3 + 23);
+    y = sectionTitle(doc, config.equipmentSectionTitle || 'EQUIPMENT INFORMATION', y);
+    labelValueRow(doc, M, y, [
+      { label: 'Name of Equipment', value: payload.equipment_name, lw: 106, vw: 190 },
+      { label: 'Make', value: payload.make, lw: 52, vw: CONTENT_W - 106 - 190 - 52 },
+    ]);
+    y += 18;
+    labelValueRow(doc, M, y, [
+      { label: 'Identification of Equipment', value: payload.equipment_id, lw: 130, vw: 166 },
+      { label: 'Option(s) & Description', value: payload.options_description, lw: 118, vw: CONTENT_W - 130 - 166 - 118 },
+    ]);
+    y += 18;
+    labelValueRow(doc, M, y, [
+      { label: 'Model No.', value: payload.model_no, lw: 78, vw: 218 },
+      { label: 'Serial No.', value: payload.serial_no, lw: 70, vw: CONTENT_W - 78 - 218 - 70 },
+    ]);
+    y += 23;
+  }
 
-  y = ensureSpace(y, 16 + 18);
-  y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS', y);
-  y = drawAccessoryHeader(doc, y);
-  (payload.children?.accessories || []).forEach((item) => {
-    if (y + 18 > CONTENT_BOTTOM_Y) {
-      y = newContentPage();
-      y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS (CONTINUED)', y);
-      y = drawAccessoryHeader(doc, y);
-    }
-    y = drawAccessoryRow(doc, y, item);
-  });
-  y += 4;
+  if (config.showAccessories !== false) {
+    y = ensureSpace(y, 16 + 18);
+    y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS', y);
+    y = drawAccessoryHeader(doc, y);
+    (payload.children?.accessories || []).forEach((item) => {
+      if (y + 18 > CONTENT_BOTTOM_Y) {
+        y = newContentPage();
+        y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS (CONTINUED)', y);
+        y = drawAccessoryHeader(doc, y);
+      }
+      y = drawAccessoryRow(doc, y, item);
+    });
+    y += 4;
+  }
+
+  if (config.systemInformation) {
+    y = ensureSpace(y, 16 + 25 * 2 + 23);
+    y = sectionTitle(doc, 'SYSTEM INFORMATION', y);
+    labelValueRow(doc, M, y, [
+      { label: 'Present System Status', value: config.systemStatusValue || '', lw: 130, vw: CONTENT_W - 130 },
+    ], 25);
+    y += 25;
+    labelValueRow(doc, M, y, [
+      { label: 'Complaints / Symptoms', value: payload.complaint_description, lw: 130, vw: CONTENT_W - 130 },
+    ], 25);
+    y += 30;
+  }
 
   if (config.kind === 'calibration') {
     y = ensureSpace(y, 16 + 18 + 23);
