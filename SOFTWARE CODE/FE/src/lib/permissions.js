@@ -50,6 +50,7 @@ import {
   ScrollText,
   User,
   Info,
+  BookOpen,
 } from 'lucide-react';
 
 /**
@@ -97,12 +98,14 @@ export const ALL_NAV_ITEMS = [
   // (mig 006) is left in place for any historical reference but is no
   // longer consulted by the FE.
   { label: 'Admin · Audit Log', to: '/audit',           icon: ScrollText, requires: 'audit:read-list' },
+  { label: 'User Guide',   to: '/user-guide',   icon: BookOpen,       requires: 'dashboard:view' },
   { label: 'Profile',      to: '/profile',      icon: User,           requires: 'dashboard:view' },
   { label: 'About Us',     to: '/about',        icon: Info,           requires: 'dashboard:view' },
 ];
 
 const NORMAL_USER_NAV_LABELS = new Set([
   'Dashboard',
+  'User Guide',
   'Profile',
   'About Us',
   'Job Requests',
@@ -136,6 +139,7 @@ export function visibleNavItems(permissions, role) {
   const owned = new Set(permissions);
   return ALL_NAV_ITEMS.filter((item) => {
     if (item.label === 'Profile' || item.label === 'About Us') return true; // Always visible to all signed-in roles.
+    if (item.label === 'User Guide' && role !== 'NORMAL_USER' && role !== 'SUPER_ADMIN') return false;
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (item.label === 'Admin · Lab Capacity' && role !== 'SUPER_ADMIN' && role !== 'LAB_IN_CHARGE' && role !== 'LAB_IN_CHARGE_SCOPED') return false;

@@ -63,6 +63,7 @@ const ProcurementPage = lazy(() => import('./pages/procurement/ProcurementPage.j
 const AuditViewer = lazy(() => import('./pages/audit/AuditViewer.jsx').then(m => ({ default: m.AuditViewer })));
 const Profile = lazy(() => import('./pages/profile/Profile.jsx').then(m => ({ default: m.Profile })));
 const AboutUs = lazy(() => import('./pages/about/AboutUs.jsx').then(m => ({ default: m.AboutUs })));
+const UserGuide = lazy(() => import('./pages/help/UserGuide.jsx').then(m => ({ default: m.UserGuide })));
 
 const SHOW_PROCUREMENT_MODULE = false;
 
@@ -112,6 +113,15 @@ export function App() {
             />
 
             {/* ── Equipment module (Phase 5 implemented) ─────────── */}
+            <Route
+              path="/user-guide"
+              element={
+                <ProtectedRoute requiredPermission="dashboard:view" requiredRole={['NORMAL_USER', 'SUPER_ADMIN']}>
+                  <Layout><UserGuide /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/equipment"
               element={

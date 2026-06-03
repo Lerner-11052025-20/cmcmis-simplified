@@ -5,6 +5,7 @@ export const ROUTE_TITLES = [
   { path: '/dashboard', title: 'Dashboard', page: 'Dashboard', access: 'dashboard:view' },
   { path: '/profile', title: 'Profile', page: 'Profile', access: 'Signed-in user' },
   { path: '/about', title: 'About Us', page: 'About Us', access: 'Signed-in user' },
+  { path: '/user-guide', title: 'User Guide', page: 'Normal User Guide', access: 'NORMAL_USER' },
   { path: '/equipment', title: 'Equipment', page: 'Equipment List', access: 'equipment:read-list' },
   { path: '/equipment/new', title: 'New Equipment', page: 'Equipment Form', access: 'equipment:create' },
   { path: '/equipment/:id', title: 'Equipment Detail', page: 'Equipment Detail', access: 'equipment:read-detail' },

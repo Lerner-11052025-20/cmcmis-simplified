@@ -48,30 +48,28 @@ import { visibleNavItems } from '../lib/permissions.js';
 
 // Meta definitions for semantic navigation grouping
 const GROUPS_META = {
-  core: { title: 'Core Operations' },
-  lab: { title: 'Laboratory' },
-  reports: { title: 'Analytics & Reports' },
-  admin: { title: 'System Controls' },
+  overview: { title: 'Overview' },
+  work: { title: 'Work Execution' },
+  assets: { title: 'Assets & Lab' },
+  insights: { title: 'Insights' },
+  admin: { title: 'Administration' },
+  account: { title: 'Account & Help' },
 };
+
+const GROUP_ORDER = ['overview', 'work', 'assets', 'insights', 'admin', 'account'];
 
 /**
  * Classifies a navigation item into one of the four groups based on path.
  */
 function getGroupForItem(item) {
   const path = item.to;
-  if (path === '/dashboard' || path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) {
-    return 'core';
-  }
-  if (path.startsWith('/equipment') || path === '/schedule' || path === '/inquiry' || path === '/procurement') {
-    return 'lab';
-  }
-  if (path === '/analytics' || path === '/reports') {
-    return 'reports';
-  }
-  if (path.startsWith('/admin') || path === '/audit' || path === '/profile' || path === '/about') {
-    return 'admin';
-  }
-  return 'core';
+  if (path === '/dashboard') return 'overview';
+  if (path.startsWith('/job-requests') || path === '/conversion' || path.startsWith('/job-cards')) return 'work';
+  if (path.startsWith('/equipment') || path === '/schedule' || path === '/inquiry' || path === '/procurement') return 'assets';
+  if (path === '/analytics' || path === '/reports') return 'insights';
+  if (path.startsWith('/admin') || path === '/audit') return 'admin';
+  if (path === '/profile' || path === '/about' || path === '/user-guide') return 'account';
+  return 'overview';
 }
 
 /**
@@ -102,7 +100,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
       acc[groupKey].push(item);
       return acc;
     },
-    { core: [], lab: [], reports: [], admin: [] }
+    { overview: [], work: [], assets: [], insights: [], admin: [], account: [] }
   );
 
   return (
@@ -159,7 +157,7 @@ export function Sidebar({ collapsed = false, onToggle }) {
             </p>
           )
         ) : (
-          Object.keys(GROUPS_META).map((groupKey) => {
+          GROUP_ORDER.map((groupKey) => {
             const groupItems = groupedItems[groupKey] || [];
             if (groupItems.length === 0) return null;
 
@@ -184,8 +182,8 @@ export function Sidebar({ collapsed = false, onToggle }) {
                 <div className="space-y-0.5">
                   {groupItems.map((item) => {
                     const Icon = item.icon;
-                    // Strip visual prefix "Admin · "
-                    const cleanLabel = item.label.replace(/^Admin\s*·\s*/i, '');
+                    // Strip visual prefix while preserving the original route/permission entry.
+                    const cleanLabel = item.label.replace(/^Admin\s*(?:Â·|·)\s*/i, '');
                     return (
                       <NavLink
                         key={item.to}
