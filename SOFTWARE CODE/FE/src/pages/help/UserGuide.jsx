@@ -2,18 +2,22 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BarChart3,
+  Bell,
   Calendar,
   CheckCircle2,
   ClipboardList,
   Eye,
   FilePlus2,
+  Info,
   KeyRound,
   LineChart,
+  LogOut,
   Monitor,
   MousePointerClick,
   RefreshCw,
   Search,
   ShieldCheck,
+  UserCircle,
   Wrench,
 } from 'lucide-react';
 
@@ -399,6 +403,121 @@ const labEngineerGuide = {
   ],
 };
 
+const commonGuideFlows = [
+  {
+    id: 'common-topbar',
+    title: 'Top Bar Use Cases',
+    subtitle: 'Use the top bar for quick search, notifications, help context, and account actions from any page.',
+    icon: Monitor,
+    accent: 'bg-sky-50 text-sky-600',
+    cta: { label: 'Open Dashboard', to: '/dashboard' },
+    steps: [
+      'Look at the top area of the screen after login.',
+      'Use the menu button to expand or collapse the sidebar when you need more space.',
+      'Use the global search box to find equipment, job requests, vendors, or job cards.',
+      'Use the right-side icons to open information, notifications, and profile actions.',
+    ],
+    tips: ['The top bar stays available across most pages.', 'Start from global search when you are not sure which module contains the record.'],
+    visual: 'topbar',
+  },
+  {
+    id: 'common-global-search',
+    title: 'Global Search Bar',
+    subtitle: 'Find important records quickly without opening every module one by one.',
+    icon: Search,
+    accent: 'bg-indigo-50 text-indigo-600',
+    cta: { label: 'Open Inquiry', to: '/inquiry' },
+    steps: [
+      'Click the search field in the top bar.',
+      'Type an equipment ID, job request ID, job card number, vendor name, or keyword.',
+      'Review the visible matches.',
+      'Select the correct result to open the related page.',
+    ],
+    tips: ['Use fewer words if search results are too narrow.', 'Use exact IDs when you have them.'],
+    visual: 'global-search',
+  },
+  {
+    id: 'common-module-search',
+    title: 'In-Module Search and Filters',
+    subtitle: 'Use local search boxes inside pages to narrow table rows and lists.',
+    icon: LineChart,
+    accent: 'bg-emerald-50 text-emerald-600',
+    cta: { label: 'Open Reports', to: '/reports' },
+    steps: [
+      'Open a module such as Equipment, Job Requests, Job Cards, Inquiry, Reports, or Schedule.',
+      'Use the page search box to type the exact ID, name, status, or keyword.',
+      'Apply filters such as status, category, lab, or date when available.',
+      'Clear the search or filter when you want to return to the full list.',
+    ],
+    tips: ['Module search is best when you already know which module contains the data.', 'Filters help reduce long lists into readable rows.'],
+    visual: 'module-search',
+  },
+  {
+    id: 'common-notifications',
+    title: 'Notifications',
+    subtitle: 'Review system updates, assigned work, approvals, and important activity alerts.',
+    icon: Bell,
+    accent: 'bg-amber-50 text-amber-600',
+    cta: { label: 'Open Notifications', to: '/notifications' },
+    steps: [
+      'Click the notification icon in the top bar or open Notifications from the sidebar if visible.',
+      'Read the latest messages and status updates.',
+      'Open any linked record if the notification includes one.',
+      'Use notifications to follow changes without manually checking every module.',
+    ],
+    tips: ['Unread items help identify what needs attention.', 'Some roles may see fewer notifications based on permission.'],
+    visual: 'notifications',
+  },
+  {
+    id: 'common-profile-menu',
+    title: 'Profile Icon and Logout',
+    subtitle: 'Open your account dropdown from the top-right profile area.',
+    icon: UserCircle,
+    accent: 'bg-violet-50 text-violet-600',
+    cta: { label: 'Open Profile', to: '/profile' },
+    steps: [
+      'Go to the top-right corner of the screen.',
+      'Click your initials, profile name, or small dropdown arrow.',
+      'Choose Profile to review your account details.',
+      'Choose Logout when your work is complete.',
+    ],
+    tips: ['Always logout from shared systems.', 'The dropdown is the fastest place to open profile settings.'],
+    visual: 'account-menu',
+  },
+  {
+    id: 'common-profile-page',
+    title: 'Profile Page',
+    subtitle: 'Check your role, employee information, and account details.',
+    icon: UserCircle,
+    accent: 'bg-rose-50 text-rose-600',
+    cta: { label: 'Open Profile', to: '/profile' },
+    steps: [
+      'Open Profile from the sidebar or top-right account dropdown.',
+      'Review your name, employee ID, email, role, and account status.',
+      'Confirm that the displayed role matches your expected access.',
+      'Contact the administrator if any profile information is incorrect.',
+    ],
+    tips: ['Your role decides which modules are visible.', 'Profile is read-friendly and helps confirm your access level.'],
+    visual: 'profile',
+  },
+  {
+    id: 'common-about',
+    title: 'About Page',
+    subtitle: 'Understand the purpose, team, and system context of CMCMIS.',
+    icon: Info,
+    accent: 'bg-slate-100 text-slate-700',
+    cta: { label: 'Open About', to: '/about' },
+    steps: [
+      'Open About Us from the sidebar.',
+      'Read the system purpose and usage context.',
+      'Review project or team information when needed.',
+      'Use this page when explaining CMCMIS to a new user.',
+    ],
+    tips: ['About page is informational only.', 'It is useful during onboarding and demonstrations.'],
+    visual: 'about',
+  },
+];
+
 export function UserGuide() {
   return <GuidePage config={normalUserGuide} />;
 }
@@ -488,6 +607,25 @@ function GuidePage({ config }) {
           <GuideSection key={flow.id} flow={flow} index={index} />
         ))}
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.045)] md:p-8">
+        <div className="max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Common modules for every role</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Everyday controls used across CMCMIS</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            These actions are common across the software. They help non-technical users search, open their profile,
+            read notifications, use page filters, and safely logout.
+          </p>
+        </div>
+      </section>
+
+      <div className="space-y-6">
+        {commonGuideFlows.map((flow, index) => (
+          <GuideSection key={flow.id} flow={flow} index={config.flows.length + index} />
+        ))}
+      </div>
+
+      <CoreFeatureHighlights />
     </div>
   );
 }
@@ -560,6 +698,13 @@ function VisualGuide({ type }) {
   if (type === 'conversion') return <ConversionVisual />;
   if (type === 'job-cards') return <JobCardsVisual />;
   if (type === 'schedule') return <ScheduleVisual />;
+  if (type === 'topbar') return <TopBarVisual />;
+  if (type === 'global-search') return <GlobalSearchVisual />;
+  if (type === 'module-search') return <ModuleSearchVisual />;
+  if (type === 'notifications') return <NotificationsVisual />;
+  if (type === 'account-menu') return <AccountMenuVisual />;
+  if (type === 'profile') return <ProfileVisual />;
+  if (type === 'about') return <AboutVisual />;
   return <DashboardVisual />;
 }
 
@@ -779,6 +924,147 @@ function ScheduleVisual() {
   );
 }
 
+function TopBarVisual() {
+  return (
+    <BrowserFrame title="Common top bar">
+      <div className="space-y-4">
+        <TopBarMock active="topbar" />
+        <div className="grid gap-3 md:grid-cols-3">
+          <MiniFeature icon={Search} label="Search records" />
+          <MiniFeature icon={Bell} label="Read alerts" />
+          <MiniFeature icon={UserCircle} label="Open account" />
+        </div>
+        <Callout top="top-[36px]" left="left-[250px]" text="Use this from any page" />
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function GlobalSearchVisual() {
+  return (
+    <BrowserFrame title="Global search">
+      <div className="space-y-4">
+        <TopBarMock active="search" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <SearchBar text="JR-2026-2430" />
+          <div className="mt-4 space-y-2">
+            <ListRow title="JR-2026-2430" subtitle="Job Request Detail" tag="Open" />
+            <ListRow title="Equipment-1" subtitle="Related equipment" tag="Open" />
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function ModuleSearchVisual() {
+  return (
+    <BrowserFrame title="Module search and filters">
+      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+        <MiniNav active="Reports" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <SearchBar text="Search inside this module" />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['Status', 'Category', 'Date', 'Lab'].map((item) => (
+              <span key={item} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{item}</span>
+            ))}
+          </div>
+          <div className="mt-4 h-28 rounded-xl bg-slate-100" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function NotificationsVisual() {
+  return (
+    <BrowserFrame title="/notifications">
+      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+        <MiniNav active="Notifications" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <Bell size={18} className="text-amber-600" />
+            Notifications
+          </div>
+          <ListRow title="Job request approved" subtitle="Open the linked request for details" tag="View" />
+          <ListRow title="Job card assigned" subtitle="Check assigned work" tag="Open" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function AccountMenuVisual() {
+  return (
+    <BrowserFrame title="Profile dropdown">
+      <div className="space-y-4">
+        <TopBarMock active="account" />
+        <div className="ml-auto w-60 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">SA</span>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">System User</p>
+              <p className="text-xs text-slate-500">Current role</p>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            <MiniMenuRow icon={UserCircle} label="Profile" />
+            <MiniMenuRow icon={LogOut} label="Logout" danger />
+          </div>
+        </div>
+        <Callout top="top-[42px]" left="left-[270px]" text="Click profile area" />
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function ProfileVisual() {
+  return (
+    <BrowserFrame title="/profile">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-base font-bold text-white">SS</span>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">System User</p>
+            <p className="text-sm text-slate-500">Role and employee details</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {['Employee ID', 'Role', 'Email', 'Account Status'].map((item) => (
+            <div key={item} className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">Available</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function AboutVisual() {
+  return (
+    <BrowserFrame title="/about">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+            <Info size={22} />
+          </span>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">About CMCMIS</p>
+            <p className="text-sm text-slate-500">Purpose, context, and system information</p>
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          <div className="h-3 w-3/4 rounded bg-slate-200" />
+          <div className="h-3 w-5/6 rounded bg-slate-100" />
+          <div className="h-3 w-2/3 rounded bg-slate-100" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
 function MiniNav({ active }) {
   const primaryItems = ['Dashboard', 'Job Requests', 'Conversion', 'Job Cards', 'Equipment'];
   const items = primaryItems.includes(active)
@@ -799,6 +1085,39 @@ function MiniNav({ active }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function TopBarMock({ active }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="h-9 w-9 rounded-xl bg-slate-100" />
+      <div className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-3 py-2 ${active === 'search' ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-slate-50'}`}>
+        <Search size={16} className="text-slate-400" />
+        <span className="truncate text-xs font-semibold text-slate-400">Search equipment, job requests, vendors...</span>
+      </div>
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500"><Info size={17} /></span>
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><Bell size={17} /></span>
+      <span className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${active === 'account' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>SS</span>
+    </div>
+  );
+}
+
+function MiniFeature({ icon: Icon, label }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+      <Icon className="mx-auto text-sky-600" size={22} />
+      <p className="mt-2 text-xs font-semibold text-slate-700">{label}</p>
+    </div>
+  );
+}
+
+function MiniMenuRow({ icon: Icon, label, danger }) {
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-700 hover:bg-slate-50'}`}>
+      <Icon size={16} />
+      {label}
     </div>
   );
 }
@@ -874,6 +1193,76 @@ function ListRow({ title, subtitle, tag, showCallout }) {
       <div className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">{tag}</div>
       {showCallout ? <Callout top="top-[4px]" left="left-[235px]" text="Open details" /> : null}
     </div>
+  );
+}
+
+function CoreFeatureHighlights() {
+  const features = [
+    {
+      icon: Search,
+      title: 'One search mindset',
+      text: 'Global search and in-module search reduce confusion by helping users find records through IDs, names, statuses, or keywords.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Role-wise simple access',
+      text: 'Every role sees only the modules needed for daily work, which keeps the screen clean and prevents accidental actions.',
+    },
+    {
+      icon: ClipboardList,
+      title: 'Clear work journey',
+      text: 'Job requests, conversion, job cards, schedules, reports, and notifications follow a natural work sequence.',
+    },
+    {
+      icon: Bell,
+      title: 'Action awareness',
+      text: 'Notifications and status cards help users know what changed and what needs attention without checking every page.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Readable reports',
+      text: 'Reports, tables, filters, PDF, Excel, and print actions support quick review and easy sharing.',
+    },
+    {
+      icon: UserCircle,
+      title: 'Simple account control',
+      text: 'Profile, role information, and logout are available from predictable common places.',
+    },
+  ];
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-indigo-50 shadow-[0_16px_42px_rgba(14,165,233,0.12)]">
+      <div className="border-b border-sky-100/70 px-6 py-6 md:px-8">
+        <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-sky-700 ring-1 ring-sky-100">
+          <CheckCircle2 size={14} strokeWidth={2.2} aria-hidden="true" />
+          Main core features
+        </span>
+        <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+          What makes CMCMIS easy to use
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">
+          CMCMIS is designed so users can move from search to action to review with minimum confusion.
+          The interface keeps important actions visible, uses consistent cards and tables, and separates role work clearly.
+        </p>
+      </div>
+
+      <div className="grid gap-4 px-6 py-6 md:grid-cols-2 xl:grid-cols-3 md:px-8">
+        {features.map((feature) => {
+          const Icon = feature.icon;
+          return (
+            <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/90 p-5 shadow-sm ring-1 ring-sky-50">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                  <Icon size={21} strokeWidth={1.9} aria-hidden="true" />
+                </span>
+                <h3 className="text-base font-semibold text-slate-950">{feature.title}</h3>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{feature.text}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
