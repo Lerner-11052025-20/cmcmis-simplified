@@ -126,7 +126,7 @@ export function HomeLanding() {
                   </span>
                   <ArrowRight className={`transition group-hover:translate-x-1 ${theme.muted}`} size={17} />
                 </div>
-                <h3 className="mt-4 text-base font-semibold">{item.label}</h3>
+                <h3 className={`mt-4 text-base font-semibold ${dark ? 'text-white' : 'text-slate-950'}`}>{item.label}</h3>
                 <p className={`mt-2 text-sm leading-6 ${theme.soft}`}>{item.desc}</p>
               </Link>
             );
@@ -172,7 +172,7 @@ function SectionHeader({ dark, eyebrow, title, text }) {
   return (
     <section className="mt-8 mb-4">
       <p className={`text-xs font-bold uppercase tracking-wide ${dark ? 'text-sky-300' : 'text-sky-700'}`}>{eyebrow}</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h2>
+      <h2 className={`mt-2 text-2xl font-semibold tracking-tight ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</h2>
       <p className={`mt-2 max-w-3xl text-sm leading-6 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>
     </section>
   );
@@ -184,7 +184,7 @@ function FeatureCard({ dark, icon: Icon, title }) {
       <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${dark ? 'bg-indigo-400/10 text-indigo-200' : 'bg-indigo-50 text-indigo-600'}`}>
         <Icon size={20} strokeWidth={1.9} />
       </span>
-      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <p className={`mt-4 text-sm font-semibold ${dark ? 'text-white' : 'text-slate-950'}`}>{title}</p>
     </div>
   );
 }
