@@ -96,14 +96,20 @@ function labelValueRow(doc, x, y, specs, h = 18) {
   });
 }
 
-function sectionTitle(doc, title, y) {
+function sectionTitle(doc, title, y, style = 'bar') {
+  if (style === 'line') {
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(COLORS.title);
+    doc.text(title, M, y, { width: CONTENT_W, lineBreak: false });
+    doc.moveTo(M, y + 13).lineTo(PAGE_W - M, y + 13).strokeColor(LINE).lineWidth(0.55).stroke();
+    return y + 19;
+  }
   doc.save().rect(M, y, CONTENT_W, 14).fill(SECTION_BG).restore();
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.title);
   doc.text(title, M + 4, y + 3, { width: CONTENT_W - 8, lineBreak: false });
   return y + 16;
 }
 
-function header(doc) {
+function header(doc, subtitle = 'T&ME REPAIR', drawRule = false) {
   const y = 24;
   if (ISRO_LOGO) doc.image(ISRO_LOGO, M + 2, y, { fit: [60, 52], align: 'center', valign: 'center' });
   if (SAC_LOGO) doc.image(SAC_LOGO, PAGE_W - M - 62, y + 2, { fit: [60, 48], align: 'center', valign: 'center' });
@@ -117,17 +123,21 @@ function header(doc) {
   doc.font('Helvetica-Bold').fontSize(13)
     .text('JOB CLOSURE REPORT', cx, y + 38, { width: cw, align: 'center' });
   doc.font('Helvetica').fontSize(9)
-    .text('T&ME REPAIR', cx, y + 56, { width: cw, align: 'center' });
+    .text(subtitle, cx, y + 56, { width: cw, align: 'center' });
+  if (drawRule) {
+    doc.moveTo(M, y + 74).lineTo(PAGE_W - M, y + 74).strokeColor(LINE).lineWidth(0.6).stroke();
+    return y + 86;
+  }
   return y + 76;
 }
 
-function drawFooter(doc, payload, y, pageNo, totalPages) {
+function drawFooter(doc, payload, y, pageNo, totalPages, formatText = 'Repair Closure Format') {
   doc.moveTo(M, y).lineTo(PAGE_W - M, y).strokeColor(LINE).lineWidth(0.6).stroke();
   doc.font('Helvetica').fontSize(6.8).fillColor(COLORS.title);
   const footerText = [
     `Document No. ${jcCode(payload)}`,
     `Revised on ${longDate(payload.created_at || payload.jc_recd_date)}`,
-    'Repair Closure Format',
+    formatText,
     `Page ${pageNo} of ${totalPages}`,
     'SAC, ISRO, Ahmedabad',
   ].join('     ');
@@ -146,9 +156,9 @@ function repairEquipmentText(rows) {
     .join(', ');
 }
 
-function drawDeviceHeader(doc, y) {
+function drawDeviceHeader(doc, y, quantityLabel = 'Quantity') {
   const widths = [34, 238, 96, 70, CONTENT_W - 34 - 238 - 96 - 70];
-  const headers = ['Sr. No.', 'Description', 'Part No.', 'Quantity', 'Cost (Rs.)'];
+  const headers = ['Sr. No.', 'Description', 'Part No.', quantityLabel, 'Cost (Rs.)'];
   let cx = M;
   headers.forEach((h, i) => {
     cell(doc, cx, y, widths[i], 20, h, { bold: true, size: 7 });
@@ -174,7 +184,7 @@ function drawDeviceRow(doc, y, row, index) {
   return y + 24;
 }
 
-function renderTmeRepairJobClosingForm(payload, stream) {
+function renderTmeRepairJobClosingForm(payload, stream, options = {}) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
@@ -192,7 +202,12 @@ function renderTmeRepairJobClosingForm(payload, stream) {
     return yPos + neededHeight > CONTENT_BOTTOM_Y ? newContentPage() : yPos;
   }
 
-  let y = header(doc);
+  const sectionStyle = options.sectionStyle || 'bar';
+  const showCalLabRows = options.showCalLabRows !== false;
+  const showEquipmentUsed = options.showEquipmentUsed !== false;
+  const showUserAcceptance = options.showUserAcceptance === true;
+
+  let y = header(doc, options.subtitle || 'T&ME REPAIR', options.headerRule === true);
   y = ensureSpace(y, 18 * 3 + 10);
   labelValueRow(doc, M, y, [
     { label: 'Job Card No.', value: jcCode(payload), lw: 86, vw: 166 },
@@ -209,8 +224,8 @@ function renderTmeRepairJobClosingForm(payload, stream) {
   ]);
   y += 22;
 
-  y = ensureSpace(y, 16 + 18 * 4 + 6);
-  y = sectionTitle(doc, 'REPAIR SUMMARY', y);
+  y = ensureSpace(y, 16 + 18 * (showCalLabRows ? 4 : 3) + 6);
+  y = sectionTitle(doc, 'REPAIR SUMMARY', y, sectionStyle);
   labelValueRow(doc, M, y, [
     { label: 'Job Started Date', value: dateText(payload.repair_job_start_planned_date || payload.job_start_date || payload.planned_start_date), lw: 104, vw: 154 },
     { label: 'Job Completed Date', value: dateText(payload.repair_job_complete_date || payload.job_end_date || payload.actual_completion_date), lw: 116, vw: CONTENT_W - 104 - 154 - 116 },
@@ -221,18 +236,20 @@ function renderTmeRepairJobClosingForm(payload, stream) {
     { label: 'Reason For Not Repaired', value: payload.repair_not_repairable_reason, lw: 136, vw: CONTENT_W - 92 - 166 - 136 },
   ]);
   y += 18;
-  labelValueRow(doc, M, y, [
-    { label: 'Equipment Received From CAL Lab', value: payload.repair_equipment_received_from_cal_lab, lw: 170, vw: 88 },
-    { label: 'Sent To CAL Lab Date', value: dateText(payload.repair_sent_to_cal_lab_on), lw: 126, vw: CONTENT_W - 170 - 88 - 126 },
-  ]);
-  y += 18;
+  if (showCalLabRows) {
+    labelValueRow(doc, M, y, [
+      { label: 'Equipment Received From CAL Lab', value: payload.repair_equipment_received_from_cal_lab, lw: 170, vw: 88 },
+      { label: 'Sent To CAL Lab Date', value: dateText(payload.repair_sent_to_cal_lab_on), lw: 126, vw: CONTENT_W - 170 - 88 - 126 },
+    ]);
+    y += 18;
+  }
   labelValueRow(doc, M, y, [
     { label: 'Attended By', value: firstText(payload.repair_attended_by_name, payload.repair_attended_by_employee_id, payload.attended_by, payload.assigned_engineer_name), lw: 86, vw: CONTENT_W - 86 },
   ]);
   y += 24;
 
   y = ensureSpace(y, 16 + 24 * 2 + 18 * 2 + 6);
-  y = sectionTitle(doc, 'FAULT ANALYSIS', y);
+  y = sectionTitle(doc, 'FAULT ANALYSIS', y, sectionStyle);
   labelValueRow(doc, M, y, [
     { label: 'Fault Description', value: firstText(payload.repair_fault_analysis_description, payload.repair_fault_description, payload.complaint_description), lw: 112, vw: CONTENT_W - 112 },
   ], 34);
@@ -251,31 +268,54 @@ function renderTmeRepairJobClosingForm(payload, stream) {
   y += 24;
 
   y = ensureSpace(y, 16 + 20);
-  y = sectionTitle(doc, 'FAULTY DEVICE(S) & COST DETAILS', y);
-  y = drawDeviceHeader(doc, y);
+  const deviceTitle = options.deviceTitle || 'FAULTY DEVICE(S) & COST DETAILS';
+  y = sectionTitle(doc, deviceTitle, y, sectionStyle);
+  y = drawDeviceHeader(doc, y, options.quantityLabel || 'Quantity');
   (payload.children?.spares || []).forEach((row, index) => {
     if (y + 24 > CONTENT_BOTTOM_Y) {
       y = newContentPage();
-      y = sectionTitle(doc, 'FAULTY DEVICE(S) & COST DETAILS (CONTINUED)', y);
-      y = drawDeviceHeader(doc, y);
+      y = sectionTitle(doc, `${deviceTitle} (CONTINUED)`, y, sectionStyle);
+      y = drawDeviceHeader(doc, y, options.quantityLabel || 'Quantity');
     }
     y = drawDeviceRow(doc, y, row, index);
   });
   y += 8;
 
-  y = ensureSpace(y, 28 + 6);
-  labelValueRow(doc, M, y, [
-    { label: 'Equipment Used For Repairs (ID Nos.)', value: repairEquipmentText(payload.children?.repair_equipment), lw: 190, vw: CONTENT_W - 190 },
-  ], 28);
-  y += 34;
+  if (showEquipmentUsed) {
+    y = ensureSpace(y, 28 + 6);
+    labelValueRow(doc, M, y, [
+      { label: 'Equipment Used For Repairs (ID Nos.)', value: repairEquipmentText(payload.children?.repair_equipment), lw: 190, vw: CONTENT_W - 190 },
+    ], 28);
+    y += 34;
+  }
+
+  if (showUserAcceptance) {
+    y = ensureSpace(y, 16 + 18 * 2 + 34 + 6);
+    y = sectionTitle(doc, 'USER ACCEPTANCE', y, sectionStyle);
+    labelValueRow(doc, M, y, [
+      { label: 'System Working Satisfactorily After Repair', value: payload.customer_acknowledged ? 'YES' : '', lw: 230, vw: CONTENT_W - 230 },
+    ]);
+    y += 18;
+    labelValueRow(doc, M, y, [
+      { label: 'Date', value: dateText(payload.customer_received_date), lw: 58, vw: 198 },
+      { label: 'Name', value: payload.equipment_received_by_customer, lw: 60, vw: CONTENT_W - 58 - 198 - 60 },
+    ]);
+    y += 18;
+    labelValueRow(doc, M, y, [
+      { label: 'In-Charge Signature', value: '', lw: 122, vw: CONTENT_W - 122 },
+    ], 34);
+    y += 40;
+  }
 
   y = ensureSpace(y, 16 + 42 + 70);
-  y = sectionTitle(doc, 'REMARKS', y);
+  y = sectionTitle(doc, 'REMARKS', y, sectionStyle);
   cell(doc, M, y, CONTENT_W, 42, firstText(payload.repair_remarks, payload.final_closure_notes, payload.review_comments, payload.legacy_remarks), { size: 7.7 });
   y += 52;
   doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.title);
-  doc.text(firstText(payload.reviewed_by, payload.assigned_engineer_name, payload.repair_attended_by_name, 'Name of In-Charge'), M, y, { width: CONTENT_W, align: 'right' });
-  doc.text('Signature of In-Charge', M, y + 20, { width: CONTENT_W, align: 'right' });
+  if (options.showInchargeName !== false) {
+    doc.text(firstText(payload.reviewed_by, payload.assigned_engineer_name, payload.repair_attended_by_name, 'Name of In-Charge'), M, y, { width: CONTENT_W, align: 'right' });
+  }
+  doc.text('Signature of In-Charge', M, options.showInchargeName === false ? y : y + 20, { width: CONTENT_W, align: 'right' });
   doc.moveTo(PAGE_W - M - 142, y + 46).lineTo(PAGE_W - M, y + 46).strokeColor(LINE).lineWidth(0.5).stroke();
   y += 58;
 
@@ -286,7 +326,7 @@ function renderTmeRepairJobClosingForm(payload, stream) {
     const totalPages = range.count;
     const isLastPage = pageNo === totalPages;
     doc.switchToPage(i);
-    drawFooter(doc, payload, isLastPage ? Math.min(lastFooterY, FOOTER_Y) : FOOTER_Y, pageNo, totalPages);
+    drawFooter(doc, payload, isLastPage ? Math.min(lastFooterY, FOOTER_Y) : FOOTER_Y, pageNo, totalPages, options.footerFormatText || 'Repair Closure Format');
   }
   doc.end();
 }

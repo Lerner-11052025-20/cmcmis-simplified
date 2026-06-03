@@ -37,6 +37,7 @@ const { renderFpeRepairJrf }        = require('./templates/fpeRepairJrf/fpeRepai
 const { renderTmeCalibrationJobClosingForm } = require('./templates/tmeCalibrationJobClosingForm/tmeCalibrationJobClosingForm');
 const { renderTmeRepairJobClosingForm } = require('./templates/tmeRepairJobClosingForm/tmeRepairJobClosingForm');
 const { renderFpeCalibrationJobClosingForm } = require('./templates/fpeCalibrationJobClosingForm/fpeCalibrationJobClosingForm');
+const { renderFpeRepairJobClosingForm } = require('./templates/fpeRepairJobClosingForm/fpeRepairJobClosingForm');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -85,13 +86,16 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
   const category = String(payload.job_category || payload.jr_job_category || '').replace('&', '');
   const type = payload.work_type || payload.jr_job_type;
   const isFpeCalibration = category === 'FPE' && type === 'CALIBRATION';
+  const isFpeRepair = category === 'FPE' && type === 'REPAIR';
   const filename = isTmeCalibration
     ? `${jcCode(payload)}_TME_Calibration_JobClosingForm.pdf`
     : isTmeRepair
       ? `${jcCode(payload)}_TME_Repair_JobClosingForm.pdf`
       : isFpeCalibration
         ? `${jcCode(payload)}_FPE_Calibration_JobClosingForm.pdf`
-        : `${jcCode(payload)}_certificate.pdf`;
+        : isFpeRepair
+          ? `${jcCode(payload)}_FPE_Repair_JobClosingForm.pdf`
+          : `${jcCode(payload)}_certificate.pdf`;
   return {
     filename,
     render: (stream) => {
@@ -105,6 +109,10 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
       }
       if (isFpeCalibration) {
         renderFpeCalibrationJobClosingForm(payload, stream, { generated_by: actor });
+        return;
+      }
+      if (isFpeRepair) {
+        renderFpeRepairJobClosingForm(payload, stream, { generated_by: actor });
         return;
       }
       renderJobCardCertificate(payload, stream, { generated_by: actor });
