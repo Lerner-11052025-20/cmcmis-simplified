@@ -97,7 +97,7 @@ export function AboutUs() {
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3 text-center">
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-2xl font-bold text-sky-600">15+</p>
+                  <p className="text-2xl font-bold text-sky-600">25+</p>
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Modules</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
