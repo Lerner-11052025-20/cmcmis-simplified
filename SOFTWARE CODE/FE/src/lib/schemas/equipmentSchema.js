@@ -68,7 +68,7 @@ export const equipmentSchema = z.object({
   project: z.string().trim().max(120).optional().default(''),
 
   // §6 — Dynamic T&C checkboxes, all must be true
-  tc_accepted: z.record(z.literal(true, { errorMap: () => ({ message: 'Required' }) })),
+  tc_accepted: z.record(z.boolean()).default({}),
 }).superRefine((data, ctx) => {
   if (data.make_id === 'other' && (!data.mfg_model_name || data.mfg_model_name.trim() === '')) {
     ctx.addIssue({

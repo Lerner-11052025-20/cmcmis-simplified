@@ -197,6 +197,29 @@ export function EquipmentForm() {
   const selectedMake = watch('make_id');
   const selectedType = watch('equipment_type_id');
 
+  const FIELD_LABELS = {
+    name: 'Equipment Name',
+    make_id: 'Manufacturer Name',
+    mfg_model_name: 'Other Manufacturer Name',
+    serial_no: 'Serial No.',
+    equipment_type_id: 'Equipment Type',
+    other_equipment_type: 'Other Equipment Type',
+    po_number: 'PO Number',
+    po_date: 'PO Date',
+    mivr_number: 'MIVR Number',
+    mivr_date: 'MIVR Date',
+    line_item_code: 'Line Item Code',
+    cost: 'Cost',
+    cost_currency: 'Cost Currency',
+    warranty_months: 'Warranty Period',
+    lab_phone: 'Lab Phone',
+    room_phone: 'Room Phone',
+    division_id: 'Division',
+    subsystem: 'Subsystem',
+    project: 'Project',
+    tc_accepted: 'Terms and Conditions',
+  };
+
   // ── Auto-save draft to localStorage on change ──────────────────────
   useEffect(() => {
     if (!draftKey) return undefined;
@@ -209,6 +232,12 @@ export function EquipmentForm() {
   // ── Submit ────────────────────────────────────────────────────────
   async function onSubmit(values) {
     setSubmitError('');
+    if (!allTncAccepted) {
+      setSubmitError('Please accept all Terms and Conditions before submitting this registration request.');
+      scrollToSection('sec-5');
+      return;
+    }
+
     try {
       const payload = { ...values };
       if (payload.make_id === 'other') {
@@ -221,6 +250,11 @@ export function EquipmentForm() {
       } else {
         payload.other_equipment_type = '';
       }
+      payload.tc_accepted = dynamicTerms.reduce((accepted, t, i) => {
+        const key = `tc_${t.id || i + 1}`;
+        accepted[key] = true;
+        return accepted;
+      }, {});
 
       const result = await createEquipment(payload);
       if (draftKey) localStorage.removeItem(draftKey);
@@ -240,6 +274,36 @@ export function EquipmentForm() {
       }
     }
   }
+
+  function onInvalid(formErrors) {
+    const entries = Object.entries(formErrors || {});
+    const lines = entries.slice(0, 8).map(([field, error]) => {
+      const label = FIELD_LABELS[field] || field;
+      return `- ${label}: ${error?.message || 'Please review this field'}`;
+    });
+
+    if (!allTncAccepted) {
+      lines.push('- Terms and Conditions: accept all listed conditions');
+    }
+
+    setSubmitError(
+      'Cannot submit yet. Please fix the following:\n' +
+      (lines.length ? lines.join('\n') : '- Please review the highlighted fields.'),
+    );
+
+    const firstField = entries[0]?.[0];
+    if (firstField && ['po_number', 'po_date', 'mivr_number', 'mivr_date', 'line_item_code', 'cost', 'cost_currency', 'warranty_months'].includes(firstField)) {
+      scrollToSection('sec-3');
+    } else if (firstField && ['lab_phone', 'room_phone', 'division_id', 'subsystem', 'project'].includes(firstField)) {
+      scrollToSection('sec-4');
+    } else if (firstField === 'tc_accepted' || !allTncAccepted) {
+      scrollToSection('sec-5');
+    } else {
+      scrollToSection('sec-1');
+    }
+  }
+
+  const submitRegistration = handleSubmit(onSubmit, onInvalid);
 
   function saveDraft() {
     if (!draftKey) return;
@@ -318,7 +382,7 @@ export function EquipmentForm() {
         </nav>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8">
+      <form onSubmit={submitRegistration} noValidate className="space-y-8">
         
         <input type="hidden" {...register('job_category')} />
         <input type="hidden" {...register('job_type')} />
@@ -338,7 +402,7 @@ export function EquipmentForm() {
                 <AlertCircle size={18} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
                   <h3 className="text-xs font-extrabold uppercase tracking-widest text-danger">Validation Flags</h3>
-                  <p className="text-xs font-medium text-slate-600 leading-relaxed mt-2">
+                  <p className="text-xs font-medium text-slate-600 leading-relaxed mt-2 whitespace-pre-line">
                     {submitError}
                   </p>
                 </div>
@@ -765,7 +829,7 @@ export function EquipmentForm() {
             </section>
 
             {/* ── NATURAL FOOTER ACTIONS (At the bottom of left column, no overlap) ── */}
-            <div className="bg-white border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] px-6 py-5 flex items-center justify-between rounded-2xl gap-4 select-none transition-all duration-350 hover:shadow-md hover:border-slate-200/80">
+            <div className="relative z-20 bg-white border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] px-6 py-5 flex items-center justify-between rounded-2xl gap-4 select-none transition-all duration-350 hover:shadow-md hover:border-slate-200/80">
               <Button 
                 type="button" 
                 variant="secondary" 
@@ -787,13 +851,19 @@ export function EquipmentForm() {
                   Save Draft
                 </Button>
                 <Button
-                  type="submit"
+                  type="button"
                   variant="primary"
-                  disabled={!isValid || !allTncAccepted || isSubmitting}
+                  onClick={submitRegistration}
+                  disabled={isSubmitting}
                   className={clsx(
                     "shadow-md shadow-accent/15 transition-all duration-150 active:scale-95 hover:bg-accent-hover",
                     (!isValid || !allTncAccepted) ? 'opacity-65' : undefined
                   )}
+                  title={
+                    !isValid || !allTncAccepted
+                      ? 'Click to see which fields still need attention before submitting'
+                      : 'Submit the equipment registration request'
+                  }
                 >
                   {isSubmitting ? (
                     <>
