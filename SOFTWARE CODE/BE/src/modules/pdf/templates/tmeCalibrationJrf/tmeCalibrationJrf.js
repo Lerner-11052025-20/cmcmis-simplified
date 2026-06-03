@@ -107,7 +107,7 @@ function sectionTitle(doc, title, y) {
   return y + 16;
 }
 
-function header(doc, title) {
+function header(doc, title, subtitle) {
   const y = 24;
   if (ISRO_LOGO) {
     doc.image(ISRO_LOGO, M + 2, y, { fit: [60, 52], align: 'center', valign: 'center' });
@@ -123,7 +123,11 @@ function header(doc, title) {
   doc.font('Helvetica-Bold').fontSize(11)
     .text('TIMCD', cx, y + 22, { width: cw, align: 'center' });
   doc.font('Helvetica-Bold').fontSize(13)
-    .text(title, cx, y + 43, { width: cw, align: 'center' });
+    .text(title, cx, y + (subtitle ? 39 : 43), { width: cw, align: 'center' });
+  if (subtitle) {
+    doc.font('Helvetica').fontSize(9).fillColor(COLORS.title)
+      .text(subtitle, cx, y + 57, { width: cw, align: 'center' });
+  }
 
   doc.moveTo(M, y + 70).lineTo(PAGE_W - M, y + 70).strokeColor(LINE).lineWidth(0.6).stroke();
   return y + 78;
@@ -230,7 +234,7 @@ function renderTmeJrf(payload, stream, config) {
     return yPos + neededHeight > CONTENT_BOTTOM_Y ? newContentPage() : yPos;
   }
 
-  let y = header(doc, config.title);
+  let y = header(doc, config.title, config.subtitle);
 
   y = ensureSpace(y, 25);
   labelValueRow(doc, M, y, [
@@ -306,7 +310,7 @@ function renderTmeJrf(payload, stream, config) {
       { label: 'Equipment is being sent after Repairs', value: boolText(payload.equipment_sent_after_repair), lw: 190, vw: CONTENT_W - 190 },
     ]);
     y += 23;
-  } else {
+  } else if (!config.systemInformation) {
     y = ensureSpace(y, 16 + 25 + 23);
     y = sectionTitle(doc, 'COMPLAINT DETAILS', y);
     labelValueRow(doc, M, y, [
@@ -347,7 +351,7 @@ function renderTmeJrf(payload, stream, config) {
     ['Room No.', payload.room_phone],
     ['Division', payload.division_code || payload.division_name],
     ['Sub-System', payload.subsystem],
-    ['Name of Project', payload.project_name],
+    [config.projectLabel || 'Name of Project', payload.project_name],
   ];
   submitRows.forEach(([label, value], i) => {
     labelValueRow(doc, M, y + i * 18, [{ label, value, lw: leftLabel, vw: leftValue }], 18);
@@ -378,7 +382,7 @@ function renderTmeJrf(payload, stream, config) {
   y += 18;
   labelValueRow(doc, M, y, [
     { label: 'Section Job No.', value: payload.linked_job_card_section_no, lw: 92, vw: 174 },
-    { label: 'Engineer In-Charge', value: payload.linked_engineer_name || payload.assigned_engineer_name, lw: 104, vw: CONTENT_W - 92 - 174 - 104 },
+    { label: config.engineerLabel || 'Engineer In-Charge', value: payload.linked_engineer_name || payload.assigned_engineer_name, lw: 104, vw: CONTENT_W - 92 - 174 - 104 },
   ]);
   y += 18;
   labelValueRow(doc, M, y, [
@@ -386,20 +390,22 @@ function renderTmeJrf(payload, stream, config) {
   ]);
   y += 23;
 
-  y = ensureSpace(y, 16 + 25 + 29 + 23 + 18);
-  y = sectionTitle(doc, 'EQUIPMENT RECEIPT ACKNOWLEDGEMENT', y);
-  cell(doc, M, y, CONTENT_W, 25, config.receiptText, { bold: true, size: 8 });
-  y += 29;
-  labelValueRow(doc, M, y, [
-    { label: 'Date', value: dateText(payload.linked_customer_received_date), lw: 58, vw: 190 },
-    { label: 'Signature', value: '', lw: 70, vw: CONTENT_W - 58 - 190 - 70 },
-  ], 23);
-  y += 23;
-  labelValueRow(doc, M, y, [
-    { label: 'Name', value: payload.linked_customer_received_by, lw: 58, vw: 190 },
-    { label: '', value: '', lw: 70, vw: CONTENT_W - 58 - 190 - 70 },
-  ], 18);
-  y += 18;
+  if (config.showReceipt !== false) {
+    y = ensureSpace(y, 16 + 25 + 29 + 23 + 18);
+    y = sectionTitle(doc, 'EQUIPMENT RECEIPT ACKNOWLEDGEMENT', y);
+    cell(doc, M, y, CONTENT_W, 25, config.receiptText, { bold: true, size: 8 });
+    y += 29;
+    labelValueRow(doc, M, y, [
+      { label: 'Date', value: dateText(payload.linked_customer_received_date), lw: 58, vw: 190 },
+      { label: 'Signature', value: '', lw: 70, vw: CONTENT_W - 58 - 190 - 70 },
+    ], 23);
+    y += 23;
+    labelValueRow(doc, M, y, [
+      { label: 'Name', value: payload.linked_customer_received_by, lw: 58, vw: 190 },
+      { label: '', value: '', lw: 70, vw: CONTENT_W - 58 - 190 - 70 },
+    ], 18);
+    y += 18;
+  }
 
   const firstPageFooterY = y + 22;
   const range = doc.bufferedPageRange();

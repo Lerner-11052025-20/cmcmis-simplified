@@ -33,6 +33,7 @@ const { renderJobRequestDetails }  = require('./templates/jobRequestDetails');
 const { renderTmeCalibrationJrf }   = require('./templates/tmeCalibrationJrf/tmeCalibrationJrf');
 const { renderTmeRepairJrf }        = require('./templates/tmeRepairJrf/tmeRepairJrf');
 const { renderFpeCalibrationJrf }   = require('./templates/fpeCalibrationJrf/fpeCalibrationJrf');
+const { renderFpeRepairJrf }        = require('./templates/fpeRepairJrf/fpeRepairJrf');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -116,13 +117,16 @@ async function prepareJobRequestDetails(jrNo, actor, rowScope) {
   const isTmeCalibration = payload.job_category === 'TME' && payload.job_type === 'CALIBRATION';
   const isTmeRepair = payload.job_category === 'TME' && payload.job_type === 'REPAIR';
   const isFpeCalibration = payload.job_category === 'FPE' && payload.job_type === 'CALIBRATION';
+  const isFpeRepair = payload.job_category === 'FPE' && payload.job_type === 'REPAIR';
   const filename = isTmeCalibration
     ? `${jrCode(payload)}_TME_Calibration_JRF.pdf`
     : isTmeRepair
       ? `${jrCode(payload)}_TME_Repair_JRF.pdf`
       : isFpeCalibration
         ? `${jrCode(payload)}_FPE_Calibration_JRF.pdf`
-        : `${jrCode(payload)}_details.pdf`;
+        : isFpeRepair
+          ? `${jrCode(payload)}_FPE_Repair_JRF.pdf`
+          : `${jrCode(payload)}_details.pdf`;
   return {
     filename,
     render: (stream) => {
@@ -136,6 +140,10 @@ async function prepareJobRequestDetails(jrNo, actor, rowScope) {
       }
       if (isFpeCalibration) {
         renderFpeCalibrationJrf(payload, stream, { generated_by: actor });
+        return;
+      }
+      if (isFpeRepair) {
+        renderFpeRepairJrf(payload, stream, { generated_by: actor });
         return;
       }
       renderJobRequestDetails(payload, stream, { generated_by: actor });
