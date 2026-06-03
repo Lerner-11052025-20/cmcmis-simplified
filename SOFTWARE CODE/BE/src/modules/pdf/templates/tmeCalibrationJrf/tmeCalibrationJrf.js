@@ -19,6 +19,9 @@ const PAGE_H = 841.89;
 const CONTENT_W = PAGE_W - M * 2;
 const SECTION_BG = '#ebeef2';
 const LINE = '#111111';
+const PAGE_TOP_Y = 34;
+const FOOTER_Y = PAGE_H - 50;
+const CONTENT_BOTTOM_Y = FOOTER_Y - 12;
 
 function assetPath(filename) {
   const candidates = [
@@ -145,63 +148,102 @@ function instructionBox(doc, y) {
   return y + h + 5;
 }
 
-function drawFooter(doc, payload) {
-  const footerY = PAGE_H - 47;
+function drawFooter(doc, payload, y, pageNo, totalPages) {
+  const footerY = y;
   const code = jrCode(payload);
   doc.moveTo(M, footerY).lineTo(PAGE_W - M, footerY).strokeColor(LINE).lineWidth(0.6).stroke();
-  doc.font('Helvetica').fontSize(7.2).fillColor(COLORS.title);
-  const col = CONTENT_W / 4;
+  doc.font('Helvetica').fontSize(6.8).fillColor(COLORS.title);
   const revised = longDate(payload.created_at || payload.submitted_at_legacy);
-  doc.text(`Document No. ${code}`, M, footerY + 8, { width: col, ellipsis: true });
-  doc.text(`Revised on ${revised}`, M + col, footerY + 8, { width: col, ellipsis: true });
-  doc.text('Job Request Format TIMCD JRF-01', M + col * 2, footerY + 8, { width: col, ellipsis: true });
-  doc.text('Page 1 of 1', M + col * 3, footerY + 8, { width: col, align: 'right' });
-  doc.text('SAC, Ahmedabad-15', M, footerY + 25, { width: CONTENT_W, align: 'right' });
+  const footerText = [
+    `Document No. ${code}`,
+    `Revised on ${revised}`,
+    'Job Request Format TIMCD JRF-01',
+    `Page ${pageNo} of ${totalPages}`,
+    'SAC, ISRO, Ahmedabad',
+  ].join('     ');
+  doc.text(footerText, M, footerY + 8, {
+    width: CONTENT_W,
+    align: 'left',
+    lineBreak: false,
+    ellipsis: true,
+  });
 }
 
 function drawAccessories(doc, y, rows) {
-  const headers = ['Item Type', 'Sr. No.', 'Item Name', 'Model No.', 'Serial No.'];
-  const widths = [76, 58, 210, 86, CONTENT_W - 76 - 58 - 210 - 86];
+  const headers = ['Item Type', 'Item Name', 'Serial No.'];
+  const widths = [130, 300, CONTENT_W - 130 - 300];
   const rowH = 18;
   let cx = M;
   headers.forEach((h, i) => {
     cell(doc, cx, y, widths[i], rowH, h, { bold: true, size: 7.4 });
     cx += widths[i];
   });
-  for (let r = 0; r < 2; r += 1) {
-    const item = rows[r] || {};
+
+  rows.forEach((item, r) => {
     cx = M;
     const values = [
       item.type,
-      item.sr_no || item.serial_no,
       item.name,
-      item.model_no,
       item.serial_no,
     ];
     values.forEach((v, i) => {
       cell(doc, cx, y + rowH * (r + 1), widths[i], rowH, v, { size: 7.5 });
       cx += widths[i];
     });
-  }
-  return y + rowH * 3 + 4;
+  });
+
+  return y + rowH * (rows.length + 1) + 4;
+}
+
+function drawAccessoryHeader(doc, y) {
+  const headers = ['Item Type', 'Item Name', 'Serial No.'];
+  const widths = [130, 300, CONTENT_W - 130 - 300];
+  let cx = M;
+  headers.forEach((h, i) => {
+    cell(doc, cx, y, widths[i], 18, h, { bold: true, size: 7.4 });
+    cx += widths[i];
+  });
+  return y + 18;
+}
+
+function drawAccessoryRow(doc, y, item) {
+  const widths = [130, 300, CONTENT_W - 130 - 300];
+  const values = [item.type, item.name, item.serial_no];
+  let cx = M;
+  values.forEach((v, i) => {
+    cell(doc, cx, y, widths[i], 18, v, { size: 7.5 });
+    cx += widths[i];
+  });
+  return y + 18;
 }
 
 function renderTmeCalibrationJrf(payload, stream) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
-    bufferPages: false,
+    bufferPages: true,
     autoFirstPage: true,
   });
   doc.pipe(stream);
 
+  function newContentPage() {
+    doc.addPage();
+    return PAGE_TOP_Y;
+  }
+
+  function ensureSpace(yPos, neededHeight) {
+    return yPos + neededHeight > CONTENT_BOTTOM_Y ? newContentPage() : yPos;
+  }
+
   let y = header(doc);
 
+  y = ensureSpace(y, 25);
   labelValueRow(doc, M, y, [
     { label: 'Equipment ID', value: equipmentId(payload), lw: 84, vw: CONTENT_W - 84 },
   ], 20);
   y += 25;
 
+  y = ensureSpace(y, 16 + 18 * 3 + 23);
   y = sectionTitle(doc, 'EQUIPMENT INFORMATION', y);
   labelValueRow(doc, M, y, [
     { label: 'Name of Equipment', value: payload.equipment_name, lw: 106, vw: 190 },
@@ -219,15 +261,27 @@ function renderTmeCalibrationJrf(payload, stream) {
   ]);
   y += 23;
 
+  y = ensureSpace(y, 16 + 18);
   y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS', y);
-  y = drawAccessories(doc, y, payload.children?.accessories || []);
+  y = drawAccessoryHeader(doc, y);
+  (payload.children?.accessories || []).forEach((item) => {
+    if (y + 18 > CONTENT_BOTTOM_Y) {
+      y = newContentPage();
+      y = sectionTitle(doc, 'ACCESSORIES / ATTACHMENTS (CONTINUED)', y);
+      y = drawAccessoryHeader(doc, y);
+    }
+    y = drawAccessoryRow(doc, y, item);
+  });
+  y += 4;
 
+  y = ensureSpace(y, 16 + 18 + 23);
   y = sectionTitle(doc, 'CALIBRATION INFORMATION', y);
   labelValueRow(doc, M, y, [
     { label: 'Equipment is being sent after Repairs', value: boolText(payload.equipment_sent_after_repair), lw: 190, vw: CONTENT_W - 190 },
   ]);
   y += 23;
 
+  y = ensureSpace(y, 16 + 24 + 18 + 18 + 90 + 6);
   y = sectionTitle(doc, 'REQUEST DETAILS', y);
   const colW = CONTENT_W / 2;
   cell(doc, M, y, colW, 24, 'SUBMITTED BY', { fill: SECTION_BG, bold: true, size: 8, align: 'center', valign: 'center' });
@@ -268,8 +322,10 @@ function renderTmeCalibrationJrf(payload, stream) {
   cell(doc, approvalX + sigLabelW, y, colW - sigLabelW, sigH, '', { size: 7.6 });
   y += sigH + 6;
 
+  y = ensureSpace(y, 66 + 5);
   y = instructionBox(doc, y);
 
+  y = ensureSpace(y, 16 + 18 * 5 + 23);
   y = sectionTitle(doc, 'FOR TIMCD USE ONLY', y);
   labelValueRow(doc, M, y, [
     { label: 'Job Card Received Date', value: dateText(payload.linked_job_card_received_date), lw: 118, vw: 148 },
@@ -296,6 +352,7 @@ function renderTmeCalibrationJrf(payload, stream) {
   ]);
   y += 23;
 
+  y = ensureSpace(y, 16 + 25 + 29 + 23 + 18);
   y = sectionTitle(doc, 'EQUIPMENT RECEIPT ACKNOWLEDGEMENT', y);
   cell(doc, M, y, CONTENT_W, 25, 'The Equipment is Received from Calibration Lab', { bold: true, size: 8 });
   y += 29;
@@ -308,8 +365,23 @@ function renderTmeCalibrationJrf(payload, stream) {
     { label: 'Name', value: payload.linked_customer_received_by, lw: 58, vw: 190 },
     { label: '', value: '', lw: 70, vw: CONTENT_W - 58 - 190 - 70 },
   ], 18);
+  y += 18;
 
-  drawFooter(doc, payload);
+  const firstPageFooterY = y + 22;
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i += 1) {
+    const pageNo = i - range.start + 1;
+    const totalPages = range.count;
+    const isLastPage = pageNo === totalPages;
+    doc.switchToPage(i);
+    drawFooter(
+      doc,
+      payload,
+      isLastPage ? Math.min(firstPageFooterY, FOOTER_Y) : FOOTER_Y,
+      pageNo,
+      totalPages,
+    );
+  }
   doc.end();
 }
 
