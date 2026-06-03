@@ -583,7 +583,7 @@ export function JobRequestNew() {
           {/* ─────────────────────── SECTION 1: JOB TYPE ─────────────────────── */}
           <section 
             id="sec-1" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 border-l-[6px] border-l-accent"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-center gap-3.5 mb-6 border-b border-slate-100 pb-5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/5 text-accent border border-accent/10">
@@ -624,7 +624,7 @@ export function JobRequestNew() {
           {/* ─────────────────────── SECTION 2: EQUIPMENT DETAILS ─────────────────────── */}
           <section 
             id="sec-2" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 border-l-[6px] border-l-emerald-500"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-center gap-3.5 mb-6 border-b border-slate-100 pb-5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/50">
@@ -714,7 +714,7 @@ export function JobRequestNew() {
           {/* ─────────────────────── SECTION 3: ACCESSORIES ─────────────────────── */}
           <section 
             id="sec-3" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 border-l-[6px] border-l-rose-500"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-center gap-3.5 mb-2 border-b border-slate-100 pb-5">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100/50">
@@ -841,7 +841,7 @@ export function JobRequestNew() {
           {/* ─────────────────────── SECTION 4: SUBMITTED BY ─────────────────────── */}
           <section 
             id="sec-4" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 border-l-[6px] border-l-amber-500"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300"
           >
             <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-5 flex-wrap gap-3">
               <div className="flex items-center gap-3.5">
@@ -963,7 +963,7 @@ export function JobRequestNew() {
           {/* ─────────────────────── SECTION 5: TERMS & CONDITIONS ─────────────────────── */}
           <section 
             id="sec-5" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 border-l-[6px] border-l-purple-500 animate-scaleUp"
+            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 animate-scaleUp"
           >
             <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-5 flex-wrap gap-3">
               <div className="flex items-center gap-3.5">
