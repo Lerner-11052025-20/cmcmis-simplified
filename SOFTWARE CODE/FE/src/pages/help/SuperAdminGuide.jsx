@@ -13,6 +13,8 @@ import {
   Info,
   KeyRound,
   LineChart,
+  LogOut,
+  ListChecks,
   Monitor,
   MousePointerClick,
   RefreshCw,
@@ -330,6 +332,45 @@ const superAdminModules = [
     ],
     tips: ['Good task names reduce user confusion.', 'Avoid near-duplicate task labels.'],
     visual: 'settings',
+  },
+  {
+    id: 'sa-checklist-mgmt',
+    group: 'Administration',
+    title: 'Checklist Management',
+    subtitle: 'Create and configure task checklists linked to equipment types.',
+    icon: ListChecks,
+    accent: 'bg-indigo-50 text-indigo-600',
+    to: '/admin/checklists',
+    action: 'Open Checklists',
+    steps: [
+      'Open Checklist Mgmt from the sidebar.',
+      'Check the metric counters for total checklists, covered equipment, and defined tasks.',
+      'Use the search bar to locate specific equipment checklists or names.',
+      'Expand any checklist card to view individual task descriptions and NABL/NON-NABL scopes.',
+      'To edit, click the Edit icon, resolve the equipment code, and add/remove tasks.',
+      'Save the checklist once tasks and scopes are verified.',
+    ],
+    tips: ['Checklists are fetched dynamically when creating job cards from converted requests.', 'Specify NABL/NON-NABL types carefully to match standard guidelines.'],
+    visual: 'checklists',
+  },
+  {
+    id: 'sa-lab-capacity',
+    group: 'Administration',
+    title: 'Lab Capacity',
+    subtitle: 'Monitor technician backlog, turnaround compliance, and allocation density.',
+    icon: LineChart,
+    accent: 'bg-emerald-50 text-emerald-600',
+    to: '/admin/lab-capacity',
+    action: 'Open Lab Capacity',
+    steps: [
+      'Open Lab Capacity from the sidebar.',
+      'Review overall SLA compliance rate dials and backlog numbers.',
+      'Inspect bottleneck alerts pointing to technicians with heavy workloads.',
+      'Scroll to the technician roster to analyze active jobs, average cycle days, and status (e.g. Critical, Low).',
+      'Use these capacity insights during meetings or during backlog optimization.',
+    ],
+    tips: ['Real-time logs are loaded automatically on page load.', 'Refresh stats using the refresh button on top-right.'],
+    visual: 'lab-capacity',
   },
   {
     id: 'sa-audit',
@@ -880,6 +921,8 @@ function ModuleVisual({ type, title }) {
   if (type === 'verify') return <VerifyVisual />;
   if (type === 'settings') return <SettingsVisual title={title} />;
   if (type === 'audit') return <AuditVisual />;
+  if (type === 'checklists') return <ChecklistsVisual />;
+  if (type === 'lab-capacity') return <LabCapacityVisual />;
   if (type === 'common-topbar') return <CommonTopBarVisual />;
   if (type === 'common-global-search') return <CommonGlobalSearchVisual />;
   if (type === 'common-module-search') return <CommonModuleSearchVisual />;
@@ -909,13 +952,19 @@ function BrowserFrame({ title, children }) {
 function LoginVisual() {
   return (
     <BrowserFrame title="/login">
-      <div className="mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-          <KeyRound size={24} strokeWidth={1.9} />
+      <div className="mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left">
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-605 mb-2">
+            <KeyRound size={22} />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">CMCMIS Admin Portal</h3>
+          <p className="text-[10px] text-slate-400">ISRO Space Applications Centre</p>
         </div>
-        <InputPreview label="Employee ID" value="SA79900" />
-        <InputPreview label="Password" value="********" />
-        <div className="mt-4 rounded-xl bg-sky-600 px-4 py-3 text-center text-sm font-semibold text-white">Sign In</div>
+        <div className="space-y-4">
+          <InputPreview label="Employee ID" value="SA79900" />
+          <InputPreview label="Password" value="••••••••" />
+          <div className="mt-4 rounded-xl bg-indigo-600 px-4 py-3 text-center text-sm font-semibold text-white shadow hover:bg-indigo-700 transition">Sign In</div>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -925,23 +974,151 @@ function DashboardVisual() {
   return (
     <BrowserFrame title="/dashboard">
       <TopBarMock />
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {['Pending Jobs', 'Active Equipment', 'Users', 'Audit Events'].map((item) => (
-          <KpiPreview key={item} label={item} />
-        ))}
+      <div className="mt-4 grid grid-cols-2 gap-3 select-none">
+        <div className="rounded-xl border border-slate-150 bg-white p-3 shadow-sm text-left">
+          <div className="text-xl font-bold text-slate-850">148</div>
+          <div className="text-[9px] font-bold text-slate-455 uppercase tracking-wide">Total Registered Assets</div>
+        </div>
+        <div className="rounded-xl border border-slate-150 bg-white p-3 shadow-sm text-left">
+          <div className="text-xl font-bold text-indigo-600">32</div>
+          <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-wide">Jobs In Calibration</div>
+        </div>
+        <div className="rounded-xl border border-slate-150 bg-white p-3 shadow-sm text-left">
+          <div className="text-xl font-bold text-slate-850">1,248</div>
+          <div className="text-[9px] font-bold text-slate-455 uppercase tracking-wide">Security Audits Logged</div>
+        </div>
+        <div className="rounded-xl border border-slate-150 bg-white p-3 shadow-sm text-left">
+          <div className="text-xl font-bold text-emerald-600">96.8%</div>
+          <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-wide">SLA Compliance Rate</div>
+        </div>
       </div>
     </BrowserFrame>
   );
 }
 
 function TableVisual({ title }) {
+  if (title === 'Job Requests') {
+    return (
+      <BrowserFrame title="/job-requests">
+        <div className="space-y-4 text-left">
+          <div className="flex justify-between items-center">
+            <SearchBar text="Filter requests..." />
+            <span className="text-[10px] font-bold text-indigo-600 cursor-pointer">+ Create</span>
+          </div>
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <thead className="bg-slate-50 border-b text-[8px] text-slate-450 uppercase">
+                <tr>
+                  <th className="p-2">Code</th>
+                  <th className="p-2">Equipment</th>
+                  <th className="p-2 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="p-2 text-indigo-650">JR-2026-0842</td>
+                  <td className="p-2">Spectrum Analyzer</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-emerald-50 border border-emerald-205 text-emerald-700 px-1 py-0.5 rounded text-[8px] font-bold">Approved</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 text-indigo-650">JR-2026-0841</td>
+                  <td className="p-2">RF Generator</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-amber-50 border border-amber-250/20 text-amber-700 px-1 py-0.5 rounded text-[8px] font-bold">Pending</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
+  if (title === 'Admin Users' || title === 'Users') {
+    return (
+      <BrowserFrame title="/admin/users">
+        <div className="space-y-4 text-left">
+          <SearchBar text="Search user directory..." />
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <thead className="bg-slate-50 border-b text-[8px] text-slate-450 uppercase">
+                <tr>
+                  <th className="p-2">Name / ID</th>
+                  <th className="p-2">Role</th>
+                  <th className="p-2 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="p-2">
+                    <p className="font-bold text-slate-805">Dr. K. Kumar</p>
+                    <p className="text-[8px] text-slate-400">ID: SA79900</p>
+                  </td>
+                  <td className="p-2 text-indigo-650">LAB_IN_CHARGE</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[8px] font-bold">Active</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2">
+                    <p className="font-bold text-slate-805">S. Verma</p>
+                    <p className="text-[8px] text-slate-400">ID: ENG9001</p>
+                  </td>
+                  <td className="p-2 text-indigo-650">LAB_ENGINEER</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[8px] font-bold">Active</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
+  if (title === 'Admin Employees' || title === 'Employees') {
+    return (
+      <BrowserFrame title="/admin/employees">
+        <div className="space-y-4 text-left">
+          <SearchBar text="Filter employees roster..." />
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <thead className="bg-slate-50 border-b text-[8px] text-slate-450 uppercase">
+                <tr>
+                  <th className="p-2">Emp ID</th>
+                  <th className="p-2">Name</th>
+                  <th className="p-2">Designation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="p-2 text-indigo-650">SA79900</td>
+                  <td className="p-2 font-bold text-slate-805">Dr. K. Kumar</td>
+                  <td className="p-2">Senior Scientist (TME)</td>
+                </tr>
+                <tr>
+                  <td className="p-2 text-indigo-650">ENG9001</td>
+                  <td className="p-2 font-bold text-slate-805">S. Verma</td>
+                  <td className="p-2">Technical Engineer (FPE)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
   return (
     <BrowserFrame title={title}>
       <SearchBar text={`Search ${title}`} />
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2 text-left">
         <RowPreview title={`${title} record`} subtitle="Status and owner details" tag="Open" />
         <RowPreview title="Recent item" subtitle="Linked workflow information" tag="View" />
-        <RowPreview title="Filtered item" subtitle="Additional row context" tag="Review" />
       </div>
     </BrowserFrame>
   );
@@ -950,17 +1127,19 @@ function TableVisual({ title }) {
 function WorkflowVisual() {
   return (
     <BrowserFrame title="/conversion">
-      <SearchBar text="Review submitted requests" />
-      <div className="mt-5 flex items-center gap-2">
-        {['Request', 'Review', 'Assign', 'Job Card'].map((item, index) => (
-          <div key={item} className="flex flex-1 items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-sky-700">{index + 1}</span>
-            <span className="text-xs font-semibold text-slate-600">{item}</span>
-            {index < 3 ? <span className="h-0.5 flex-1 bg-slate-200" /> : null}
+      <div className="space-y-3.5 text-left">
+        <SearchBar text="Review incoming conversion queue..." />
+        <div className="p-3 border border-indigo-150 bg-indigo-50/5 rounded-xl space-y-3">
+          <div className="flex justify-between items-center text-xs">
+            <span className="font-bold text-slate-850">JR-2026-0842 (Calibration)</span>
+            <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">Unassigned</span>
           </div>
-        ))}
+          <div className="flex gap-2 text-[10px] font-semibold border-t pt-2.5">
+            <div className="flex-1 rounded-lg border px-2.5 py-1 text-slate-500 bg-white">Assign: S. Verma (FPE Cal)</div>
+            <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer">Convert to Job Card</span>
+          </div>
+        </div>
       </div>
-      <div className="mt-5 rounded-xl border border-slate-100 bg-white p-3 text-sm font-semibold text-slate-700">Convert after review</div>
     </BrowserFrame>
   );
 }
@@ -968,13 +1147,23 @@ function WorkflowVisual() {
 function JobCardVisual() {
   return (
     <BrowserFrame title="/job-cards">
-      <div className="mb-3 flex gap-2">
-        {['Assigned', 'In Progress', 'Completed'].map((item, index) => (
-          <span key={item} className={`rounded-xl px-3 py-2 text-xs font-semibold ${index === 1 ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'}`}>{item}</span>
-        ))}
+      <div className="space-y-4 text-left">
+        <div className="flex border-b text-[10px] font-bold text-slate-400 gap-4 select-none pb-1.5">
+          <span className="text-indigo-600 border-b-2 border-indigo-600 pb-1.5">All Cards</span>
+          <span>Assigned</span>
+          <span>In Progress</span>
+        </div>
+        <div className="p-3 border rounded-xl space-y-2">
+          <div className="flex justify-between items-center text-xs">
+            <span className="font-bold text-slate-800">JC-2026-1004</span>
+            <span className="bg-sky-50 text-sky-700 border px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">In Progress</span>
+          </div>
+          <div className="text-[10px] text-slate-500 leading-tight space-y-0.5 font-semibold">
+            <p>Instrument: Agilent Oscilloscope (EQ-10024)</p>
+            <p>Engineer: S. Verma</p>
+          </div>
+        </div>
       </div>
-      <RowPreview title="JC-2026-2424" subtitle="Engineer and status details" tag="Open" />
-      <div className="mt-4 h-24 rounded-xl bg-slate-100" />
     </BrowserFrame>
   );
 }
@@ -982,10 +1171,15 @@ function JobCardVisual() {
 function EquipmentVisual() {
   return (
     <BrowserFrame title="/equipment">
-      <SearchBar text="Search equipment or serial number" />
-      <div className="mt-4 space-y-2">
-        <RowPreview title="Equipment-1" subtitle="Status: Active" tag="View" />
-        <RowPreview title="Signal Analyzer" subtitle="Verification ready" tag="Open" />
+      <div className="space-y-4 text-left">
+        <SearchBar text="Search equipment catalog..." />
+        <div className="p-3 border rounded-xl flex items-center justify-between">
+          <div className="leading-tight">
+            <h4 className="text-xs font-bold text-slate-800">Agilent Spectrum Analyzer</h4>
+            <p className="text-[10px] text-slate-400">EQ-10024 | Serial: SN-10442 | Div: TME</p>
+          </div>
+          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-250/20 px-2 py-0.5 rounded uppercase">Active</span>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -994,13 +1188,22 @@ function EquipmentVisual() {
 function ScheduleVisual() {
   return (
     <BrowserFrame title="/schedule">
-      <div className="grid grid-cols-3 gap-2">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
-          <div key={day} className={`rounded-xl border border-slate-100 p-3 text-center text-xs font-semibold ${index === 2 ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500'}`}>
-            {day}
-            <div className="mt-2 h-10 rounded-lg bg-slate-100" />
+      <div className="space-y-3.5 text-left">
+        <div className="flex items-center justify-between border-b pb-2 select-none">
+          <h4 className="text-xs font-bold text-slate-800">Live Calibration Schedules</h4>
+          <span className="text-[9px] text-indigo-650 font-bold cursor-pointer">Week View</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold">
+          <div className="border border-indigo-150 p-2.5 bg-indigo-50/10 rounded-xl relative">
+            <p className="text-[8px] font-bold text-indigo-500 uppercase">Mon - 04 Jun</p>
+            <p className="text-slate-800 mt-1">JC-2026-1004</p>
+            <p className="text-[9px] text-slate-450 mt-0.5">S. Verma (FPE Cal)</p>
           </div>
-        ))}
+          <div className="border p-2.5 bg-slate-50/50 rounded-xl">
+            <p className="text-[8px] font-bold text-slate-400 uppercase">Tue - 05 Jun</p>
+            <p className="text-slate-550 mt-1">Free Slot</p>
+          </div>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1009,15 +1212,20 @@ function ScheduleVisual() {
 function SearchVisual() {
   return (
     <BrowserFrame title="/inquiry">
-      <div className="mb-3 flex gap-2">
-        {['Equipment', 'Vendors', 'Job Requests'].map((item, index) => (
-          <span key={item} className={`rounded-xl px-3 py-2 text-xs font-semibold ${index === 0 ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'}`}>{item}</span>
-        ))}
-      </div>
-      <SearchBar text="Search records" />
-      <div className="mt-4 space-y-2">
-        <RowPreview title="JR-2026-2430" subtitle="Job request match" tag="Open" />
-        <RowPreview title="Equipment-1" subtitle="Equipment match" tag="Open" />
+      <div className="space-y-4 text-left">
+        <div className="flex border-b text-xs font-semibold text-slate-400 gap-4 pb-2">
+          <span className="text-indigo-600 border-b-2 border-indigo-600 pb-2">Equipment</span>
+          <span>Vendors</span>
+          <span>Job Requests</span>
+        </div>
+        <SearchBar text="Search serial or model..." />
+        <div className="p-3 border rounded-xl hover:bg-slate-50 cursor-pointer flex justify-between items-center text-xs">
+          <div>
+            <h4 className="font-bold text-slate-800">Agilent Spectrum Analyzer</h4>
+            <p className="text-[10px] text-slate-400">EQ-10024 | Serial: MY52102</p>
+          </div>
+          <span className="bg-indigo-50 text-indigo-600 border px-1.5 py-0.5 rounded font-bold text-[9px]">Open</span>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1026,11 +1234,24 @@ function SearchVisual() {
 function AnalyticsVisual() {
   return (
     <BrowserFrame title="/analytics">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="h-28 rounded-xl bg-sky-100" />
-        <div className="h-28 rounded-xl bg-indigo-100" />
-        <div className="h-20 rounded-xl bg-emerald-100" />
-        <div className="h-20 rounded-xl bg-amber-100" />
+      <div className="space-y-4 text-left select-none">
+        <h4 className="text-xs font-bold text-slate-700">Analytical Throughput KPI</h4>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="p-3 border rounded-xl bg-slate-50/30">
+            <p className="text-[8px] font-bold text-slate-400 uppercase">Calibration Load</p>
+            <div className="mt-2 text-md font-bold text-slate-850">28 Active</div>
+            <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-indigo-600 h-full w-3/4"></div>
+            </div>
+          </div>
+          <div className="p-3 border rounded-xl bg-slate-50/30">
+            <p className="text-[8px] font-bold text-slate-400 uppercase">Repair Load</p>
+            <div className="mt-2 text-md font-bold text-slate-850">4 Active</div>
+            <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-amber-500 h-full w-[15%]"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1039,15 +1260,21 @@ function AnalyticsVisual() {
 function ReportsVisual() {
   return (
     <BrowserFrame title="/reports">
-      <div className="grid grid-cols-2 gap-3">
-        {['Calibration Due', 'Pending Jobs', 'Job Cards', 'Audit'].map((item) => (
-          <div key={item} className="rounded-xl border border-slate-100 bg-white p-3 text-xs font-semibold text-slate-700">{item}</div>
-        ))}
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {['PDF', 'Excel', 'Print'].map((item) => (
-          <span key={item} className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white">{item}</span>
-        ))}
+      <div className="space-y-4 text-left">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-3 rounded-xl border border-indigo-100 bg-indigo-50/5 cursor-pointer">
+            <h4 className="font-bold text-slate-850">NABL Audit Summary</h4>
+            <p className="text-[9px] text-slate-400">All calibration checks this month</p>
+          </div>
+          <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 cursor-pointer">
+            <h4 className="font-bold text-slate-850">Technician Utilization</h4>
+            <p className="text-[9px] text-slate-400">Technician load report</p>
+          </div>
+        </div>
+        <div className="border-t pt-3 flex items-center justify-between text-xs font-semibold text-slate-655">
+          <span>Format: Excel Spreadsheet</span>
+          <span className="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer">Export Report</span>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1056,19 +1283,131 @@ function ReportsVisual() {
 function VerifyVisual() {
   return (
     <BrowserFrame title="/admin/equipment-verification">
-      <RowPreview title="Equipment pending verification" subtitle="Review identity and serial details" tag="Verify" />
-      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">Approve only after checking all details</div>
+      <div className="space-y-3.5 text-left">
+        <SearchBar text="Search pending verification..." />
+        <div className="p-3 border border-indigo-150 bg-indigo-50/5 rounded-xl space-y-2.5">
+          <div className="flex justify-between items-center text-xs">
+            <span className="font-bold text-slate-850">Spectrum Analyzer (EQ-10024)</span>
+            <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-250/20 px-1.5 py-0.5 rounded font-bold uppercase">Pending SA Verify</span>
+          </div>
+          <div className="text-[10px] leading-tight space-y-1 text-slate-550 border-t pt-2 font-semibold">
+            <p>Serial Number: SN-MY52102</p>
+            <p>Ownership Division: TME Division</p>
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <span className="bg-slate-200 text-slate-700 font-bold px-3 py-1 rounded text-[9px] cursor-pointer">Return</span>
+            <span className="bg-emerald-650 text-white font-bold px-3 py-1 rounded text-[9px] cursor-pointer">Approve Assets</span>
+          </div>
+        </div>
+      </div>
     </BrowserFrame>
   );
 }
 
 function SettingsVisual({ title }) {
+  if (title === 'Terms and Conditions' || title === 'Terms') {
+    return (
+      <BrowserFrame title="/admin/terms">
+        <div className="space-y-4 text-left">
+          <SearchBar text="Search terms database..." />
+          <div className="p-3 border rounded-xl bg-white space-y-2">
+            <div className="flex justify-between items-center text-xs border-b pb-1.5">
+              <span className="font-bold text-slate-800">SAC Standard Calibration Terms v1.2</span>
+              <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[8px] font-bold border border-emerald-200">Active</span>
+            </div>
+            <textarea
+              className="w-full text-[10px] border rounded bg-slate-50/50 p-2 font-mono h-16 text-slate-655"
+              defaultValue="I hereby declare that this equipment is under ISRO SAC possession and requires standard NABL calibration."
+              readOnly
+            />
+            <div className="flex justify-end text-[10px]">
+              <span className="bg-indigo-650 text-white px-2.5 py-1 rounded font-bold cursor-pointer">Update Terms</span>
+            </div>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
+  if (title === 'Projects') {
+    return (
+      <BrowserFrame title="/admin/projects">
+        <div className="space-y-4 text-left">
+          <div className="flex justify-between items-center">
+            <SearchBar text="Search project tags..." />
+            <span className="text-[10px] font-bold text-indigo-600 cursor-pointer">+ Add Project</span>
+          </div>
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <thead className="bg-slate-50 border-b text-[8px] text-slate-450 uppercase">
+                <tr>
+                  <th className="p-2">Project Code</th>
+                  <th className="p-2">Description</th>
+                  <th className="p-2 text-center">Division</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="p-2 text-indigo-650">SAC-TME-2026</td>
+                  <td className="p-2">Telemetry Module Calibrations</td>
+                  <td className="p-2 text-center">TME</td>
+                </tr>
+                <tr>
+                  <td className="p-2 text-indigo-650">SAC-FPE-2026</td>
+                  <td className="p-2">Frequency Payload Electronics</td>
+                  <td className="p-2 text-center">FPE</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
+  if (title === 'Tasks') {
+    return (
+      <BrowserFrame title="/admin/tasks">
+        <div className="space-y-4 text-left">
+          <div className="flex justify-between items-center">
+            <SearchBar text="Search master task library..." />
+            <span className="text-[10px] font-bold text-indigo-600 cursor-pointer">+ Add Task</span>
+          </div>
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <thead className="bg-slate-50 border-b text-[8px] text-slate-455 uppercase">
+                <tr>
+                  <th className="p-2">Task Description</th>
+                  <th className="p-2 text-center">Scope</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                <tr>
+                  <td className="p-2">Visual Inspection and power-up diagnostics</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-bold border border-indigo-150">BOTH</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2">NABL compliant phase noise calibration</td>
+                  <td className="p-2 text-center">
+                    <span className="bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-bold border border-indigo-150">NABL</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </BrowserFrame>
+    );
+  }
+
   return (
     <BrowserFrame title={title}>
       <SearchBar text={`Search ${title}`} />
-      <div className="mt-4 space-y-2">
-        <RowPreview title={`${title} item`} subtitle="Master data record" tag="Edit" />
-        <RowPreview title="Approved value" subtitle="Used in workflows" tag="View" />
+      <div className="mt-4 space-y-2 text-left">
+        <RowPreview title={`${title} record`} subtitle="Status and owner details" tag="Open" />
+        <RowPreview title="Recent item" subtitle="Linked workflow information" tag="View" />
       </div>
     </BrowserFrame>
   );
@@ -1077,10 +1416,91 @@ function SettingsVisual({ title }) {
 function AuditVisual() {
   return (
     <BrowserFrame title="/audit">
-      <SearchBar text="Search user, module, action" />
-      <div className="mt-4 space-y-2">
-        <RowPreview title="User role updated" subtitle="Admin Users module" tag="Trace" />
-        <RowPreview title="Equipment verified" subtitle="Equipment Verification" tag="Trace" />
+      <div className="space-y-4 text-left">
+        <SearchBar text="Filter audit trails..." />
+        <div className="overflow-hidden rounded-xl border">
+          <table className="w-full text-left text-[9px] font-semibold text-slate-700">
+            <thead className="bg-slate-50 border-b text-[8px] text-slate-455 uppercase">
+              <tr>
+                <th className="p-2">Timestamp</th>
+                <th className="p-2">Actor ID</th>
+                <th className="p-2">Action Event</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              <tr>
+                <td className="p-2 text-slate-400">04-Jun 02:08:42</td>
+                <td className="p-2 font-bold text-slate-805">SA79900</td>
+                <td className="p-2 text-indigo-650">Convented JR to Job Card</td>
+              </tr>
+              <tr>
+                <td className="p-2 text-slate-400">04-Jun 01:55:12</td>
+                <td className="p-2 font-bold text-slate-805">SA79900</td>
+                <td className="p-2 text-indigo-650">Updated Equipment Master EQ-10024</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function ChecklistsVisual() {
+  return (
+    <BrowserFrame title="/admin/checklists">
+      <div className="grid gap-4 md:grid-cols-[130px_1fr] text-left">
+        <MiniSidebar active="Admin" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h4 className="text-xs font-bold text-slate-800">Checklists Directory</h4>
+            <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">+ New Checklist</span>
+          </div>
+          <div className="space-y-2 text-xs font-semibold">
+            <div className="p-3 border rounded-xl bg-slate-50/30">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-850">Spectrum Analyzer Checklist</span>
+                <span className="bg-indigo-50 text-indigo-755 border border-indigo-200 px-2 py-0.5 rounded text-[8px] font-bold uppercase">6 Tasks</span>
+              </div>
+              <p className="text-[10px] text-slate-450 mt-1">For Equipment Type: TME-SA-04</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function LabCapacityVisual() {
+  return (
+    <BrowserFrame title="/admin/lab-capacity">
+      <div className="grid gap-4 md:grid-cols-[130px_1fr] text-left">
+        <MiniSidebar active="Admin" />
+        <div className="space-y-3.5">
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="p-2.5 border rounded-xl bg-slate-50/50 shadow-inner">
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Active Backlog</p>
+              <p className="text-lg font-extrabold text-slate-850 mt-1">24 Jobs</p>
+            </div>
+            <div className="p-2.5 border border-red-100 bg-red-50/10 rounded-xl shadow-inner">
+              <p className="text-[9px] font-bold text-red-500 uppercase">Alerts Density</p>
+              <p className="text-lg font-extrabold text-red-700 mt-1">2 Technicians</p>
+            </div>
+          </div>
+          <div className="rounded-xl border p-3 bg-white space-y-2">
+            <h4 className="text-[10px] font-bold text-slate-700">Roster Distribution</h4>
+            <div className="space-y-1.5 text-[10px] font-semibold text-slate-600">
+              <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-lg border border-slate-150">
+                <span>R. Sharma (ID: 104)</span>
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-250/20 px-2 py-0.5 rounded text-[8px] font-bold uppercase">Low Load</span>
+              </div>
+              <div className="flex justify-between items-center bg-red-50/5 p-1.5 rounded-lg border border-red-150/40">
+                <span>S. Verma (ID: 105)</span>
+                <span className="bg-red-50 text-red-700 border border-red-250/20 px-2 py-0.5 rounded text-[8px] font-bold uppercase">Critical (6 Jobs)</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1089,13 +1509,15 @@ function AuditVisual() {
 function CommonTopBarVisual() {
   return (
     <BrowserFrame title="Common top bar">
-      <TopBarMock />
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <MiniFeature icon={Search} label="Search records" />
-        <MiniFeature icon={Bell} label="Read alerts" />
-        <MiniFeature icon={UserCircle} label="Open account" />
+      <div className="space-y-4 text-left">
+        <TopBarMock />
+        <div className="grid gap-3 md:grid-cols-3">
+          <MiniFeature icon={Search} label="Search records" />
+          <MiniFeature icon={Bell} label="Read alerts" />
+          <MiniFeature icon={UserCircle} label="Open account" />
+        </div>
+        <div className="mt-4 rounded-xl bg-slate-950 px-4 py-3 text-center text-xs font-bold text-white">Use this from any page</div>
       </div>
-      <div className="mt-4 rounded-xl bg-slate-950 px-4 py-3 text-center text-xs font-bold text-white">Use this from any page</div>
     </BrowserFrame>
   );
 }
@@ -1104,11 +1526,17 @@ function CommonGlobalSearchVisual() {
   return (
     <BrowserFrame title="Global search">
       <TopBarMock />
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <SearchBar text="JR-2026-2430" />
-        <div className="mt-4 space-y-2">
-          <RowPreview title="JR-2026-2430" subtitle="Job Request Detail" tag="Open" />
-          <RowPreview title="Equipment-1" subtitle="Related equipment" tag="Open" />
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left">
+        <SearchBar text="JR-2026" />
+        <div className="mt-3 space-y-1 text-xs">
+          <div className="px-2 pb-1 text-[9px] font-bold text-indigo-650 uppercase border-b select-none">Autocomplete matches</div>
+          <div className="p-2 hover:bg-slate-50 rounded-lg cursor-pointer flex justify-between">
+            <div>
+              <p className="font-bold text-slate-805">JR-2026-0842</p>
+              <p className="text-[10px] text-slate-450">Spectrum Analyzer Calibration</p>
+            </div>
+            <span className="text-[9px] text-emerald-650 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 self-center">Approved</span>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -1118,13 +1546,14 @@ function CommonGlobalSearchVisual() {
 function CommonModuleSearchVisual() {
   return (
     <BrowserFrame title="In-module search and filters">
-      <SearchBar text="Search inside this module" />
-      <div className="mt-3 flex flex-wrap gap-2">
-        {['Status', 'Category', 'Date', 'Lab'].map((item) => (
-          <span key={item} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{item}</span>
-        ))}
+      <div className="space-y-4 text-left">
+        <SearchBar text="Search inside this module" />
+        <div className="mt-3 flex flex-wrap gap-2 text-[9px] font-bold select-none">
+          <span className="rounded bg-indigo-50 text-indigo-600 border px-2 py-1">Category: TME</span>
+          <span className="rounded bg-slate-50 text-slate-500 border px-2 py-1">Status: Active</span>
+          <span className="rounded bg-slate-50 text-slate-550 border px-2 py-1">Date: 30 Days</span>
+        </div>
       </div>
-      <div className="mt-4 h-28 rounded-xl bg-slate-100" />
     </BrowserFrame>
   );
 }
@@ -1132,14 +1561,21 @@ function CommonModuleSearchVisual() {
 function CommonNotificationsVisual() {
   return (
     <BrowserFrame title="/notifications">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
           <Bell size={18} className="text-amber-600" />
           Notifications
         </div>
-        <RowPreview title="Job request approved" subtitle="Open the linked request for details" tag="View" />
-        <div className="mt-2">
-          <RowPreview title="Job card assigned" subtitle="Check assigned work" tag="Open" />
+        <div className="space-y-2 text-xs font-semibold">
+          <div className="p-2 bg-indigo-50/20 border border-indigo-100/60 rounded-xl relative">
+            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
+            <p className="text-slate-800 text-[11px] font-bold">Job request JR-2026-0842 Approved</p>
+            <p className="text-[9px] text-slate-400 mt-1">LIC converted this request into Job Card JC-2026-1004.</p>
+          </div>
+          <div className="p-2 bg-slate-50/40 border border-slate-150 rounded-xl">
+            <p className="text-slate-700 text-[11px]">Job card JC-2026-0924 assigned to you</p>
+            <p className="text-[9px] text-slate-400 mt-1">Assigned by Lab In-Charge on 02-Jun-2026.</p>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -1150,16 +1586,24 @@ function CommonAccountMenuVisual() {
   return (
     <BrowserFrame title="Profile dropdown">
       <TopBarMock />
-      <div className="ml-auto mt-4 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+      <div className="ml-auto mt-4 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl text-left">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">SA</span>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">System User</p>
-            <p className="text-xs text-slate-500">Super Admin</p>
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-sm font-bold text-white shadow-md">SA</span>
+          <div className="leading-tight">
+            <p className="text-xs font-bold text-slate-808">System Super Admin</p>
+            <p className="text-[9px] text-slate-455 mt-0.5 uppercase tracking-wider font-semibold">Super Admin</p>
           </div>
         </div>
-        <MiniMenuRow icon={UserCircle} label="Profile" />
-        <MiniMenuRow icon={ArrowRight} label="Logout" danger />
+        <div className="mt-2.5 space-y-1 text-xs font-bold">
+          <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-slate-700 hover:bg-slate-50 cursor-pointer">
+            <UserCircle size={15} className="text-slate-400" />
+            <span>My Profile</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-rose-500 hover:bg-rose-50/50 cursor-pointer">
+            <LogOut size={15} />
+            <span>Sign Out</span>
+          </div>
+        </div>
       </div>
     </BrowserFrame>
   );
@@ -1168,21 +1612,23 @@ function CommonAccountMenuVisual() {
 function CommonProfileVisual() {
   return (
     <BrowserFrame title="/profile">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-base font-bold text-white">SA</span>
-          <div>
-            <p className="text-lg font-semibold text-slate-950">System Super Admin</p>
-            <p className="text-sm text-slate-500">Role and employee details</p>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left">
+        <div className="flex items-center gap-4 border-b pb-3.5">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-base font-bold text-white shadow-md">SA</span>
+          <div className="leading-tight">
+            <p className="text-base font-bold text-slate-808">System Super Admin</p>
+            <p className="text-xs text-slate-550">Employee ID: SA79900</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {['Employee ID', 'Role', 'Email', 'Account Status'].map((item) => (
-            <div key={item} className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">Available</p>
-            </div>
-          ))}
+        <div className="grid gap-3 grid-cols-2 text-xs">
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[9px] font-bold text-slate-400 uppercase">Division</p>
+            <p className="mt-1 font-bold text-slate-750">Super Admin Office</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[9px] font-bold text-slate-400 uppercase">System Role</p>
+            <p className="mt-1 font-bold text-slate-750">Super Admin</p>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -1192,20 +1638,19 @@ function CommonProfileVisual() {
 function CommonAboutVisual() {
   return (
     <BrowserFrame title="/about">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left space-y-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 shadow-sm">
             <Info size={22} />
           </span>
-          <div>
-            <p className="text-lg font-semibold text-slate-950">About CMCMIS</p>
-            <p className="text-sm text-slate-500">Purpose, context, and system information</p>
+          <div className="leading-tight">
+            <p className="text-md font-bold text-slate-808">CMCMIS SAC</p>
+            <p className="text-xs text-slate-400">Version 2.4.0 (Simplified)</p>
           </div>
         </div>
-        <div className="mt-5 space-y-3">
-          <div className="h-3 w-3/4 rounded bg-slate-200" />
-          <div className="h-3 w-5/6 rounded bg-slate-100" />
-          <div className="h-3 w-2/3 rounded bg-slate-100" />
+        <div className="text-xs font-semibold text-slate-655 leading-relaxed space-y-2 border-t pt-3">
+          <p>Calibration & Maintenance Management Information System designed for ISRO Space Applications Centre.</p>
+          <p>Provides end-to-end telemetry workflows, NABL checklist enforcement, and technician capacity forecasting.</p>
         </div>
       </div>
     </BrowserFrame>
@@ -1215,7 +1660,7 @@ function CommonAboutVisual() {
 function CommonNavigationVisual() {
   return (
     <BrowserFrame title="Common navigation">
-      <div className="grid gap-4 md:grid-cols-[130px_1fr]">
+      <div className="grid gap-4 md:grid-cols-[130px_1fr] text-left">
         <MiniSidebar active="Dashboard" />
         <div className="space-y-3">
           <RowPreview title="ISRO logo" subtitle="Opens CMCMIS home" tag="Home" />
@@ -1230,7 +1675,7 @@ function CommonNavigationVisual() {
 function CommonCoreVisual() {
   return (
     <BrowserFrame title="Main core features">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2 text-left">
         {['Role-wise access', 'Fast search', 'Status tracking', 'Reports export', 'Audit review', 'Readable UI'].map((item) => (
           <div key={item} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <CheckCircle2 size={20} className="text-emerald-600" />
@@ -1244,7 +1689,7 @@ function CommonCoreVisual() {
 
 function TopBarMock() {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm text-left">
       <div className="h-9 w-9 rounded-xl bg-slate-100" />
       <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
         <Search size={16} className="text-slate-400" />
@@ -1259,7 +1704,7 @@ function TopBarMock() {
 function MiniSidebar({ active }) {
   const items = ['Dashboard', 'Job Requests', 'Equipment', 'Reports', 'Admin'];
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm select-none">
       <div className="mb-3 h-8 rounded-xl bg-slate-100" />
       <div className="space-y-2">
         {items.map((item) => (

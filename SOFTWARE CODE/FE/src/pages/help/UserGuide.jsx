@@ -11,6 +11,7 @@ import {
   Info,
   KeyRound,
   LineChart,
+  ListChecks,
   LogOut,
   Monitor,
   MousePointerClick,
@@ -206,6 +207,8 @@ const labInChargeGuide = {
     { label: 'Dashboard', id: 'dashboard-review' },
     { label: 'Conversion', id: 'conversion' },
     { label: 'Job Cards', id: 'job-cards' },
+    { label: 'Checklists', id: 'checklist-mgmt' },
+    { label: 'Lab Capacity', id: 'lab-capacity' },
     { label: 'Reports', id: 'reports-review' },
   ],
   flows: [
@@ -288,6 +291,47 @@ const labInChargeGuide = {
       ],
       tips: ['Schedule helps avoid missed work.', 'Use it together with Job Cards for day-to-day planning.'],
       visual: 'schedule',
+    },
+    {
+      id: 'checklist-mgmt',
+      title: 'Checklist Management',
+      subtitle: 'Create and manage calibration checklists for specific equipment.',
+      icon: ListChecks,
+      accent: 'bg-indigo-50 text-indigo-600',
+      cta: { label: 'Manage Checklists', to: '/admin/checklists' },
+      steps: [
+        'Open Checklist Mgmt from the sidebar.',
+        'View the total checklists, equipment covered, and task counts at the top.',
+        'Use the search bar to find checklists by name or equipment ID.',
+        'Click the arrow icon to expand a checklist card and view its tasks.',
+        'Click New Checklist to create a new checklist, type the Equipment ID, and click Fetch.',
+        'Add tasks from the master library or click Add Custom Task to type new tasks, then click Create Checklist.',
+      ],
+      tips: [
+        'Each equipment should have a dedicated checklist matching its model requirements.',
+        'Ensure tasks match NABL/NON-NABL scopes correctly.',
+      ],
+      visual: 'checklists',
+    },
+    {
+      id: 'lab-capacity',
+      title: 'Lab Capacity & Workloads',
+      subtitle: 'Monitor technician workloads and SLA turnaround metrics in real-time.',
+      icon: BarChart3,
+      accent: 'bg-emerald-50 text-emerald-600',
+      cta: { label: 'Open Lab Capacity', to: '/admin/lab-capacity' },
+      steps: [
+        'Open Lab Capacity from the sidebar.',
+        'Check KPIs: Total Active Backlog, Bottleneck Alerts (engineers with >5 active jobs), and Overall SLA Compliance.',
+        'Review the SLA Turnaround Tracker circles for Calibration and Repair.',
+        'Scroll down to inspect the Technician Workload & Cycle Metrics table.',
+        'Check average resolution speed and operational load status for each engineer.',
+      ],
+      tips: [
+        'Review capacity before assigning new job cards in the Conversion Workspace.',
+        'Help engineers with Critical Load status by redistributing their pending jobs.',
+      ],
+      visual: 'lab-capacity',
     },
     {
       id: 'reports-review',
@@ -698,6 +742,8 @@ function VisualGuide({ type }) {
   if (type === 'conversion') return <ConversionVisual />;
   if (type === 'job-cards') return <JobCardsVisual />;
   if (type === 'schedule') return <ScheduleVisual />;
+  if (type === 'checklists') return <ChecklistsVisual />;
+  if (type === 'lab-capacity') return <LabCapacityVisual />;
   if (type === 'topbar') return <TopBarVisual />;
   if (type === 'global-search') return <GlobalSearchVisual />;
   if (type === 'module-search') return <ModuleSearchVisual />;
@@ -725,16 +771,26 @@ function BrowserFrame({ children, title }) {
 function LoginVisual() {
   return (
     <BrowserFrame title="/login">
-      <div className="mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
-          <KeyRound size={24} strokeWidth={1.9} />
+      <div className="mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-md">
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-650 mb-2">
+            <KeyRound size={22} />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">CMCMIS SAC Portal</h3>
+          <p className="text-[10px] text-slate-400">Secure Administrative Authentication</p>
         </div>
-        <div className="mt-5 space-y-3">
-          <VisualInput label="Employee ID" value="SA79900" />
-          <VisualInput label="Password" value="********" />
-          <div className="rounded-xl bg-sky-600 px-4 py-3 text-center text-sm font-semibold text-white">Sign In</div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employee ID</label>
+            <div className="mt-1 rounded-xl border border-indigo-150 bg-indigo-50/20 px-3 py-2 text-xs font-semibold text-slate-700">SA79900</div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Password</label>
+            <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-400">••••••••</div>
+          </div>
+          <div className="rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-xs font-bold text-white shadow-sm shadow-indigo-150 hover:bg-indigo-700 transition">Sign In</div>
         </div>
-        <Callout top="top-[154px]" left="left-[245px]" text="Click Sign In" />
+        <Callout top="top-[185px]" left="left-[230px]" text="Click Sign In" />
       </div>
     </BrowserFrame>
   );
@@ -743,22 +799,40 @@ function LoginVisual() {
 function JobRequestCreateVisual() {
   return (
     <BrowserFrame title="/job-requests/new">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Job Requests" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b pb-3">
             <div>
-              <div className="h-3 w-32 rounded bg-slate-200" />
-              <div className="mt-2 h-2 w-44 rounded bg-slate-100" />
+              <h3 className="text-sm font-bold text-slate-800">Create New Request</h3>
+              <p className="text-[10px] text-slate-400">Fill calibration or repair details</p>
             </div>
-            <div className="rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white">Submit</div>
+            <span className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white">Submit</span>
           </div>
-          <div className="mt-5 grid gap-3">
-            {['Job Type', 'Equipment', 'Complaint', 'Submitter', 'Terms'].map((item, idx) => (
-              <VisualRow key={item} index={idx + 1} label={item} />
-            ))}
+          <div className="space-y-3 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Job Type</label>
+                <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 font-semibold text-slate-700">Calibration (NABL)</div>
+              </div>
+              <div>
+                <label className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Category</label>
+                <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 font-semibold text-slate-700">TME Instruments</div>
+              </div>
+            </div>
+            <div>
+              <label className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Equipment Reference</label>
+              <div className="mt-1 rounded-lg border border-indigo-200 bg-indigo-50/20 px-2 py-1.5 font-semibold text-indigo-700 flex justify-between items-center">
+                <span>EQ-10442 (Spectrum Analyzer)</span>
+                <span className="text-[9px] text-emerald-650 bg-emerald-50 px-1.5 py-0.5 rounded-md">Verified</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Complaint / Remarks</label>
+              <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-slate-655 font-medium">Display flickers on power up; check RF attenuation values.</div>
+            </div>
           </div>
-          <Callout top="top-[80px]" left="left-[250px]" text="Fill sections in order" />
+          <Callout top="top-[190px]" left="left-[240px]" text="Confirm & click Submit" />
         </div>
       </div>
     </BrowserFrame>
@@ -767,13 +841,48 @@ function JobRequestCreateVisual() {
 
 function JobRequestDetailVisual() {
   return (
-    <BrowserFrame title="/job-requests/:id">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+    <BrowserFrame title="/job-requests/JR-2026-0842">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Job Requests" />
-        <div className="space-y-4">
-          <HeaderCard icon={ClipboardList} title="JR-2026-2430" subtitle="Current Status: Approved" />
-          <Timeline labels={['Draft', 'Pending', 'Approved']} />
-          <Callout top="top-[104px]" left="left-[250px]" text="Check status here" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-800">JR-2026-0842</h3>
+                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[9px] font-bold text-emerald-700">Approved</span>
+              </div>
+              <p className="text-[10px] text-slate-400">Submitted by Dr. K. Kumar (TME Division)</p>
+            </div>
+            <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-555 cursor-pointer">View PDF</span>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-slate-50 p-2 rounded-lg">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">Instrument</p>
+                <p className="font-semibold text-slate-700 mt-0.5">Signal Generator (EQ-10024)</p>
+              </div>
+              <div className="bg-slate-50 p-2 rounded-lg">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">Calibration Due</p>
+                <p className="font-semibold text-slate-700 mt-0.5">14-Sep-2026</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-150 p-3 rounded-lg space-y-2">
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Workflow Journey</p>
+              <div className="flex items-center text-[10px] font-semibold text-slate-500">
+                <span className="h-4 w-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-bold">1</span>
+                <span className="ml-1 text-slate-700">Drafted</span>
+                <span className="flex-1 h-[2px] bg-indigo-600 mx-1"></span>
+                <span className="h-4 w-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-bold">2</span>
+                <span className="ml-1 text-slate-700">Submitted</span>
+                <span className="flex-1 h-[2px] bg-indigo-600 mx-1"></span>
+                <span className="h-4 w-4 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[8px] font-bold">3</span>
+                <span className="ml-1 text-slate-700">Approved</span>
+              </div>
+            </div>
+          </div>
+          <Callout top="top-[80px]" left="left-[240px]" text="Track real-time updates" />
         </div>
       </div>
     </BrowserFrame>
@@ -783,14 +892,43 @@ function JobRequestDetailVisual() {
 function EquipmentVisual() {
   return (
     <BrowserFrame title="/equipment">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Equipment" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SearchBar text="Search equipment, serial number, or ID" />
-          <div className="mt-4 space-y-2">
-            {['Equipment-1', 'Signal Analyzer', 'Calibration Unit'].map((item, idx) => (
-              <ListRow key={item} title={item} subtitle="Status: Active" tag="View" showCallout={idx === 0} />
-            ))}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <SearchBar text="Search equipment by serial number..." />
+            <span className="rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-600 cursor-pointer">Filter</span>
+          </div>
+          
+          <div className="overflow-hidden rounded-xl border border-slate-150">
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b">
+                <tr>
+                  <th className="py-2 px-3">Code / ID</th>
+                  <th className="py-2 px-3">Description</th>
+                  <th className="py-2 px-3">Division</th>
+                  <th className="py-2 px-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y font-semibold text-slate-700">
+                <tr className="hover:bg-slate-50 cursor-pointer bg-slate-50/30">
+                  <td className="py-2.5 px-3 text-indigo-600">EQ-10024</td>
+                  <td className="py-2.5 px-3">Spectrum Analyzer</td>
+                  <td className="py-2.5 px-3">TME</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Active</span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50 cursor-pointer">
+                  <td className="py-2.5 px-3 text-indigo-600">EQ-10041</td>
+                  <td className="py-2.5 px-3">RF Calibrator</td>
+                  <td className="py-2.5 px-3">FPE</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">Active</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -801,19 +939,31 @@ function EquipmentVisual() {
 function DashboardVisual() {
   return (
     <BrowserFrame title="/dashboard">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Dashboard" />
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            {['Pending Jobs', 'Completed', 'Active Equipment', 'Reports'].map((item) => (
-              <div key={item} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="h-9 w-9 rounded-xl bg-sky-50" />
-                <div className="mt-4 text-lg font-semibold text-slate-900">24</div>
-                <div className="text-xs font-semibold text-slate-500">{item}</div>
-              </div>
-            ))}
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/20 p-4 shadow-sm relative overflow-hidden">
+              <span className="absolute right-3 top-3 inline-flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              <div className="text-xl font-bold text-slate-800">14</div>
+              <div className="text-[10px] font-semibold text-slate-550">Pending Job Requests</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/20 p-4 shadow-sm">
+              <div className="text-xl font-bold text-slate-800">28</div>
+              <div className="text-[10px] font-semibold text-slate-555">Completed Job Cards</div>
+            </div>
           </div>
-          <Callout top="top-[80px]" left="left-[260px]" text="Start with cards" />
+          
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+            <h4 className="text-xs font-bold text-slate-700">Live Calibration Timeline</h4>
+            <div className="flex gap-2 h-16 items-end pb-1 select-none">
+              <div className="flex-1 bg-indigo-500 h-10 rounded-md" title="Mon"></div>
+              <div className="flex-1 bg-indigo-500 h-14 rounded-md" title="Tue"></div>
+              <div className="flex-1 bg-indigo-300 h-6 rounded-md" title="Wed"></div>
+              <div className="flex-1 bg-indigo-500 h-16 rounded-md" title="Thu"></div>
+              <div className="flex-1 bg-emerald-500 h-8 rounded-md" title="Fri"></div>
+            </div>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -823,18 +973,23 @@ function DashboardVisual() {
 function InquiryVisual() {
   return (
     <BrowserFrame title="/inquiry">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Inquiry" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex gap-2">
-            {['Equipment', 'Vendors', 'Job Requests'].map((tab, idx) => (
-              <span key={tab} className={`rounded-xl px-3 py-2 text-xs font-semibold ${idx === 0 ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'}`}>{tab}</span>
-            ))}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="flex border-b text-xs font-semibold text-slate-400 gap-4 select-none pb-2">
+            <span className="text-indigo-600 border-b-2 border-indigo-600 pb-2">Instruments</span>
+            <span>Vendors</span>
+            <span>Job Requests</span>
           </div>
-          <SearchBar text="Search records here" />
-          <div className="mt-4 space-y-2">
-            <ListRow title="Equipment-1" subtitle="Serial No: SN-1024" tag="Open" />
-            <ListRow title="JR-2026-2430" subtitle="Status: Approved" tag="Open" />
+          <SearchBar text="Search across entire portal..." />
+          <div className="space-y-2.5">
+            <div className="p-3 border rounded-xl hover:bg-slate-50 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">Agilent Oscilloscope</h4>
+                <p className="text-[10px] text-slate-400">Model: DSOX3024A | Serial: MY52102</p>
+              </div>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-lg">EQ-10024</span>
+            </div>
           </div>
         </div>
       </div>
@@ -845,20 +1000,25 @@ function InquiryVisual() {
 function ReportsVisual() {
   return (
     <BrowserFrame title="/reports">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Reports" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid grid-cols-2 gap-3">
-            {['Calibration Due', 'Pending Jobs', 'Job Cards', 'Analytics'].map((item) => (
-              <div key={item} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-700">{item}</div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-xl border border-slate-100 bg-white p-3">
-            <div className="mb-3 flex gap-2">
-              <span className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white">Apply Filters</span>
-              <span className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white">Export</span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="grid grid-cols-2 gap-2 select-none">
+            <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-indigo-200 hover:bg-indigo-50/10 cursor-pointer">
+              <h4 className="text-xs font-bold text-slate-800">Calibration Due Report</h4>
+              <p className="text-[9px] text-slate-400">Instruments due in next 30 days</p>
             </div>
-            <div className="h-24 rounded-lg bg-slate-100" />
+            <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-indigo-200 hover:bg-indigo-50/10 cursor-pointer">
+              <h4 className="text-xs font-bold text-slate-800">Job Cards Status Log</h4>
+              <p className="text-[9px] text-slate-400">Real-time technician roster</p>
+            </div>
+          </div>
+          <div className="border-t pt-3 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-500">Form: PDF Document</span>
+            <div className="flex gap-2">
+              <span className="bg-emerald-600 px-3 py-1.5 rounded-lg text-white font-bold cursor-pointer">Export Excel</span>
+              <span className="bg-indigo-600 px-3 py-1.5 rounded-lg text-white font-bold cursor-pointer">View Report</span>
+            </div>
           </div>
         </div>
       </div>
@@ -869,34 +1029,55 @@ function ReportsVisual() {
 function ConversionVisual() {
   return (
     <BrowserFrame title="/conversion">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Conversion" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SearchBar text="Review submitted requests" />
-          <div className="mt-4 space-y-2">
-            <ListRow title="JR-2026-2430" subtitle="Calibration request" tag="Convert" />
-            <ListRow title="JR-2026-2429" subtitle="Repair request" tag="Review" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <SearchBar text="Filter pending approvals..." />
+          <div className="space-y-3">
+            <div className="p-3 border border-indigo-100 bg-indigo-50/5 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-800">JR-2026-0842</span>
+                <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-bold">Awaiting LIC Action</span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-medium">Spectrum Analyzer (EQ-10024) - Cal Calibration</p>
+              <div className="flex gap-2 items-center text-xs border-t pt-2.5">
+                <div className="flex-1 rounded-lg border px-2.5 py-1 text-slate-500 bg-white text-[10px]">Assign Technician: R. Sharma</div>
+                <span className="bg-indigo-600 text-white font-bold px-3 py-1 rounded-lg text-[10px] cursor-pointer">Convert to JC</span>
+              </div>
+            </div>
           </div>
-          <Callout top="top-[145px]" left="left-[240px]" text="Convert after review" />
         </div>
       </div>
     </BrowserFrame>
   );
 }
 
+// 
 function JobCardsVisual() {
   return (
     <BrowserFrame title="/job-cards">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Job Cards" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex gap-2">
-            {['Assigned', 'In Progress', 'Completed'].map((tab, idx) => (
-              <span key={tab} className={`rounded-xl px-3 py-2 text-xs font-semibold ${idx === 1 ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'}`}>{tab}</span>
-            ))}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="flex border-b text-xs font-semibold text-slate-400 gap-4 pb-2">
+            <span className="text-indigo-600 border-b-2 border-indigo-600 pb-2">Details</span>
+            <span>Tasks Checklist</span>
+            <span>Attachments</span>
           </div>
-          <ListRow title="JC-2026-2424" subtitle="Engineer: Assigned" tag="Open" />
-          <Timeline labels={['Assigned', 'Work', 'Complete']} />
+          <div className="p-3 border rounded-xl space-y-3">
+            <div className="flex justify-between items-center text-xs">
+              <h4 className="font-bold text-slate-800">JC-2026-1004</h4>
+              <span className="bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase">In Progress</span>
+            </div>
+            <div className="space-y-1 text-[10px] text-slate-550 font-semibold">
+              <p>Technician: R. Sharma (TME Lab)</p>
+              <p>Start Date: 03-Jun-2026</p>
+            </div>
+            <div className="border-t pt-2 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400 font-medium">Completed: 2/5 Tasks</span>
+              <span className="text-indigo-600 font-bold cursor-pointer">View Workspace</span>
+            </div>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -906,18 +1087,90 @@ function JobCardsVisual() {
 function ScheduleVisual() {
   return (
     <BrowserFrame title="/schedule">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
         <MiniNav active="Schedule" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid grid-cols-3 gap-2">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
-              <div key={day} className={`rounded-xl border border-slate-100 p-3 text-center text-xs font-semibold ${idx === 2 ? 'bg-sky-50 text-sky-700' : 'bg-white text-slate-500'}`}>
-                {day}
-                <div className="mt-2 h-10 rounded-lg bg-slate-100" />
-              </div>
-            ))}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-2 select-none">
+            <h4 className="text-xs font-bold text-slate-800">Weekly Cal Allocations</h4>
+            <span className="text-[10px] text-indigo-600 font-bold cursor-pointer">Next Week</span>
           </div>
-          <Callout top="top-[95px]" left="left-[250px]" text="Plan upcoming work" />
+          <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-semibold">
+            <div className="border rounded-xl p-2 bg-slate-50/50">
+              <p className="text-slate-400 font-bold uppercase text-[8px]">04 Jun</p>
+              <p className="text-slate-800 mt-1">EQ-10024</p>
+              <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            </div>
+            <div className="border border-indigo-200 rounded-xl p-2 bg-indigo-50/10">
+              <p className="text-indigo-500 font-bold uppercase text-[8px]">05 Jun</p>
+              <p className="text-slate-800 mt-1">EQ-10041</p>
+              <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            </div>
+            <div className="border rounded-xl p-2 bg-slate-50/50">
+              <p className="text-slate-400 font-bold uppercase text-[8px]">06 Jun</p>
+              <p className="text-slate-500 mt-1">Free Slot</p>
+              <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-slate-300"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function ChecklistsVisual() {
+  return (
+    <BrowserFrame title="/admin/checklists">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
+        <MiniNav active="Checklists" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h4 className="text-xs font-bold text-slate-800">Checklists Directory</h4>
+            <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer">+ New Checklist</span>
+          </div>
+          <div className="space-y-2 text-xs font-semibold">
+            <div className="p-3 border rounded-xl bg-slate-50/30">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-800">Spectrum Analyzer Checklist</span>
+                <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase border border-indigo-150">6 Tasks</span>
+              </div>
+              <p className="text-[10px] text-slate-450 mt-1">For Equipment Type: TME-SA-04</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function LabCapacityVisual() {
+  return (
+    <BrowserFrame title="/admin/lab-capacity">
+      <div className="grid gap-4 grid-cols-[110px_1fr]">
+        <MiniNav active="Lab Capacity" />
+        <div className="space-y-3.5">
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="p-2.5 border rounded-xl bg-slate-50/50 shadow-inner">
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Active Backlog</p>
+              <p className="text-lg font-extrabold text-slate-800 mt-1">24 Jobs</p>
+            </div>
+            <div className="p-2.5 border border-red-100 bg-red-50/10 rounded-xl shadow-inner">
+              <p className="text-[9px] font-bold text-red-500 uppercase">Alerts Density</p>
+              <p className="text-lg font-extrabold text-red-700 mt-1">2 Technicians</p>
+            </div>
+          </div>
+          <div className="rounded-xl border p-3 bg-white space-y-2">
+            <h4 className="text-[10px] font-bold text-slate-700">Roster Distribution</h4>
+            <div className="space-y-1.5 text-[10px] font-semibold text-slate-600">
+              <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded-lg border border-slate-150">
+                <span>R. Sharma (ID: 104)</span>
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-250/20 px-2 py-0.5 rounded text-[8px] font-bold uppercase">Low Load</span>
+              </div>
+              <div className="flex justify-between items-center bg-red-50/5 p-1.5 rounded-lg border border-red-150/40">
+                <span>S. Verma (ID: 105)</span>
+                <span className="bg-red-50 text-red-700 border border-red-250/20 px-2 py-0.5 rounded text-[8px] font-bold uppercase">Critical (6 Jobs)</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -945,11 +1198,17 @@ function GlobalSearchVisual() {
     <BrowserFrame title="Global search">
       <div className="space-y-4">
         <TopBarMock active="search" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SearchBar text="JR-2026-2430" />
-          <div className="mt-4 space-y-2">
-            <ListRow title="JR-2026-2430" subtitle="Job Request Detail" tag="Open" />
-            <ListRow title="Equipment-1" subtitle="Related equipment" tag="Open" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left">
+          <SearchBar text="JR-2026" />
+          <div className="mt-3 space-y-1 text-xs">
+            <div className="px-2 pb-1 text-[9px] font-bold text-indigo-650 uppercase border-b select-none">Autocomplete matches</div>
+            <div className="p-2 hover:bg-slate-50 rounded-lg cursor-pointer flex justify-between">
+              <div>
+                <p className="font-bold text-slate-800">JR-2026-0842</p>
+                <p className="text-[10px] text-slate-450">Spectrum Analyzer Calibration</p>
+              </div>
+              <span className="text-[9px] text-emerald-650 font-bold bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100 self-center">Approved</span>
+            </div>
           </div>
         </div>
       </div>
@@ -960,16 +1219,27 @@ function GlobalSearchVisual() {
 function ModuleSearchVisual() {
   return (
     <BrowserFrame title="Module search and filters">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 md:grid-cols-[110px_1fr]">
         <MiniNav active="Reports" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
           <SearchBar text="Search inside this module" />
-          <div className="mt-3 flex flex-wrap gap-2">
-            {['Status', 'Category', 'Date', 'Lab'].map((item) => (
-              <span key={item} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{item}</span>
-            ))}
+          <div className="flex flex-wrap gap-1.5 text-[9px] font-bold select-none">
+            <span className="rounded bg-indigo-50 text-indigo-600 border px-2 py-1">Category: TME</span>
+            <span className="rounded bg-slate-50 text-slate-500 border px-2 py-1">Status: Active</span>
+            <span className="rounded bg-slate-50 text-slate-500 border px-2 py-1">Date: 30 Days</span>
           </div>
-          <div className="mt-4 h-28 rounded-xl bg-slate-100" />
+          <div className="overflow-hidden rounded-xl border border-slate-100">
+            <table className="w-full text-left text-[10px] font-semibold text-slate-700">
+              <tr className="bg-slate-50 border-b text-[8px] text-slate-450 uppercase font-bold">
+                <th className="p-2">Code</th>
+                <th className="p-2">Owner</th>
+              </tr>
+              <tr>
+                <td className="p-2 text-indigo-600">EQ-10024</td>
+                <td className="p-2">TME Lab</td>
+              </tr>
+            </table>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -979,15 +1249,24 @@ function ModuleSearchVisual() {
 function NotificationsVisual() {
   return (
     <BrowserFrame title="/notifications">
-      <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+      <div className="grid gap-4 md:grid-cols-[110px_1fr]">
         <MiniNav active="Notifications" />
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Bell size={18} className="text-amber-600" />
-            Notifications
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+          <div className="mb-2 flex items-center justify-between border-b pb-2 select-none">
+            <span className="text-xs font-bold text-slate-800">System Notifications</span>
+            <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded cursor-pointer">Mark all read</span>
           </div>
-          <ListRow title="Job request approved" subtitle="Open the linked request for details" tag="View" />
-          <ListRow title="Job card assigned" subtitle="Check assigned work" tag="Open" />
+          <div className="space-y-2 text-xs font-semibold">
+            <div className="p-2 bg-indigo-50/20 border border-indigo-100/60 rounded-xl relative">
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
+              <p className="text-slate-800 text-[11px] font-bold">Job request JR-2026-0842 Approved</p>
+              <p className="text-[9px] text-slate-400 mt-1">LIC converted this request into Job Card JC-2026-1004.</p>
+            </div>
+            <div className="p-2 bg-slate-50/40 border border-slate-150 rounded-xl">
+              <p className="text-slate-700 text-[11px]">Job card JC-2026-0924 assigned to you</p>
+              <p className="text-[9px] text-slate-400 mt-1">Assigned by Lab In-Charge on 02-Jun-2026.</p>
+            </div>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -999,17 +1278,23 @@ function AccountMenuVisual() {
     <BrowserFrame title="Profile dropdown">
       <div className="space-y-4">
         <TopBarMock active="account" />
-        <div className="ml-auto w-60 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+        <div className="ml-auto w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl text-left">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">SA</span>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">System User</p>
-              <p className="text-xs text-slate-500">Current role</p>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-sm font-bold text-white shadow-md">SA</span>
+            <div className="leading-tight">
+              <p className="text-xs font-bold text-slate-800">Dr. K. Kumar</p>
+              <p className="text-[9px] text-slate-450 mt-0.5 uppercase tracking-wider font-semibold">TME In-Charge</p>
             </div>
           </div>
-          <div className="mt-3 space-y-2">
-            <MiniMenuRow icon={UserCircle} label="Profile" />
-            <MiniMenuRow icon={LogOut} label="Logout" danger />
+          <div className="mt-2.5 space-y-1 text-xs font-bold">
+            <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-slate-700 hover:bg-slate-50 cursor-pointer">
+              <UserCircle size={15} className="text-slate-400" />
+              <span>My Profile</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-rose-500 hover:bg-rose-50/50 cursor-pointer">
+              <LogOut size={15} />
+              <span>Sign Out</span>
+            </div>
           </div>
         </div>
         <Callout top="top-[42px]" left="left-[270px]" text="Click profile area" />
@@ -1021,21 +1306,23 @@ function AccountMenuVisual() {
 function ProfileVisual() {
   return (
     <BrowserFrame title="/profile">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-base font-bold text-white">SS</span>
-          <div>
-            <p className="text-lg font-semibold text-slate-950">System User</p>
-            <p className="text-sm text-slate-500">Role and employee details</p>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center gap-4 border-b pb-3.5">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-base font-bold text-white shadow-md">KK</span>
+          <div className="leading-tight">
+            <p className="text-base font-bold text-slate-800">Dr. K. Kumar</p>
+            <p className="text-xs text-slate-500">Employee ID: SA79900</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {['Employee ID', 'Role', 'Email', 'Account Status'].map((item) => (
-            <div key={item} className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item}</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">Available</p>
-            </div>
-          ))}
+        <div className="grid gap-3 grid-cols-2 text-xs">
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[9px] font-bold text-slate-400 uppercase">Division</p>
+            <p className="mt-1 font-bold text-slate-750">TME Calibrations</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-[9px] font-bold text-slate-400 uppercase">System Role</p>
+            <p className="mt-1 font-bold text-slate-750">Lab In-Charge</p>
+          </div>
         </div>
       </div>
     </BrowserFrame>
@@ -1045,20 +1332,19 @@ function ProfileVisual() {
 function AboutVisual() {
   return (
     <BrowserFrame title="/about">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 shadow-sm">
             <Info size={22} />
           </span>
-          <div>
-            <p className="text-lg font-semibold text-slate-950">About CMCMIS</p>
-            <p className="text-sm text-slate-500">Purpose, context, and system information</p>
+          <div className="leading-tight">
+            <p className="text-md font-bold text-slate-800">CMCMIS SAC</p>
+            <p className="text-xs text-slate-400">Version 2.4.0 (Simplified)</p>
           </div>
         </div>
-        <div className="mt-5 space-y-3">
-          <div className="h-3 w-3/4 rounded bg-slate-200" />
-          <div className="h-3 w-5/6 rounded bg-slate-100" />
-          <div className="h-3 w-2/3 rounded bg-slate-100" />
+        <div className="text-xs font-semibold text-slate-655 leading-relaxed space-y-2 border-t pt-3">
+          <p>Calibration & Maintenance Management Information System designed for ISRO Space Applications Centre.</p>
+          <p>Provides end-to-end telemetry workflows, NABL checklist enforcement, and technician capacity forecasting.</p>
         </div>
       </div>
     </BrowserFrame>
