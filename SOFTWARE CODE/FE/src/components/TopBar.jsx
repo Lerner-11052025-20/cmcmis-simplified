@@ -48,6 +48,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
+  BookOpen,
   ChevronDown,
   Info,
   LogOut,
@@ -575,6 +576,19 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 
       {/* ── Right cluster ───────────────────────────────────────── */}
       <div className="ml-auto flex shrink-0 items-center justify-end gap-5">
+        {user ? (
+          <button
+            type="button"
+            onClick={() => navigate(guideRouteForRole(user.role))}
+            aria-label="Open role guide"
+            title="Open role guide"
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800 active:scale-95"
+          >
+            <BookOpen size={17} strokeWidth={2.1} aria-hidden="true" />
+            <span>Guide</span>
+          </button>
+        ) : null}
+
         <button
           type="button"
           onClick={() => navigate('/about')}
@@ -729,6 +743,31 @@ export function TopBar({ collapsed = false, onToggleSidebar }) {
 // roles (In-Charge / Engineer), green for the everyday Normal User,
 // grey for the read-only auditor. Matches the reference screenshot
 // where Dr. K. Kumar (NORMAL_USER) wears the green "User" badge.
+function guideRouteForRole(role) {
+  switch (role) {
+    case 'SUPER_ADMIN':
+      return '/super-admin-guide';
+    case 'NORMAL_USER':
+      return '/user-guide';
+    case 'VIEW_ONLY':
+      return '/view-only-guide';
+    case 'LAB_IN_CHARGE':
+    case 'TME_REPAIR_LAB_IN_CHARGE':
+    case 'TME_CAL_LAB_IN_CHARGE':
+    case 'FPE_REPAIR_LAB_IN_CHARGE':
+    case 'FPE_CAL_LAB_IN_CHARGE':
+      return '/lab-incharge-guide';
+    case 'LAB_ENGINEER':
+    case 'TME_REPAIR_LAB_ENG':
+    case 'TME_CAL_LAB_ENG':
+    case 'FPE_REPAIR_LAB_ENG':
+    case 'FPE_CAL_LAB_ENG':
+      return '/lab-engineer-guide';
+    default:
+      return '/about';
+  }
+}
+
 function RolePill({ role }) {
   const { label, cls } = rolePillStyle(role);
   return (
