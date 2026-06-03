@@ -30,6 +30,22 @@ const SORT_COLUMNS = {
 };
 const ORDER_DIRS = { asc: 'ASC', desc: 'DESC' };
 
+const FT_MIN_CHARS = 3;
+
+function buildLikePrefix(q) {
+  return q.replace(/[%_\\]/g, '\\$&') + '%';
+}
+
+function buildBooleanFtPattern(q) {
+  const cleaned = q.replace(/[^\p{L}\p{N}\-.]+/gu, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned
+    .split(/\s+/)
+    .filter((tok) => tok.length >= 2)
+    .map((tok) => `${tok}*`)
+    .join(' ');
+}
+
 // ────────────────────────────────────────────────────────────────────────
 //  LIST
 // ────────────────────────────────────────────────────────────────────────
@@ -49,17 +65,31 @@ async function listEquipment(params) {
   const where = [];
   const args = [];
 
-  if (q) {
-    where.push(`(
-      e.EQM_NAME LIKE ?
-      OR e.EQM_MODELNO LIKE ?
-      OR m.CMM_CONT_NAME LIKE ?
-      OR CAST(e.EQM_ID AS CHAR) LIKE ?
-      OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
-      OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
-    )`);
-    const like = `%${q}%`;
-    args.push(like, like, like, like, like, like);
+  const cleanQ = q ? String(q).trim() : '';
+
+  if (cleanQ) {
+    const ftPattern = cleanQ.length >= FT_MIN_CHARS ? buildBooleanFtPattern(cleanQ) : null;
+    if (ftPattern) {
+      where.push(`(
+        MATCH (e.EQM_NAME, e.EQM_MODELNO, e.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
+        OR m.CMM_CONT_NAME LIKE ?
+        OR CAST(e.EQM_ID AS CHAR) LIKE ?
+        OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
+        OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(ftPattern, likePrefix, likePrefix, likePrefix, likePrefix);
+    } else {
+      where.push(`(
+        e.EQM_NAME LIKE ?
+        OR m.CMM_CONT_NAME LIKE ?
+        OR CAST(e.EQM_ID AS CHAR) LIKE ?
+        OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
+        OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(likePrefix, likePrefix, likePrefix, likePrefix, likePrefix);
+    }
   }
   if (type_id) {
     where.push('e.EQM_INST_TYPE = ?');
@@ -86,7 +116,7 @@ async function listEquipment(params) {
   // Allow-list sort/order; if invalid (cannot happen after zod) fall back.
   const sortSql = SORT_COLUMNS[sort] || SORT_COLUMNS.equipment_code;
   const orderSql = ORDER_DIRS[order] || 'ASC';
-  const searchRankSql = q
+  const searchRankSql = cleanQ
     ? `CASE
          WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
          WHEN CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) = ? THEN 1
@@ -94,7 +124,7 @@ async function listEquipment(params) {
          ELSE 3
        END, `
     : '';
-  const searchRankArgs = q ? [String(q).trim(), String(q).trim(), String(q).trim()] : [];
+  const searchRankArgs = cleanQ ? [cleanQ, cleanQ, cleanQ] : [];
   // Always tie-break by the full PK to make pagination deterministic.
   const tieBreak = ', e.EQM_TYPE ASC, e.EQM_ID ASC';
 

@@ -415,11 +415,13 @@ async function prepareEquipmentPdfExport({ startId, endId, actor }) {
 
   return {
     filename,
-    render: (stream) => renderEquipmentListPdf({
-      rows: items,
-      requester,
-      rangeText,
-    }, stream),
+    render: async (stream) => {
+      await renderEquipmentListPdf({
+        rows: items,
+        requester,
+        rangeText,
+      }, stream);
+    },
   };
 }
 

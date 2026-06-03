@@ -16,6 +16,22 @@
 const pool = require('../../config/db');
 const { buildLaneWhere } = require('../../utils/lanes');
 
+const FT_MIN_CHARS = 3;
+
+function buildLikePrefix(q) {
+  return q.replace(/[%_\\]/g, '\\$&') + '%';
+}
+
+function buildBooleanFtPattern(q) {
+  const cleaned = q.replace(/[^\p{L}\p{N}\-.]+/gu, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned
+    .split(/\s+/)
+    .filter((tok) => tok.length >= 2)
+    .map((tok) => `${tok}*`)
+    .join(' ');
+}
+
 const SORT_MAP = {
   '-created_at': 'jc.JM_CREATED_ON DESC, jc.JM_JobCardNO DESC',
   'created_at':  'jc.JM_CREATED_ON ASC, jc.JM_JobCardNO ASC',
@@ -36,14 +52,26 @@ async function listJobCards(params, scope = null) {
   }
 
   if (params.q) {
-    where.push(`(
-      jc.JM_JobCardNO   LIKE ?
-      OR jc.JM_SectionJobNo LIKE ?
-      OR e.EQM_NAME     LIKE ?
-      OR emp.EMM_NAME   LIKE ?
-    )`);
-    const like = `%${params.q}%`;
-    args.push(like, like, like, like);
+    const cleanQ = String(params.q).trim();
+    const ftPattern = cleanQ.length >= FT_MIN_CHARS ? buildBooleanFtPattern(cleanQ) : null;
+    if (ftPattern) {
+      where.push(`(
+        jc.JM_JobCardNO LIKE ?
+        OR jc.JM_SectionJobNo LIKE ?
+        OR MATCH (e.EQM_NAME, e.EQM_MODELNO, e.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
+        OR emp.EMM_NAME LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(likePrefix, likePrefix, ftPattern, likePrefix);
+    } else {
+      where.push(`(
+        jc.JM_JobCardNO LIKE ?
+        OR jc.JM_SectionJobNo LIKE ?
+        OR e.EQM_NAME LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(likePrefix, likePrefix, likePrefix);
+    }
   }
 
   if (params.status) {

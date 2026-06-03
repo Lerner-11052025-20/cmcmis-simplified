@@ -14,6 +14,7 @@
 // ============================================================================
 
 import clsx from 'clsx';
+import { Skeleton } from './ui/Skeleton';
 
 /**
  * @param {Object} props
@@ -66,22 +67,44 @@ export function DataTable({
 
           {/* ── Body ── */}
           <tbody>
-            {rows.length === 0 && !loading ? (
-              <tr>
-                <td
-                  className="px-4 py-16 text-center text-slate-400 text-sm font-medium"
-                  colSpan={columns.length + 1}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
+            {rows.length === 0 ? (
+              loading ? (
+                Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className={clsx(
+                      'border-b border-slate-200/60 last:border-b-0',
+                      rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/60',
+                    )}
+                  >
+                    {/* Row number skeleton */}
+                    <td className="px-4 py-4 align-middle w-12">
+                      <Skeleton className="w-6 h-6 rounded-full" />
+                    </td>
+                    {columns.map((c, i) => (
+                      <td key={i} className="px-4 py-4 align-middle">
+                        <Skeleton className="h-4 w-3/4" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    className="px-4 py-16 text-center text-slate-400 text-sm font-medium"
+                    colSpan={columns.length + 1}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                      </div>
+                      <span>{emptyMessage}</span>
                     </div>
-                    <span>{emptyMessage}</span>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              )
             ) : (
               rows.map((row, rowIndex) => (
                 <tr

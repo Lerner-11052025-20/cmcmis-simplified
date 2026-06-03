@@ -57,7 +57,6 @@ export function Login() {
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
-  const [loginSuccessData, setLoginSuccessData] = useState(null);
   
   // Track active form submission state to prevent the boot-time useEffect
   // from immediately redirecting when the context user hydrates.
@@ -77,30 +76,20 @@ export function Login() {
   // We gate this with isLoggingIn to prevent active sign-in form submits
   // from getting hijacked before showing the welcome popup.
   useEffect(() => {
-    if (!loading && user && !isLoggingIn && !loginSuccessData) {
+    if (!loading && user && !isLoggingIn) {
       const target = location.state?.from?.pathname || '/dashboard';
       navigate(target, { replace: true });
     }
-  }, [loading, user, isLoggingIn, loginSuccessData, location.state, navigate]);
+  }, [loading, user, isLoggingIn, location.state, navigate]);
 
   /** @param {{ employee_id: string, password: string }} values */
   async function onSubmit(values) {
     setServerError('');
     setIsLoggingIn(true);
     try {
-      const enrichedUser = await login(values.employee_id, values.password);
-      
-      // Store user details to trigger the 2-second welcome popup
-      setLoginSuccessData({
-        display_name: enrichedUser.display_name || 'Authorized Operator',
-        employee_id: enrichedUser.sub || values.employee_id,
-      });
-
-      // Pause transition for exactly 2 seconds
-      setTimeout(() => {
-        const target = location.state?.from?.pathname || '/dashboard';
-        navigate(target, { replace: true });
-      }, 2000);
+      await login(values.employee_id, values.password);
+      const target = location.state?.from?.pathname || '/dashboard';
+      navigate(target, { replace: true });
     } catch (err) {
       setIsLoggingIn(false);
       // Form/Card shake error feedback trigger
@@ -371,65 +360,7 @@ export function Login() {
         </div>
       </div>
 
-      {/* ── HIGH-FIDELITY SECURE WELCOME POPUP OVERLAY (2-Second Delay) ── */}
-      {loginSuccessData && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-lg animate-fade-in select-none pointer-events-auto">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_30px_60px_rgba(15,23,42,0.08)] p-8 max-w-sm w-full text-center relative overflow-hidden flex flex-col items-center animate-scale-up mx-4">
-            {/* Subtle decorative color border header */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400" />
-            
-            {/* Interactive top-right close icon (X) */}
-            <button
-              type="button"
-              onClick={() => {
-                setLoginSuccessData(null);
-                setIsLoggingIn(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none rounded-lg p-1 hover:bg-slate-50"
-              title="Dismiss welcome message"
-            >
-              <X size={18} strokeWidth={2} />
-            </button>
 
-            {/* Verification Success Shield Vector */}
-            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100/70 flex items-center justify-center text-emerald-600 mb-5 relative shrink-0">
-              <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-20 animate-ping" />
-              <svg className="w-8 h-8 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-
-            <h3 className="text-lg font-extrabold text-slate-800 tracking-tight font-sans">
-              Access Granted
-            </h3>
-            <p className="text-[10px] text-slate-400 font-sans uppercase tracking-widest mt-1 font-semibold">
-              Telemetry Session Established
-            </p>
-
-            {/* Credentials Badges */}
-            <div className="flex flex-col gap-2 mt-5 w-full items-center font-sans">
-              <div className="text-[9px] font-sans text-slate-400 uppercase tracking-widest font-bold">
-                Authenticated Operator:
-              </div>
-              
-              {/* Employee Name Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-extrabold bg-accent/5 text-accent border border-accent/10 shadow-sm max-w-full truncate font-sans">
-                👤 {loginSuccessData.display_name}
-              </div>
-              
-              {/* Employee ID Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-sans font-extrabold bg-slate-50 text-slate-700 border border-slate-100 shadow-sm">
-                🆔 {loginSuccessData.employee_id}
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center gap-2 text-xs text-slate-400 font-sans font-semibold">
-              <Spinner size={14} className="text-emerald-500 animate-spin" />
-              <span>Redirecting to terminal…</span>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

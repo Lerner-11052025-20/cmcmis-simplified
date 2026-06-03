@@ -117,7 +117,7 @@ function drawMetadataBox(doc, { requester, rangeText, stats }) {
   doc.y = y + h + 15;
 }
 
-function drawEquipmentTable(doc, rows) {
+async function drawEquipmentTableAsync(doc, rows) {
   const x = PAGE_MARGIN_X;
   const tableW = doc.page.width - PAGE_MARGIN_X * 2;
 
@@ -168,9 +168,12 @@ function drawEquipmentTable(doc, rows) {
     return;
   }
 
-  // Draw rows
+  // Draw rows with chunk-based yielding to event loop
   let rowIdx = 0;
-  rows.forEach((row) => {
+  const CHUNK_SIZE = 50;
+
+  for (let idx = 0; idx < rows.length; idx++) {
+    const row = rows[idx];
     const isOdd = rowIdx % 2 !== 0;
     const rowBgColor = isOdd ? ODD_ROW_BG : EVEN_ROW_BG;
     rowIdx++;
@@ -207,10 +210,15 @@ function drawEquipmentTable(doc, rows) {
     });
 
     doc.y = ry + needed;
-  });
+
+    // Yield control back to the event loop
+    if (idx > 0 && idx % CHUNK_SIZE === 0) {
+      await new Promise(resolve => setImmediate(resolve));
+    }
+  }
 }
 
-function renderEquipmentListPdf({ rows, requester, rangeText }, stream) {
+async function renderEquipmentListPdf({ rows, requester, rangeText }, stream) {
   const doc = new PDFDocument({
     size: 'A4',
     layout: 'landscape', // Landscape is perfect for wide columns
@@ -233,8 +241,8 @@ function renderEquipmentListPdf({ rows, requester, rangeText }, stream) {
     stats: { count: rows.length },
   });
 
-  // Data table
-  drawEquipmentTable(doc, rows);
+  // Data table (async)
+  await drawEquipmentTableAsync(doc, rows);
 
   stampPageNumbers(doc, { docId: 'EQUIPMENT-INVENTORY' });
   doc.end();

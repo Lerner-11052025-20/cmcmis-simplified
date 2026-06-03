@@ -135,7 +135,7 @@ async function exportPdf(req, res, next) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    render(res);
+    await render(res);
   } catch (e) { next(e); }
 }
 

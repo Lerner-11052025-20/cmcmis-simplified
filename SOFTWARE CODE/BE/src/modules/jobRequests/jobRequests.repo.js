@@ -19,6 +19,22 @@
 const pool = require('../../config/db');
 const { buildLaneWhere } = require('../../utils/lanes');
 
+const FT_MIN_CHARS = 3;
+
+function buildLikePrefix(q) {
+  return q.replace(/[%_\\]/g, '\\$&') + '%';
+}
+
+function buildBooleanFtPattern(q) {
+  const cleaned = q.replace(/[^\p{L}\p{N}\-.]+/gu, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned
+    .split(/\s+/)
+    .filter((tok) => tok.length >= 2)
+    .map((tok) => `${tok}*`)
+    .join(' ');
+}
+
 // ───────────────────────────────────────────────────────────────────────
 //  Allow-lists (NEVER interpolate user input into SQL)
 // ───────────────────────────────────────────────────────────────────────
@@ -75,19 +91,25 @@ async function listJobRequests(params, scope) {
   }
 
   if (params.q) {
-    // LIKE-based search across the indexed string columns. We didn't
-    // create a FULLTEXT index in Phase 6 Slice 1 (Phase 8 if needed).
-    // Leading '%' defeats index seek but for slice-1 cardinality (<1k
-    // expected rows in dev) the table-scan after the row-level filter
-    // is still well under budget.
-    where.push(`(
-      jr.JR_JOBREQUESTNO LIKE ?
-      OR jr.JR_EQM_NAME      LIKE ?
-      OR jr.JR_EQM_SRNO      LIKE ?
-      OR jr.JR_SUBMITTEDBYNAME LIKE ?
-    )`);
-    const like = `%${params.q}%`;
-    args.push(like, like, like, like);
+    const cleanQ = String(params.q).trim();
+    const ftPattern = cleanQ.length >= FT_MIN_CHARS ? buildBooleanFtPattern(cleanQ) : null;
+    if (ftPattern) {
+      where.push(`(
+        jr.JR_JOBREQUESTNO LIKE ?
+        OR jr.JR_SUBMITTEDBYNAME LIKE ?
+        OR MATCH (eq.EQM_NAME, eq.EQM_MODELNO, eq.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
+        OR jr.JR_EQM_NAME LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(likePrefix, likePrefix, ftPattern, likePrefix);
+    } else {
+      where.push(`(
+        jr.JR_JOBREQUESTNO LIKE ?
+        OR jr.JR_EQM_NAME LIKE ?
+      )`);
+      const likePrefix = buildLikePrefix(cleanQ);
+      args.push(likePrefix, likePrefix);
+    }
   }
 
   if (params.type) {
@@ -153,6 +175,7 @@ async function listJobRequests(params, scope) {
       jr.JR_MVP_STATUS_AT                           AS submitted_at
     FROM cmms_jobrequest_mst jr
     LEFT JOIN cmms_section_mst sm ON sm.SM_ID = jr.JR_DIVISION
+    LEFT JOIN cmms_eqip_mst eq ON eq.EQM_TYPE = jr.JR_EQM_TYPE AND eq.EQM_ID = jr.JR_EQM_ID
     ${whereSql}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?`;
@@ -160,6 +183,7 @@ async function listJobRequests(params, scope) {
   const countSql = `
     SELECT COUNT(*) AS n
     FROM cmms_jobrequest_mst jr
+    LEFT JOIN cmms_eqip_mst eq ON eq.EQM_TYPE = jr.JR_EQM_TYPE AND eq.EQM_ID = jr.JR_EQM_ID
     ${whereSql}`;
 
   const [[rows], [countRows]] = await Promise.all([

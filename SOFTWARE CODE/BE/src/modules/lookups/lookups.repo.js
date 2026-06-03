@@ -11,6 +11,22 @@
 const pool = require('../../config/db');
 const { buildLaneWhere, isEngineerRole, normalizeLaneScopes } = require('../../utils/lanes');
 
+const FT_MIN_CHARS = 3;
+
+function buildLikePrefix(q) {
+  return q.replace(/[%_\\]/g, '\\$&') + '%';
+}
+
+function buildBooleanFtPattern(q) {
+  const cleaned = q.replace(/[^\p{L}\p{N}\-.]+/gu, ' ').trim();
+  if (!cleaned) return '';
+  return cleaned
+    .split(/\s+/)
+    .filter((tok) => tok.length >= 2)
+    .map((tok) => `${tok}*`)
+    .join(' ');
+}
+
 /**
  * Divisions (sections-master) — Division dropdown on the JR form.
  * Source: cmms_section_mst (legacy). See SCHEMA_PHASE6.md decision P6-D11.
@@ -49,38 +65,89 @@ async function searchEquipment(q, limit = 20) {
   // Empty q? Return an empty list — the FE should not call this without a
   // query, but defending against the empty-string case avoids a full scan.
   if (!q || !String(q).trim()) return [];
-  const like = `%${q}%`;
+  const cleanQ = String(q).trim();
   const cap = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
-  const [rows] = await pool.query(
-    `SELECT
-       e.EQM_TYPE                            AS eqm_type,
-       e.EQM_ID                              AS eqm_id,
-       e.EQM_NAME                            AS name,
-       m.CMM_CONT_NAME                       AS make,
-       e.EQM_MODELNO                         AS model_no,
-       e.EQM_SRNO                            AS serial_no,
-       p.PROD_NAME                           AS type_name
-     FROM cmms_eqip_mst e
-     LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
-     LEFT JOIN cmms_product_mst p ON p.PROD_ID     = e.EQM_INST_TYPE
-     WHERE e.EQM_NAME LIKE ?
-        OR e.EQM_MODELNO LIKE ?
-        OR CAST(e.EQM_ID AS CHAR) LIKE ?
-        OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
-        OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
-     ORDER BY
-       CASE
-         WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
-         WHEN CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) = ? THEN 1
-         WHEN CONCAT(e.EQM_TYPE, '-', e.EQM_ID) = ? THEN 2
-         ELSE 3
-       END,
-       e.EQM_NAME ASC,
-       e.EQM_ID ASC
-     LIMIT ?`,
-    [like, like, like, like, like, String(q).trim(), String(q).trim(), String(q).trim(), cap],
-  );
+  const ftPattern = cleanQ.length >= FT_MIN_CHARS ? buildBooleanFtPattern(cleanQ) : null;
+  
+  let rows;
+  if (ftPattern) {
+    [rows] = await pool.query(
+      `SELECT
+         e.EQM_TYPE                            AS eqm_type,
+         e.EQM_ID                              AS eqm_id,
+         e.EQM_NAME                            AS name,
+         m.CMM_CONT_NAME                       AS make,
+         e.EQM_MODELNO                         AS model_no,
+         e.EQM_SRNO                            AS serial_no,
+         p.PROD_NAME                           AS type_name
+       FROM cmms_eqip_mst e
+       LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
+       LEFT JOIN cmms_product_mst p ON p.PROD_ID     = e.EQM_INST_TYPE
+       WHERE MATCH (e.EQM_NAME, e.EQM_MODELNO, e.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
+          OR CAST(e.EQM_ID AS CHAR) LIKE ?
+          OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
+          OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+       ORDER BY
+         CASE
+           WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
+           WHEN CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) = ? THEN 1
+           WHEN CONCAT(e.EQM_TYPE, '-', e.EQM_ID) = ? THEN 2
+           ELSE 3
+         END,
+         e.EQM_NAME ASC,
+         e.EQM_ID ASC
+       LIMIT ?`,
+      [
+        ftPattern,
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        cleanQ,
+        cleanQ,
+        cleanQ,
+        cap
+      ]
+    );
+  } else {
+    [rows] = await pool.query(
+      `SELECT
+         e.EQM_TYPE                            AS eqm_type,
+         e.EQM_ID                              AS eqm_id,
+         e.EQM_NAME                            AS name,
+         m.CMM_CONT_NAME                       AS make,
+         e.EQM_MODELNO                         AS model_no,
+         e.EQM_SRNO                            AS serial_no,
+         p.PROD_NAME                           AS type_name
+       FROM cmms_eqip_mst e
+       LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
+       LEFT JOIN cmms_product_mst p ON p.PROD_ID     = e.EQM_INST_TYPE
+       WHERE e.EQM_NAME LIKE ?
+          OR CAST(e.EQM_ID AS CHAR) LIKE ?
+          OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
+          OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+       ORDER BY
+         CASE
+           WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
+           WHEN CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) = ? THEN 1
+           WHEN CONCAT(e.EQM_TYPE, '-', e.EQM_ID) = ? THEN 2
+           ELSE 3
+         END,
+         e.EQM_NAME ASC,
+         e.EQM_ID ASC
+       LIMIT ?`,
+      [
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        cleanQ,
+        cleanQ,
+        cleanQ,
+        cap
+      ]
+    );
+  }
 
   return rows.map((r) => ({
     id:               `${r.eqm_type}-${r.eqm_id}`,
