@@ -1,0 +1,264 @@
+
+
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[a4paper,
+left=12mm,
+right=12mm,
+top=12mm,
+bottom=12mm]{geometry}
+
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{helvet}
+\usepackage{tcolorbox}
+
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.35}
+
+\definecolor{sectiongray}{RGB}{245,246,248}
+
+\newcommand{\sectiontitle}[1]
+{
+\vspace{2mm}
+
+{\large\bfseries #1}
+
+\vspace{0.5mm}
+
+\hrule
+
+\vspace{1.5mm}
+}
+
+\begin{document}
+
+
+%==================================================
+% HEADER
+%==================================================
+
+\begin{tabularx}{\textwidth}{m{2cm}Xm{2cm}}
+
+\includegraphics[height=1.8cm]{isro-logo.png}
+
+&
+\centering
+
+{\Large\bfseries SPACE APPLICATIONS CENTRE}\\[1mm]
+{\large\bfseries TIMCD}\\[2mm]
+{\Large\bfseries JOB CLOSURE REPORT}\\
+{\normalsize F\&PE REPAIR / MAINTENANCE}
+
+&
+\includegraphics[height=1.8cm]{sac-logo.png}
+
+\end{tabularx}
+
+\vspace{3mm}
+
+\hrule
+
+\vspace{4mm}
+
+%==================================================
+% JOB INFORMATION
+%==================================================
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+
+Job Card No. &
+&
+Equipment ID &
+\\
+\hline
+
+Equipment Name &
+&
+Section Job No. &
+\\
+\hline
+
+Division / Project &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+\end{tabularx}
+
+\vspace{3mm}
+
+
+%==================================================
+% REPAIR SUMMARY
+%==================================================
+
+\sectiontitle{REPAIR SUMMARY}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+
+Job Started Date &
+&
+Job Completed Date &
+\\
+\hline
+
+Repair Status &
+&
+Reason for Not Repaired &
+\\
+\hline
+
+Attended By &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% FAULT ANALYSIS
+%==================================================
+
+\sectiontitle{FAULT ANALYSIS}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+
+Fault Description &
+\\[5mm]
+\hline
+
+Action Taken &
+\\[5mm]
+\hline
+
+Faulty Section &
+\\
+\hline
+
+Fault Category &
+\\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% REPLACED PARTS
+%==================================================
+
+\sectiontitle{FAULTY DEVICE(S) / REPLACED PARTS}
+
+\begin{tabularx}{\textwidth}
+{|c|X|c|c|c|}
+\hline
+
+\textbf{Sr. No.}
+&
+\textbf{Description}
+&
+\textbf{Part No.}
+&
+\textbf{Qty}
+&
+\textbf{Cost (Rs.)}
+
+\\
+\hline
+
+& & & & \\
+\hline
+
+& & & & \\
+\hline
+
+& & & & \\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% USER ACCEPTANCE
+%==================================================
+
+\sectiontitle{USER ACCEPTANCE}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+
+System Working Satisfactorily After Repair &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+Date &
+&
+Name &
+\\
+\hline
+
+In-Charge Signature &
+\multicolumn{3}{l|}{}
+\\[10mm]
+\hline
+
+\end{tabularx}
+
+%==================================================
+% REMARKS
+%==================================================
+
+\sectiontitle{REMARKS}
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+\\[10mm]
+
+\\
+\hline
+
+\end{tabularx}
+
+\vspace{8mm}
+
+\begin{flushright}
+
+\textbf{Signature of In-Charge}
+
+\\[5mm]
+
+\rule{5cm}{0.4pt}
+
+\end{flushright}
+
+\vfill
+
+%==================================================
+% FOOTER
+%==================================================
+
+\hrule
+\vspace{2mm}
+
+\footnotesize
+
+\begin{tabularx}{\textwidth}{XXXX}
+Document No. TIMCD/JC-00 &
+Revised on 01-June-2026 &
+Job Card Format TIMCD JC-01 &
+Page 1 of 1
+\end{tabularx}
+
+\vspace{1mm}
+
+\begin{flushright}
+SAC, Ahmedabad-15
+\end{flushright}
+
+\end{document}

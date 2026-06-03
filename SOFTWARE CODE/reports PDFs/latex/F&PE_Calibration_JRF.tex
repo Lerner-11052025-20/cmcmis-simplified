@@ -1,0 +1,301 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[a4paper,
+left=12mm,
+right=12mm,
+top=10mm,
+bottom=10mm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{helvet}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.15}
+
+\definecolor{sectiongray}{RGB}{235,238,242}
+
+\newcommand{\sectiontitle}[1]{
+\vspace{0.5mm}
+\colorbox{sectiongray}{
+\parbox{\dimexpr\linewidth-2\fboxsep}{
+\textbf{#1}
+}}
+\vspace{0.5mm}
+}
+
+\begin{document}
+
+%==================================================
+% HEADER
+%==================================================
+
+\begin{tabularx}{\textwidth}{m{2cm}Xm{2cm}}
+
+\includegraphics[height=1.8cm]{isro-logo.png}
+
+&
+\centering
+{\Large\bfseries SPACE APPLICATIONS CENTRE}\\[1mm]
+{\large\bfseries TIMCD}\\[2mm]
+{\Large\bfseries JOB REQUEST OF F\&PE FOR CALIBRATION}
+&
+\includegraphics[height=1.8cm]{sac-logo.png}
+
+\end{tabularx}
+
+\vspace{3mm}
+\hrule
+\vspace{4mm}
+
+%==================================================
+% EQUIPMENT ID
+%==================================================
+
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Equipment ID} & \\[3.5mm]
+\hline
+\end{tabularx}
+
+%==================================================
+% EQUIPMENT DETAILS
+%==================================================
+
+\sectiontitle{EQUIPMENT DETAILS}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Name of Equipment & & Make & \\
+\hline
+Model No. & & Serial No. & \\
+\hline
+\end{tabularx}
+
+%==================================================
+% SYSTEM STATUS
+%==================================================
+
+\sectiontitle{SYSTEM INFORMATION}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+Present System Status & \\[5mm]
+\hline
+Complaints / Symptoms & \\[5mm]
+\hline
+\end{tabularx}
+
+%==================================================
+% CALIBRATION INFORMATION
+%==================================================
+
+\sectiontitle{CALIBRATION INFORMATION}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+Equipment is being sent after Repairs &
+\\
+\hline
+\end{tabularx}
+
+
+%==================================================
+% REQUEST DETAILS
+%==================================================
+
+\sectiontitle{REQUEST DETAILS}
+
+\begin{tabularx}{\textwidth}{|p{3cm}|X|p{2.8cm}|X|}
+\hline
+
+\multicolumn{2}{|c|}{\cellcolor{sectiongray}\textbf{SUBMITTED BY}} &
+\multicolumn{2}{c|}{
+\cellcolor{sectiongray}
+\parbox[c][10mm][c]{0.45\linewidth}{
+\centering
+\textbf{APPROVAL}\\
+\small Forwarded through Head of Division / Engineer In-Charge
+}
+}
+\\
+\hline
+
+Name &
+&
+Name &
+\\
+\hline
+
+Designation &
+&
+Date &
+\\
+\cline{1-2}\cline{3-4}
+
+Phone (Lab) &
+&
+\multirow{5}{*}{\textbf{Signature}} &
+\multirow{5}{*}{\rule{0pt}{3.5cm}}
+\\
+\cline{1-2}
+
+Room No. &
+&
+&
+\\
+\cline{1-2}
+
+Division &
+&
+&
+\\
+\cline{1-2}
+
+Sub-System &
+&
+&
+\\
+\cline{1-2}
+
+Name of Project &
+&
+&
+\\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% INSTRUCTION
+%==================================================
+
+\vspace{1mm}
+
+\begin{tcolorbox}[
+colback=sectiongray,
+colframe=black,
+boxrule=0.5pt,
+left=2mm,
+right=2mm,
+top=1mm,
+bottom=1mm]
+
+\textbf{Instructions for User:}
+
+\begin{enumerate}
+\item At the time of submission of equipment for calibration and receiving equipment after calibration, the user's representative shall demonstrate / ensure the equipment is in working condition.
+
+\item Equipment must accompany the operation and service manual(s) and accessory kit (if any).
+
+\item Please fill up a separate Job Card for each equipment.
+\end{enumerate}
+
+\end{tcolorbox}
+
+%==================================================
+% FOR TIMCD USE ONLY
+%==================================================
+
+\sectiontitle{FOR TIMCD USE ONLY}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Job Card Received Date &
+&
+Instrument Received Date &
+\\
+\hline
+
+Job Type &
+&
+Repair Type &
+\\
+\hline
+
+Job Start Planned Date &
+&
+Job Complete Planned Date &
+\\
+\hline
+
+Section Job No. &
+&
+Engineer In-Charge &
+\\
+\hline
+
+\multicolumn{1}{|>{\bfseries}l|}{Job Status}
+&
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% EQUIPMENT RECEIPT ACKNOWLEDGEMENT
+%==================================================
+
+\sectiontitle{EQUIPMENT RECEIPT ACKNOWLEDGEMENT}
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+\textbf{The Equipment is Received from Calibration Lab}
+
+\\[2mm]
+\hline
+
+\end{tabularx}
+
+\vspace{1mm}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Date &
+&
+Signature &
+\\[4mm]
+\hline
+
+Name &
+&
+&
+\\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% FOOTER
+%==================================================
+
+\hrule
+\vspace{2mm}
+
+\footnotesize
+
+\begin{tabularx}{\textwidth}{XXXX}
+Document No. TIMCD/JC-00 &
+Revised on 01-June-2026 &
+Job Card Format TIMCD JC-01 &
+Page 1 of 1
+\end{tabularx}
+
+\vspace{1mm}
+
+\begin{flushright}
+SAC, Ahmedabad-15
+\end{flushright}
+
+\end{document}
+```

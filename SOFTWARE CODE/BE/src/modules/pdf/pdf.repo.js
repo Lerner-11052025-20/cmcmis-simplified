@@ -328,6 +328,7 @@ async function loadJobRequestFull(jrNo) {
        jr.JR_DIVISION                AS division_id,
        sm.SM_SHORTNAME               AS division_code,
        sm.SM_NAME                    AS division_name,
+       sm.SM_HEAD_NAME               AS division_head_name,
        /* approval / rejection */
        jr.JR_APPROVED_BY             AS approved_by_employee_id,
        jr.JR_APPROVED_ON             AS approved_at,
@@ -345,13 +346,25 @@ async function loadJobRequestFull(jrNo) {
        jc.JM_MVP_STATUS              AS linked_job_card_status,
        jc.JM_WORKFLOW_TYPE           AS linked_job_card_workflow_type,
        jc.JM_PlannedComletedDate     AS linked_job_card_target_end_date,
-       jc.JM_CREATED_ON              AS linked_job_card_created_at
+       jc.JM_CREATED_ON              AS linked_job_card_created_at,
+       jc.JM_JCRecdDate              AS linked_job_card_received_date,
+       jc.JM_InstRecdDate            AS linked_instrument_received_date,
+       jc.JM_PlannedStartDate        AS linked_job_start_planned_date,
+       jc.JM_PlannedComletedDate     AS linked_job_complete_planned_date,
+       jc.JM_ASSIGNED_ENGINEER       AS linked_engineer_employee_id,
+       emp_jc_eng.EMM_NAME           AS linked_engineer_name,
+       jc.job_type                   AS linked_internal_job_type,
+       jc.repair_type                AS linked_repair_type,
+       jc.job_status_display         AS linked_job_status_display,
+       jc.equipment_received_by_customer AS linked_customer_received_by,
+       jc.customer_received_date     AS linked_customer_received_date
      FROM cmms_jobrequest_mst jr
      LEFT JOIN cmms_section_mst sm     ON sm.SM_ID  = jr.JR_DIVISION
      LEFT JOIN cmms_emp_mst   emp_app  ON emp_app.EMM_ID = jr.JR_APPROVED_BY
      LEFT JOIN cmms_emp_mst   emp_rej  ON emp_rej.EMM_ID = jr.JR_REJECTED_BY
      LEFT JOIN cmms_emp_mst   emp_eng  ON emp_eng.EMM_ID = jr.JR_ASSIGNED_ENGINEER
      LEFT JOIN cmms_jobcard_mst jc     ON jc.JM_SectionJobNo = jr.JR_SECTIONJOB_NO
+     LEFT JOIN cmms_emp_mst   emp_jc_eng ON emp_jc_eng.EMM_ID = jc.JM_ASSIGNED_ENGINEER
      WHERE jr.JR_JOBREQUESTNO = ?
      LIMIT 1`,
     [jrNo],

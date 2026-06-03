@@ -30,6 +30,7 @@ const { errors } = require('../../middleware/errorHandler');
 const { renderJobCardCertificate } = require('./templates/jobCardCertificate');
 const { renderJobCardDetails }     = require('./templates/jobCardDetails');
 const { renderJobRequestDetails }  = require('./templates/jobRequestDetails');
+const { renderTmeCalibrationJrf }   = require('./templates/tmeCalibrationJrf/tmeCalibrationJrf');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -110,10 +111,19 @@ async function prepareJobRequestDetails(jrNo, actor, rowScope) {
     throw errors.notFound(`Job Request not found: ${jrNo}`);
   }
 
-  const filename = `${jrCode(payload)}_details.pdf`;
+  const isTmeCalibration = payload.job_category === 'TME' && payload.job_type === 'CALIBRATION';
+  const filename = isTmeCalibration
+    ? `${jrCode(payload)}_TME_Calibration_JRF.pdf`
+    : `${jrCode(payload)}_details.pdf`;
   return {
     filename,
-    render: (stream) => renderJobRequestDetails(payload, stream, { generated_by: actor }),
+    render: (stream) => {
+      if (isTmeCalibration) {
+        renderTmeCalibrationJrf(payload, stream, { generated_by: actor });
+        return;
+      }
+      renderJobRequestDetails(payload, stream, { generated_by: actor });
+    },
   };
 }
 

@@ -1,0 +1,486 @@
+\documentclass[a4paper,10pt]{article}
+
+%==================================================
+% PACKAGES
+%==================================================
+
+\usepackage[a4paper,
+left=12mm,
+right=12mm,
+top=12mm,
+bottom=12mm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{helvet}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tcolorbox}
+\usepackage{calc}
+
+%==================================================
+% FONT
+%==================================================
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.2}
+
+%==================================================
+% PAGE STYLE
+%==================================================
+
+\pagestyle{fancy}
+
+\fancyhf{}
+
+\cfoot{Page \thepage\ of \pageref{LastPage}}
+
+\renewcommand{\headrulewidth}{0pt}
+
+%==================================================
+% COLORS
+%==================================================
+
+\definecolor{sectiongray}{RGB}{245,246,248}
+
+%==================================================
+% SECTION TITLE
+%==================================================
+
+\newcommand{\sectiontitle}[1]
+{
+\vspace{2mm}
+
+{\large\bfseries #1}
+
+\vspace{0.5mm}
+
+\hrule
+
+\vspace{1.5mm}
+}
+
+%==================================================
+% DYNAMIC VARIABLES
+%==================================================
+
+\newcommand{\CertificateNo}{}
+\newcommand{\ULRNo}{}
+
+\newcommand{\EquipmentName}{}
+\newcommand{\EquipmentID}{}
+
+\newcommand{\Make}{}
+\newcommand{\ModelNo}{}
+\newcommand{\SerialNo}{}
+
+\newcommand{\ReceivedDate}{}
+\newcommand{\IssueDate}{}
+\newcommand{\CalibrationDate}{}
+\newcommand{\DueDate}{}
+
+\newcommand{\ProcedureRef}{}
+\newcommand{\JobNo}{}
+
+%==================================================
+% DOCUMENT
+%==================================================
+
+\begin{document}
+%==================================================
+% HEADER
+%==================================================
+
+\begin{tabularx}{\textwidth}{m{2cm}Xm{2cm}}
+
+\includegraphics[height=1.8cm]{isro-logo.png}
+
+&
+\centering
+
+{\textbf {SAC(ISRO)-TIMCD-CALIBRATION LABORATORY}}\\
+{\textbf {SPACE APPLICATIONS CENTRE (SAC), ISRO}}\\
+{\textbf {BUILDING NO : 48-23}}\\
+{\textbf {DEPARTMENT OF SPACE}}\\
+{\textbf {GOVERNMENT OF INDIA}}\\
+{\textbf {AHMEDABAD : 380015}}\\
+{\textbf {TEL : (079)26914823}}
+
+&
+\includegraphics[height=1.8cm]{nabl-logo.png}
+
+\end{tabularx}
+
+\vspace{2mm}
+
+\begin{center}
+{\Large\bfseries CALIBRATION CERTIFICATE}
+\end{center}
+
+\vspace{2mm}
+
+%==================================================
+% CERTIFICATE DETAILS
+%==================================================
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Certificate No. &
+&
+ULR No. &
+\\
+\hline
+\end{tabularx}
+
+%==================================================
+% CALIBRATION INFORMATION
+%==================================================
+
+\sectiontitle{CALIBRATION INFORMATION}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+
+Equipment Received Date &
+&
+Certificate Issue Date &
+\\
+\hline
+
+Date(s) of Calibration &
+&
+Calibration Due Date &
+\\
+\hline
+
+Job Number &
+&
+Procedure Reference &
+\\
+\hline
+
+Calibration Location &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+\end{tabularx}
+%==================================================
+% EQUIPMENT DESCRIPTION
+%==================================================
+
+\sectiontitle{EQUIPMENT DESCRIPTION}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+Equipment ID & \\[1mm]
+\hline
+Equipment Name & \\[1mm]
+\hline
+Make & \\[1mm]
+\hline
+Model Number & \\[1mm]
+\hline
+Serial Number & \\[1mm]
+\hline
+\end{tabularx}
+
+\vspace{2mm}
+
+%==================================================
+% ACCESSORIES
+%==================================================
+
+\sectiontitle{ACCESSORIES}
+
+\begin{tabularx}{\textwidth}
+{|c|X|c|c|}
+\hline
+
+\textbf{Sr. No.} &
+\textbf{Accessory Description} &
+\textbf{Model No.} &
+\textbf{Serial No.}
+\\
+\hline
+
+& & & \\
+\hline
+
+& & & \\
+\hline
+
+& & & \\
+\hline
+
+\end{tabularx}
+
+\vspace{2mm}
+
+%==================================================
+% CUSTOMER INFORMATION
+%==================================================
+
+\sectiontitle{CUSTOMER INFORMATION}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Submitted By & &
+Division &
+\\
+\hline
+
+Group & &
+Project &
+\\
+\hline
+
+Phone (Lab) & &
+Phone (Room) &
+\\
+\hline
+
+\end{tabularx}
+
+\vspace{2mm}
+
+%==================================================
+% ENVIRONMENTAL CONDITIONS
+%==================================================
+
+\sectiontitle{ENVIRONMENTAL CONDITIONS}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Temperature &
+&
+Relative Humidity &
+\\
+\hline
+\end{tabularx}
+
+\vspace{2mm}
+
+%==================================================
+% STANDARDS USED
+%==================================================
+
+\sectiontitle{STANDARDS USED}
+
+\begin{tabularx}{\textwidth}
+{|c|X|X|X|c|}
+\hline
+
+\textbf{ID} &
+\textbf{Standard Used} &
+\textbf{Make / Model} &
+\textbf{Calibrated At} &
+\textbf{Validity}
+\\
+\hline
+
+& & & & \\
+\hline
+
+& & & & \\
+\hline
+
+& & & & \\
+\hline
+
+& & & & \\
+\hline
+
+\end{tabularx}
+
+\vspace{2mm}
+
+\begin{center}
+\small
+Measurements are traceable to National / International Standards
+\end{center}
+
+%==================================================
+% PAGE 2
+%==================================================
+
+\newpage
+
+%==================================================
+% PARAMETER CHECK LIST
+%==================================================
+
+\sectiontitle{ PARAMETER CHECK LIST}
+
+\begin{tabularx}{\textwidth}{|p{1cm}|X|p{3cm}|}
+\hline
+\textbf{No} &
+\textbf{Parameters Checked} &
+\textbf{Observations / Remarks}
+\\
+\hline
+
+1 & & \\ \hline
+2 & & \\ \hline
+3 & & \\ \hline
+4 & & \\ \hline
+5 & & \\ \hline
+6 & & \\ \hline
+7 & & \\ \hline
+8 & & \\ \hline
+9 & & \\ \hline
+10 & & \\ \hline
+
+\end{tabularx}
+
+\vspace{3mm}
+
+%==================================================
+% ADJUSTMENT DETAILS
+%==================================================
+
+\sectiontitle{ ADJUSTMENT DETAILS}
+
+\begin{tabularx}{\textwidth}
+{|p{1cm}|X|p{2cm}|p{2.8cm}|p{3cm}|p{3cm}|}
+\hline
+
+\textbf{Sr.No.} &
+\textbf{Parameter} &
+\textbf{Test Value} &
+\textbf{Specification / Limits} &
+\textbf{Before Adjustment} &
+\textbf{After Adjustment}
+\\
+\hline
+
+& & & & & \\
+\hline
+
+& & & & & \\
+\hline
+
+\end{tabularx}
+
+\vspace{2mm}
+
+\noindent
+\textbf{Detailed Observation Report of \rule{2cm}{0.4pt} pages for above parameters are attached.}
+
+\vspace{4mm}
+
+%==================================================
+% NOTES
+%==================================================
+
+\sectiontitle{ NOTES}
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+1. The result in this report refers only to this particular item submitted for calibration.
+\\[1mm]
+
+2. This report shall not be reproduced except in full without written approval from HEAD TIMCD.
+\\[1mm]
+
+3. The calibration results recorded in this report are valid at the time and under the stated conditions of measurements.
+\\[1mm]
+
+4. Confidence level is approximately 95\% and coverage factor k=2.
+\\[1mm]
+
+\hline
+
+\end{tabularx}
+
+\vspace{3mm}
+
+%==================================================
+% REMARKS
+%==================================================
+
+\sectiontitle{ REMARKS}
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+Performance of the Equipment is within the specifications.
+
+\\[4mm]
+
+\hline
+
+\end{tabularx}
+
+\vspace{2mm}
+
+\noindent
+\textbf{Observation with calculation of expanded uncertainty is available with CAL LAB and will be provided on request.}
+
+\vspace{5mm}
+
+%==================================================
+% CALIBRATION STATUS
+%==================================================
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+
+Calibration Status &
+VALID CAL
+
+\\
+\hline
+
+\end{tabularx}
+
+\vspace{12mm}
+
+%==================================================
+% SIGNATURES
+%==================================================
+
+\begin{tabularx}{\textwidth}{XXX}
+
+\centering Sign:
+&
+\centering Sign:
+&
+\centering Sign:
+\\[12mm]
+
+\centering CALIBRATED BY
+&
+\centering REVIEWED BY
+&
+\centering AUTHORISED BY
+
+\end{tabularx}
+
+\vfill
+
+\hrule
+
+\vspace{2mm}
+
+\footnotesize
+
+Form No: FR/GN/10
+\hfill
+Issue No: 01
+\hfill
+Rev: 01
+\hfill
+Page \thepage\ of \pageref{LastPage}
+
+
+
+\end{document}

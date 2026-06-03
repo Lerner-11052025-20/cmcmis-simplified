@@ -1,0 +1,257 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[a4paper,
+left=12mm,
+right=12mm,
+top=10mm,
+bottom=10mm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{helvet}
+\usepackage{tcolorbox}
+
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.3}
+
+\definecolor{sectiongray}{RGB}{235,238,242}
+
+\newcommand{\sectiontitle}[1]{
+\vspace{2mm}
+\colorbox{sectiongray}{
+\parbox{\dimexpr\linewidth-2\fboxsep}{
+\textbf{\large #1}
+}}
+\vspace{1mm}
+}
+
+\begin{document}
+
+%==================================================
+% HEADER
+%==================================================
+
+\begin{tabularx}{\textwidth}{m{2cm}Xm{2cm}}
+
+\includegraphics[height=1.8cm]{isro-logo.png}
+
+&
+\centering
+
+{\Large\bfseries SPACE APPLICATIONS CENTRE}\\[1mm]
+{\large\bfseries TIMCD}\\[2mm]
+{\Large\bfseries JOB CLOSURE REPORT}\\
+{\normalsize T\&ME CALIBRATION}
+
+&
+\includegraphics[height=1.8cm]{sac-logo.png}
+
+\end{tabularx}
+
+\vspace{3mm}
+
+
+%==================================================
+% JOB INFORMATION
+%==================================================
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Job Card No. & & Equipment ID & \\
+\hline
+Equipment Name & & Calibration Ref. No. & \\
+\hline
+Division / Project & \multicolumn{3}{l|}{} \\
+\hline
+\end{tabularx}
+
+%==================================================
+% REVIEW & ACCEPTANCE
+%==================================================
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+$\bullet$ Statement of conformity, decision rule and calibration due date as per SAC centralized policy EP/033.
+
+\\[2mm]
+
+$\bullet$ User Signature :
+
+\\[2mm]
+
+$\bullet$ Job Request Reviewed : YES / NO
+
+\\[2mm]
+
+\hline
+
+\end{tabularx}
+
+%==================================================
+% CALIBRATION SUMMARY
+%==================================================
+
+\sectiontitle{CALIBRATION SUMMARY}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+Job Started Date & & Job Completed Date & \\
+\hline
+Calibration Status & & Calibration Due Date & \\
+\hline
+Temperature & & Relative Humidity & \\
+\hline
+Calibration Ref. No. & & Calibrated By & \\
+\hline
+Signature & \multicolumn{3}{l|}{} \\
+\hline
+\end{tabularx}
+
+%==================================================
+% CALIBRATION ACTIVITY
+%==================================================
+
+\sectiontitle{CALIBRATION ACTIVITY DETAILS}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|>{\bfseries}l|X|}
+\hline
+
+Status of Equipment as Received &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+Repair Carried Out By &
+\multicolumn{3}{l|}{}
+\\
+\hline
+
+Sent to Lab Date &
+&
+Received from Lab Date &
+\\
+\hline
+
+Adjustment(s) &
+&
+Adjustment Status &
+\\
+\hline
+
+Reason for Limited / Partial / No Calibration &
+\multicolumn{3}{l|}{}
+\\[6mm]
+\hline
+
+\end{tabularx}
+
+%==================================================
+% STANDARDS USED
+%==================================================
+
+\sectiontitle{STANDARDS USED}
+
+\begin{tabularx}{\textwidth}{|>{\bfseries}l|X|}
+\hline
+
+Equipment Used for Calibration (ID Nos.)
+
+&
+\\[3mm]
+
+\hline
+
+\end{tabularx}
+
+%==================================================
+% ADJUSTMENT DETAILS
+%==================================================
+
+\sectiontitle{ADJUSTMENT DETAILS}
+
+\begin{tabularx}{\textwidth}
+{|p{1cm}|X|p{2cm}|p{2.8cm}|p{3cm}|p{3cm}|}
+\hline
+
+\textbf{Sr.No.}
+&
+\textbf{Parameter}
+&
+\textbf{Test Value}
+&
+\textbf{Specification / Limits}
+&
+\textbf{Before Adjustment}
+&
+\textbf{After Adjustment}
+\\
+\hline
+
+& & & & & \\
+\hline
+
+& & & & & \\
+\hline
+
+& & & & & \\
+\hline
+
+\end{tabularx}
+
+%==================================================
+% REMARKS
+%==================================================
+
+\sectiontitle{REMARKS}
+
+\begin{tabularx}{\textwidth}{|X|}
+\hline
+
+\\[5mm]
+
+\\
+
+\hline
+
+\end{tabularx}
+
+\vspace{5mm}
+
+\begin{flushright}
+
+\textbf{Name of In-Charge}
+
+\\[3mm]
+
+\textbf{Signature of In-Charge}
+
+\\[3mm]
+
+\rule{5cm}{0.4pt}
+
+\end{flushright}
+
+\vfill
+
+%==================================================
+% FOOTER
+%==================================================
+
+\hrule
+\vspace{2mm}
+
+\footnotesize
+
+\begin{tabularx}{\textwidth}{XXXX}
+Document No. TIMCD/JC-00 &
+Revised on 01-June-2026 &
+Job Closure Format &
+Page 1 of 1
+\end{tabularx}
+
+\end{document}
