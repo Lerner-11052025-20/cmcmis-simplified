@@ -12,7 +12,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CalendarDays,
+  IdCard,
+  Mail,
+  MapPin,
+  Save,
+} from 'lucide-react';
 
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
@@ -32,6 +40,30 @@ const EMPTY = {
   address: '', city: '', state: '', zip: '',
   remarks: '',
 };
+
+function SectionCard({ icon: Icon, eyebrow, title, children, tone = 'accent' }) {
+  const tones = {
+    accent: 'bg-accent/5 text-accent border-accent/10',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100/70',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100/70',
+    slate: 'bg-slate-50 text-slate-600 border-slate-200/70',
+  };
+
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300">
+      <div className="flex items-center gap-3.5 mb-6 border-b border-slate-100 pb-5">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${tones[tone] || tones.accent}`}>
+          <Icon size={20} strokeWidth={2} aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">{eyebrow}</p>
+          <h2 className="text-base font-extrabold text-slate-800 tracking-tight leading-none mt-1.5">{title}</h2>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export function EmployeeForm({ mode /* 'new' | 'edit' */ }) {
   const { id: routeId } = useParams();
@@ -153,76 +185,111 @@ export function EmployeeForm({ mode /* 'new' | 'edit' */ }) {
     }
   }
 
-  if (loading) return <p className="text-sm text-ink-soft">Loading…</p>;
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="flex min-h-[42vh] flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white shadow-card">
+          <div className="h-9 w-9 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+          <p className="text-sm font-semibold text-slate-500">Loading employee record...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <button type="button" onClick={() => navigate('/admin/employees')}
-          className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-          <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" />
-          Back to Employees
-        </button>
-        <h1 className="text-2xl font-semibold text-ink mt-2">
-          {isEdit ? `Edit Employee — ${routeId}` : 'New Employee'}
-        </h1>
-        <p className="text-sm text-ink-soft mt-1">
-          {isEdit
-            ? 'Update the HR master record. Employee ID cannot be changed.'
-            : 'Create a new employee in the master. A user account can be added later.'}
-        </p>
+    <div className="max-w-6xl mx-auto space-y-8 pb-12 font-sans antialiased">
+      <div className="flex flex-col gap-2.5">
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/employees')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-all duration-200 group"
+          >
+            <ArrowLeft size={13} strokeWidth={2.5} aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-x-0.5" />
+            Back to Employees
+          </button>
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+            {isEdit ? 'Edit Employee' : 'New Employee'}
+          </h1>
+          <p className="text-sm font-medium text-slate-500 max-w-2xl">
+            {isEdit
+              ? `Update the HR master record for ${routeId}. Employee ID remains locked.`
+              : 'Create an employee master record for personnel, division, and contact routing.'}
+          </p>
+        </div>
       </div>
 
       {formError ? (
-        <div role="alert" className="rounded-md bg-danger/10 text-danger text-xs px-3 py-2 whitespace-pre-line border border-danger/30">
-          {formError}
+        <div
+          role="alert"
+          className="rounded-2xl bg-danger/5 border border-danger/20 p-5 flex gap-3 shadow-[0_2px_10px_rgba(239,68,68,0.05)]"
+        >
+          <AlertTriangle size={18} className="text-danger shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <h3 className="text-xs font-extrabold uppercase tracking-widest text-danger">Validation Flags</h3>
+            <p className="text-xs font-medium text-slate-600 leading-relaxed mt-2 whitespace-pre-line">
+              {formError}
+            </p>
+          </div>
         </div>
       ) : null}
 
-      <section className="bg-white rounded-lg border border-border shadow-card p-6">
-        <h2 className="text-lg font-semibold text-ink mb-4">Identity</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-8">
+        <SectionCard icon={IdCard} eyebrow="Section 1" title="Identity and Division">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
           <FormField label="Employee ID" required error={fieldErrors.employee_id}>
             <Input value={form.employee_id}
               onChange={(e) => update('employee_id', e.target.value.toUpperCase())}
-              disabled={isEdit} placeholder="e.g. AC12345" />
+              disabled={isEdit}
+              placeholder="e.g. AC12345"
+              className={isEdit ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 font-bold' : undefined}
+            />
           </FormField>
           <FormField label="Full Name" required error={fieldErrors.full_name}>
-            <Input value={form.full_name} onChange={(e) => update('full_name', e.target.value)} />
+            <Input value={form.full_name} onChange={(e) => update('full_name', e.target.value)} placeholder="Enter full name" />
           </FormField>
           <FormField label="Designation" required error={fieldErrors.designation}>
-            <Input value={form.designation} onChange={(e) => update('designation', e.target.value)} />
+            <Input value={form.designation} onChange={(e) => update('designation', e.target.value)} placeholder="Enter designation" />
           </FormField>
           <FormField label="Division" required error={fieldErrors.division_id}>
             <Select value={form.division_id} onChange={(e) => update('division_id', e.target.value)}>
               <option value="">Select division</option>
-              {divisions.map((d) => (<option key={d.id} value={d.id}>{d.code} — {d.name}</option>))}
+              {divisions.map((d) => {
+                const divisionId = d.id ?? d.division_id ?? d.SM_ID;
+                const code = d.code ?? d.division_code ?? d.SM_SHORTNAME;
+                const name = d.name ?? d.division_name ?? d.SM_NAME;
+                return (
+                  <option key={divisionId} value={divisionId}>
+                    {code ? `${code} - ` : ''}{name || `Division ${divisionId}`}
+                  </option>
+                );
+              })}
             </Select>
           </FormField>
-        </div>
-      </section>
+          </div>
+        </SectionCard>
 
-      <section className="bg-white rounded-lg border border-border shadow-card p-6">
-        <h2 className="text-lg font-semibold text-ink mb-4">Contact</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SectionCard icon={Mail} eyebrow="Section 2" title="Contact Channels" tone="emerald">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
           <FormField label="Email" error={fieldErrors.email}>
-            <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} />
+            <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} placeholder="name@example.com" />
           </FormField>
           <FormField label="Mobile" error={fieldErrors.mobile}>
-            <Input value={form.mobile} onChange={(e) => update('mobile', e.target.value)} />
+            <Input value={form.mobile} onChange={(e) => update('mobile', e.target.value)} placeholder="Enter mobile number" />
           </FormField>
           <FormField label="Lab Phone" error={fieldErrors.lab_phone}>
-            <Input value={form.lab_phone} onChange={(e) => update('lab_phone', e.target.value)} />
+            <Input value={form.lab_phone} onChange={(e) => update('lab_phone', e.target.value)} placeholder="Enter lab extension" />
           </FormField>
           <FormField label="Room Phone" error={fieldErrors.room_phone}>
-            <Input value={form.room_phone} onChange={(e) => update('room_phone', e.target.value)} />
+            <Input value={form.room_phone} onChange={(e) => update('room_phone', e.target.value)} placeholder="Enter room extension" />
           </FormField>
-        </div>
-      </section>
+          </div>
+        </SectionCard>
 
-      <section className="bg-white rounded-lg border border-border shadow-card p-6">
-        <h2 className="text-lg font-semibold text-ink mb-4">Personal (optional)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SectionCard icon={CalendarDays} eyebrow="Section 3" title="Personal Details" tone="amber">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <FormField label="Date of Birth" error={fieldErrors.date_of_birth}>
             <Input type="date" value={form.date_of_birth}
               onChange={(e) => update('date_of_birth', e.target.value)} />
@@ -232,11 +299,16 @@ export function EmployeeForm({ mode /* 'new' | 'edit' */ }) {
               onChange={(e) => update('date_of_joining', e.target.value)} />
           </FormField>
           <FormField label="Blood Group" error={fieldErrors.blood_group}>
-            <Input value={form.blood_group} onChange={(e) => update('blood_group', e.target.value)} />
+            <Input value={form.blood_group} onChange={(e) => update('blood_group', e.target.value.toUpperCase())} placeholder="e.g. B+" />
           </FormField>
+          </div>
+        </SectionCard>
+
+        <SectionCard icon={MapPin} eyebrow="Section 4" title="Address and Notes" tone="slate">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div className="md:col-span-3">
             <FormField label="Address" error={fieldErrors.address}>
-              <Input value={form.address} onChange={(e) => update('address', e.target.value)} />
+              <Input value={form.address} onChange={(e) => update('address', e.target.value)} placeholder="Enter office or residential address" />
             </FormField>
           </div>
           <FormField label="City" error={fieldErrors.city}>
@@ -252,22 +324,33 @@ export function EmployeeForm({ mode /* 'new' | 'edit' */ }) {
             <FormField label="Remarks" error={fieldErrors.remarks}>
               <textarea rows={2} value={form.remarks}
                 onChange={(e) => update('remarks', e.target.value)}
-                className="w-full rounded-md border border-border bg-base-elev/30 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent" />
+                placeholder="Add any administrative notes"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-accent leading-relaxed transition-all duration-200 hover:border-slate-300" />
             </FormField>
           </div>
-        </div>
-      </section>
+          </div>
+        </SectionCard>
 
-      <div className="flex items-center justify-between sticky bottom-0 bg-base/80 backdrop-blur py-3">
-        <Button variant="secondary" onClick={() => navigate('/admin/employees')} disabled={submitting}>
+        <div className="bg-white border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] px-6 py-5 flex items-center justify-between rounded-2xl gap-4 select-none transition-all duration-300 hover:shadow-md hover:border-slate-200/80">
+        <Button
+          variant="secondary"
+          onClick={() => navigate('/admin/employees')}
+          disabled={submitting}
+          className="text-slate-600 hover:bg-slate-50 border-slate-200 shadow-sm transition-transform duration-150 hover:-translate-x-0.5 active:scale-95"
+        >
           Cancel
         </Button>
         <Button variant="primary" onClick={submit} disabled={submitting}
-          className={!isValid ? 'opacity-60' : undefined}
+          className={!isValid ? 'opacity-65 cursor-pointer' : 'shadow-md shadow-accent/15 transition-all duration-150 active:scale-95'}
           title={!isValid ? 'Click to see which fields need attention' : undefined}>
-          <Save size={14} strokeWidth={1.75} aria-hidden="true" />
+          {submitting ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+          ) : (
+            <Save size={14} strokeWidth={2.2} aria-hidden="true" />
+          )}
           {isEdit ? 'Save Changes' : 'Create Employee'}
         </Button>
+        </div>
       </div>
     </div>
   );

@@ -73,8 +73,7 @@ const pool = mysql.createPool({
     await conn.query('SELECT 1');
     conn.release();
     logger.info(
-      { host: env.DB_HOST, port: env.DB_PORT, db: env.DB_NAME, poolLimit: env.DB_POOL_LIMIT },
-      'DB pool ready',
+      `\x1b[32m✓ DB\x1b[0m connected | ${env.DB_HOST}:${env.DB_PORT} | ${env.DB_NAME} | pool ${env.DB_POOL_LIMIT}`,
     );
   } catch (err) {
     logger.fatal({ err: { message: err.message, code: err.code } }, 'DB pool failed to connect — exiting');

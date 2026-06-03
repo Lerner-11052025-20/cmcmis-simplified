@@ -55,6 +55,46 @@ const { notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+function stripApiBase(url) {
+  const raw = String(url || '/');
+  return raw.startsWith(env.API_BASE_PATH)
+    ? raw.slice(env.API_BASE_PATH.length) || '/'
+    : raw;
+}
+
+function frontendRoute(req) {
+  const headerRoute = req.get?.('X-Frontend-Route');
+  if (headerRoute) return headerRoute;
+
+  const ref = req.get?.('referer') || req.get?.('referrer') || '';
+  if (!ref) return '-';
+  try {
+    const parsed = new URL(ref);
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return '-';
+  }
+}
+
+function statusToken(statusCode) {
+  if (statusCode >= 500) return `\x1b[31mERR ${statusCode}\x1b[0m`;
+  if (statusCode >= 400) return `\x1b[33mWARN ${statusCode}\x1b[0m`;
+  if (statusCode === 304) return `\x1b[36mCACHE ${statusCode}\x1b[0m`;
+  return `\x1b[32mOK ${statusCode}\x1b[0m`;
+}
+
+function requestLogLine(req, res, responseTime) {
+  const duration = Number(responseTime || 0).toFixed(0);
+  return [
+    `API ${req.method} ${stripApiBase(req.url)}`,
+    `FE ${frontendRoute(req)}`,
+    statusToken(res.statusCode),
+    `${duration}ms`,
+    req.ip || req.remoteAddress || '-',
+    `#${req.id}`,
+  ].join(' | ');
+}
+
 // `trust proxy` lets Express look at X-Forwarded-For to compute req.ip.
 // In dev this is harmless; in prod (behind Nginx) it is essential for
 // accurate rate-limiting and audit logging. The Phase 10 deployment
@@ -98,7 +138,7 @@ app.use(
     origin: env.CORS_ORIGIN,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Frontend-Route'],
     // Browsers respect this; CORS pre-flight responses cache for 10 min,
     // saving an OPTIONS round-trip on every subsequent request.
     maxAge: 600,
@@ -140,10 +180,8 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    customSuccessMessage: (req, res) =>
-      `${req.method} ${req.url} → ${res.statusCode}`,
-    customErrorMessage: (req, res) =>
-      `${req.method} ${req.url} → ${res.statusCode}`,
+    customSuccessMessage: requestLogLine,
+    customErrorMessage: requestLogLine,
     // Slim serializers — drop headers, drop res body, keep just the fields
     // we actually want to read at 2am.
     serializers: {
@@ -333,7 +371,7 @@ app.use(errorHandler);
 
 // ── HTTP listener ───────────────────────────────────────────────────────
 const server = app.listen(env.PORT, () => {
-  logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server ready');
+  logger.info(`\x1b[32m✓ API\x1b[0m server ready | http://localhost:${env.PORT} | ${env.NODE_ENV}`);
 });
 
 // ── Graceful shutdown ────────────────────────────────────────────────────

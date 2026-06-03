@@ -95,6 +95,13 @@ export const api = axios.create({
 // first request before the user authenticates — which is why /auth/login
 // has no Bearer expectation on the BE side.
 api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const route = `${window.location.pathname}${window.location.search}`;
+    config.headers.set
+      ? config.headers.set('X-Frontend-Route', route)
+      : (config.headers['X-Frontend-Route'] = route);
+  }
+
   if (accessToken) {
     config.headers.set
       ? config.headers.set('Authorization', `Bearer ${accessToken}`)

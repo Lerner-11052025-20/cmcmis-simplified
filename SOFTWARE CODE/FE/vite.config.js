@@ -46,7 +46,7 @@ export default defineConfig({
     strictPort: true, // refuse to silently fall through to 5174 — surfaces port conflicts
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         // No path rewrite — BE expects /api/v1/... verbatim.
       },
