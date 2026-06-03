@@ -35,9 +35,30 @@ function displayText(value) {
   return String(value).replaceAll('_', ' ');
 }
 
-function renderCell(col, value) {
+function extractYear(value) {
+  if (!value) return new Date().getFullYear();
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && /^\d{4}/.test(value)) return value.slice(0, 4);
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+}
+
+function formatDisplayCode(prefix, id, dateValue, fallback) {
+  if (id === null || id === undefined || id === '') return fallback || '';
+  return `${prefix}-${extractYear(dateValue)}-${String(id).padStart(4, '0')}`;
+}
+
+function renderCell(col, value, row) {
   if (value === null || value === undefined || value === '') {
     return <span className="text-slate-300">-</span>;
+  }
+
+  if (col.display === 'jrCode') {
+    return formatDisplayCode('JR', value, row?.submitted_date || row?.received_date, row?.request_code);
+  }
+
+  if (col.display === 'jcCode') {
+    return formatDisplayCode('JC', value, row?.received_date || row?.completed_date, row?.card_code || row?.job_card_no);
   }
 
   if (col.kind === 'date') {
@@ -139,6 +160,7 @@ export function ReportTable({ columns, rows, total, page, pageSize, onPage, load
                     className={clsx(
                       'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500',
                       sortable && 'cursor-pointer select-none hover:text-slate-800',
+                      (column.mono || column.display) && 'whitespace-nowrap',
                     )}
                     onClick={() => toggleSort(column)}
                   >
@@ -177,8 +199,14 @@ export function ReportTable({ columns, rows, total, page, pageSize, onPage, load
                     </span>
                   </td>
                   {columns.map((column) => (
-                    <td key={column.id} className="px-4 py-3 align-middle text-sm font-medium leading-5 text-slate-700">
-                      {renderCell(column, row?.[column.accessorKey])}
+                    <td
+                      key={column.id}
+                      className={clsx(
+                        'px-4 py-3 align-middle text-sm font-medium leading-5 text-slate-700',
+                        (column.mono || column.display) && 'whitespace-nowrap font-mono text-[13px]',
+                      )}
+                    >
+                      {renderCell(column, row?.[column.accessorKey], row)}
                     </td>
                   ))}
                 </tr>

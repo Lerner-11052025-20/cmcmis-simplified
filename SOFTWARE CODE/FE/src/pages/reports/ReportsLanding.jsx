@@ -141,7 +141,7 @@ export function ReportsLanding() {
                 Page {page}
               </span>
             </div>
-            <SummaryTiles summary={reportQ.data?.summary} keys={cfg.summaryKeys} />
+            <SummaryTiles summary={reportQ.data?.summary} keys={cfg.summaryKeys} reportKey={cfg.key} />
             <ReportTable
               columns={cfg.columns}
               rows={reportQ.data?.rows}

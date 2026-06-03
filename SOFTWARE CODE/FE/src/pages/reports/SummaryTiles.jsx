@@ -39,6 +39,23 @@ const LABELS = {
   rejected:        ['Rejected',         'terminal'],
 };
 
+const REPORT_LABELS = {
+  calibrationDue: {
+    total: ['Total Equipment', 'in scope'],
+  },
+  jobCardSummary: {
+    total: ['Total Job Cards', 'in selected range'],
+    open_assigned: ['Open Assigned', 'awaiting start'],
+    completed: ['Completed JCs', 'finished work'],
+  },
+  jobRequestSummary: {
+    total: ['Total Requests', 'in selected range'],
+    submitted: ['Submitted Requests', 'sent for action'],
+    assigned: ['Assigned Requests', 'engineer present'],
+    verified_closed: ['Verified Requests', 'closed requests'],
+  },
+};
+
 const TILE_META = [
   { accent: 'indigo', icon: ClipboardList },
   { accent: 'emerald', icon: CheckCircle2 },
@@ -50,7 +67,7 @@ const TILE_META = [
   { accent: 'orange', icon: FileText },
 ];
 
-export function SummaryTiles({ summary, keys }) {
+export function SummaryTiles({ summary, keys, reportKey }) {
   if (!summary) return null;
   const renderKeys = (keys && keys.length)
     ? keys
@@ -59,7 +76,7 @@ export function SummaryTiles({ summary, keys }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {renderKeys.map((k, i) => {
-        const [label, sub] = LABELS[k] || [k, ''];
+        const [label, sub] = REPORT_LABELS[reportKey]?.[k] || LABELS[k] || [k, ''];
         const meta = TILE_META[i % TILE_META.length];
         return (
           <StandardKpiCard

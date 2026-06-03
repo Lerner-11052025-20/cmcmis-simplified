@@ -46,8 +46,6 @@ export const REPORTS = [
       { id: 'equipment_name',     header: 'Equipment Name',    accessorKey: 'equipment_name',    size: 220 },
       { id: 'serial_number',      header: 'Serial Number',     accessorKey: 'serial_number',     size: 130 },
       { id: 'division',           header: 'Division',          accessorKey: 'division',          size: 110 },
-      { id: 'last_cal_date',      header: 'Last Calibration',  accessorKey: 'last_cal_date',     size: 130, kind: 'date' },
-      { id: 'next_cal_due_date',  header: 'Next Calibration',  accessorKey: 'next_cal_due_date', size: 130, kind: 'date' },
       { id: 'calibration_status', header: 'Cal Status',        accessorKey: 'calibration_status',size: 110, kind: 'badge' },
       { id: 'equipment_status',   header: 'Equipment Status',  accessorKey: 'equipment_status',  size: 140, kind: 'badge' },
     ],
@@ -62,7 +60,7 @@ export const REPORTS = [
     statusEnum: ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED'],
     summaryKeys: ['total_pending', 'new_requests', 'assigned', 'unassigned'],
     columns: [
-      { id: 'request_code',           header: 'Job Request ID',     accessorKey: 'request_code',           size: 130 },
+      { id: 'request_code',           header: 'Job Request ID',     accessorKey: 'job_request_id',         size: 160, display: 'jrCode', mono: true },
       { id: 'equipment_name',         header: 'Equipment Name',     accessorKey: 'equipment_name',         size: 220 },
       { id: 'job_type',               header: 'Job Type',           accessorKey: 'job_type',               size: 110 },
       { id: 'status',                 header: 'Status',             accessorKey: 'status',                 size: 130, kind: 'badge' },
@@ -124,7 +122,7 @@ export const REPORTS = [
     statusEnum: ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED_CLOSED', 'REOPENED'],
     summaryKeys: ['total', 'open_assigned', 'in_progress', 'completed'],
     columns: [
-      { id: 'job_card_no',             header: 'Job Card No',     accessorKey: 'job_card_no',             size: 130 },
+      { id: 'job_card_no',             header: 'Job Card ID',     accessorKey: 'job_card_id',             size: 160, display: 'jcCode', mono: true },
       { id: 'equipment_name',          header: 'Equipment Name',  accessorKey: 'equipment_name',          size: 220 },
       { id: 'job_type',                header: 'Job Type',        accessorKey: 'job_type',                size: 110 },
       { id: 'status',                  header: 'Status',          accessorKey: 'status',                  size: 140, kind: 'badge' },
@@ -147,7 +145,7 @@ export const REPORTS = [
                  'COMPLETED', 'VERIFIED_CLOSED', 'REJECTED', 'REOPENED'],
     summaryKeys: ['total', 'submitted', 'assigned', 'verified_closed'],
     columns: [
-      { id: 'request_code',           header: 'Request ID',     accessorKey: 'request_code',           size: 130 },
+      { id: 'request_code',           header: 'Job Request ID', accessorKey: 'job_request_id',         size: 160, display: 'jrCode', mono: true },
       { id: 'equipment_name',         header: 'Equipment Name', accessorKey: 'equipment_name',         size: 220 },
       { id: 'job_type',               header: 'Job Type',       accessorKey: 'job_type',               size: 110 },
       { id: 'status',                 header: 'Status',         accessorKey: 'status',                 size: 140, kind: 'badge' },
