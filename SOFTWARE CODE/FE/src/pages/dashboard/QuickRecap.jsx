@@ -180,10 +180,11 @@ function EquipmentColumn({ rows, loading }) {
       {(rows || []).map((eq, i) => {
         const isEven = i % 2 === 0;
         const rowBg = isEven ? 'bg-slate-50/80 hover:bg-slate-100/60' : 'bg-white hover:bg-slate-50/50';
+        const equipmentId = eq.equipment_id || `${eq.eqm_type}-${eq.eqm_id}`;
         return (
           <Link
             key={`${eq.eqm_type}-${eq.eqm_id}-${i}`}
-            to={`/equipment/${encodeURIComponent(eq.eqm_id)}`}
+            to={`/equipment/${encodeURIComponent(equipmentId)}`}
             className={clsx(
               'group flex items-start gap-3.5 py-3 px-3 rounded-lg transition-all duration-200 font-sans border border-transparent hover:border-slate-200/40 shadow-none hover:shadow-sm',
               rowBg

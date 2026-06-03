@@ -38,6 +38,7 @@ import { StatusPill } from '../../components/StatusPill.jsx';
 import { useJobCardList } from '../../lib/hooks/useJobCardList.js';
 import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 import { downloadJobCardsPdf } from '../../lib/api/jobCards.js';
+import { fetchEngineers } from '../../lib/api/lookups.js';
 import { formatIstDate } from '../../lib/time.js';
 
 const STATUS_OPTIONS = [
@@ -47,6 +48,14 @@ const STATUS_OPTIONS = [
   { value: 'VERIFIED_CLOSED', label: 'Verified' },
   { value: 'REOPENED',        label: 'Reopened' },
 ];
+const SORT_OPTIONS = [
+  { value: '-created_at', label: 'Newest first' },
+  { value: 'created_at', label: 'Oldest first' },
+  { value: '-due_date', label: 'Due date latest first' },
+  { value: 'due_date', label: 'Due date earliest first' },
+  { value: 'card_code', label: 'Job card code A-Z' },
+  { value: '-card_code', label: 'Job card code Z-A' },
+];
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -55,6 +64,14 @@ export function JobCardList() {
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [assignedEngineerId, setAssignedEngineerId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sort, setSort] = useState('-created_at');
+  const [engineers, setEngineers] = useState([]);
+  const [engineersLoading, setEngineersLoading] = useState(false);
+  const [engineersError, setEngineersError] = useState('');
 
   // ── PDF Export state ──────────────────────────────────────────────
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -72,6 +89,40 @@ export function JobCardList() {
     }, 300);
     return () => debTimer.current && clearTimeout(debTimer.current);
   }, [qInput]);
+
+  useEffect(() => {
+    if (!isAdvancedOpen || engineers.length > 0) return undefined;
+
+    const ctrl = new AbortController();
+    let cancelled = false;
+
+    setEngineersLoading(true);
+    setEngineersError('');
+
+    fetchEngineers(ctrl.signal)
+      .then((items) => {
+        if (cancelled) return;
+        setEngineers(Array.isArray(items) ? items : []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+        setEngineersError(err?.response?.data?.error?.message || err?.message || 'Could not load engineers.');
+      })
+      .finally(() => {
+        if (!cancelled) setEngineersLoading(false);
+      });
+
+    return () => { cancelled = true; ctrl.abort(); };
+  }, [engineers.length, isAdvancedOpen]);
+
+  function handleResetAdvancedFilters() {
+    setAssignedEngineerId('');
+    setDateFrom('');
+    setDateTo('');
+    setSort('-created_at');
+    setPage(1);
+  }
 
   async function handleExportPdf() {
     const start = parseInt(exportStartId, 10);
@@ -117,9 +168,12 @@ export function JobCardList() {
       page_size: DEFAULT_PAGE_SIZE,
       ...(q ? { q } : {}),
       ...(status ? { status } : {}),
-      sort: '-created_at',
+      ...(assignedEngineerId ? { assigned_engineer_id: assignedEngineerId } : {}),
+      ...(dateFrom ? { date_from: dateFrom } : {}),
+      ...(dateTo ? { date_to: dateTo } : {}),
+      sort,
     }),
-    [page, q, status],
+    [assignedEngineerId, dateFrom, dateTo, page, q, sort, status],
   );
 
   const { data, error, loading } = useJobCardList(params);
@@ -239,7 +293,11 @@ export function JobCardList() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => alert('Advanced filters arrive in Phase 6 Slice 2.')}
+              className={clsx(
+                isAdvancedOpen && 'border-accent bg-accent/10 text-accent hover:bg-accent/15',
+              )}
+              onClick={() => setIsAdvancedOpen((open) => !open)}
+              aria-expanded={isAdvancedOpen}
             >
               <Filter size={14} strokeWidth={1.5} aria-hidden="true" />
               Advanced Filters
@@ -264,6 +322,68 @@ export function JobCardList() {
             )}
           </div>
         </div>
+
+        {isAdvancedOpen ? (
+          <div className="border-t border-border pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <label className="space-y-1 lg:col-span-2">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Assigned Engineer</span>
+                <Select
+                  value={assignedEngineerId}
+                  onChange={(e) => { setAssignedEngineerId(e.target.value); setPage(1); }}
+                  disabled={engineersLoading}
+                  aria-label="Filter by assigned engineer"
+                >
+                  <option value="">{engineersLoading ? 'Loading engineers...' : 'All Engineers'}</option>
+                  {engineers.map((engineer) => (
+                    <option key={engineer.id || engineer.employee_id} value={engineer.employee_id}>
+                      {engineer.full_name || engineer.employee_id}
+                      {engineer.employee_id ? ` (${engineer.employee_id})` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Scheduled From</span>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                  aria-label="Filter by scheduled from date"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Scheduled To</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                  aria-label="Filter by scheduled to date"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Sort By</span>
+                <Select
+                  value={sort}
+                  onChange={(e) => { setSort(e.target.value); setPage(1); }}
+                  aria-label="Sort job cards"
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-danger">
+                {engineersError || null}
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleResetAdvancedFilters}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ── Error banner ───────────────────────────────────── */}
@@ -281,6 +401,7 @@ export function JobCardList() {
         loading={loading}
         emptyMessage={
           q || status
+          || assignedEngineerId || dateFrom || dateTo || sort !== '-created_at'
             ? 'No job cards match your filters.'
             : 'No job cards yet.'
         }

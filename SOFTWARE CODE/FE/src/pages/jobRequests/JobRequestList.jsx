@@ -43,6 +43,7 @@ import { StatusPill } from '../../components/StatusPill.jsx';
 import { useJobRequestList } from '../../lib/hooks/useJobRequestList.js';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { bulkVerifyAllJobRequests, downloadJobRequestsPdf } from '../../lib/api/jobRequests.js';
+import { fetchDivisions } from '../../lib/api/lookups.js';
 import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 import { formatIstTimestamp } from '../../lib/time.js';
 
@@ -62,6 +63,19 @@ const STATUS_OPTIONS = [
   { value: 'REJECTED',        label: 'Rejected' },
   { value: 'REOPENED',        label: 'Reopened' },
 ];
+const PRIORITY_OPTIONS = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+];
+const SORT_OPTIONS = [
+  { value: '-created_at', label: 'Newest first' },
+  { value: 'created_at', label: 'Oldest first' },
+  { value: '-priority', label: 'Priority high to low' },
+  { value: 'priority', label: 'Priority low to high' },
+  { value: 'request_code', label: 'Job request code A-Z' },
+  { value: '-request_code', label: 'Job request code Z-A' },
+];
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -76,6 +90,15 @@ export function JobRequestList() {
   const [q, setQ] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [priority, setPriority] = useState('');
+  const [divisionId, setDivisionId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sort, setSort] = useState('-created_at');
+  const [divisions, setDivisions] = useState([]);
+  const [divisionsLoading, setDivisionsLoading] = useState(false);
+  const [divisionsError, setDivisionsError] = useState('');
 
   // ── Bulk-verify state ─────────────────────────────────────────────
   // refreshSeed is bumped after bulk-verify to bust the hook's cache key
@@ -100,20 +123,65 @@ export function JobRequestList() {
     return () => debTimer.current && clearTimeout(debTimer.current);
   }, [qInput]);
 
+  useEffect(() => {
+    if (!isAdvancedOpen || divisions.length > 0) return undefined;
+
+    const ctrl = new AbortController();
+    let cancelled = false;
+
+    setDivisionsLoading(true);
+    setDivisionsError('');
+
+    fetchDivisions(ctrl.signal)
+      .then((items) => {
+        if (cancelled) return;
+        setDivisions(Array.isArray(items) ? items : []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+        setDivisionsError(err?.response?.data?.error?.message || err?.message || 'Could not load divisions.');
+      })
+      .finally(() => {
+        if (!cancelled) setDivisionsLoading(false);
+      });
+
+    return () => { cancelled = true; ctrl.abort(); };
+  }, [divisions.length, isAdvancedOpen]);
+
+  function handleResetAdvancedFilters() {
+    setPriority('');
+    setDivisionId('');
+    setDateFrom('');
+    setDateTo('');
+    setSort('-created_at');
+    setPage(1);
+  }
+
   // ── Build the hook params (memoised so cache key is stable) ────────
   // _refresh is stripped by the hook before it reaches the API; it only
   // exists to make the JSON cache key unique after a bulk-verify.
   const params = useMemo(
-    () => ({
-      page,
-      page_size: DEFAULT_PAGE_SIZE,
-      ...(q ? { q } : {}),
-      ...(type ? { type } : {}),
-      ...(status ? { status } : {}),
-      sort: '-created_at',
-      _refresh: refreshSeed,
-    }),
-    [page, q, type, status, refreshSeed],
+    () => {
+      const parsedDivisionId = Number(divisionId);
+
+      return {
+        page,
+        page_size: DEFAULT_PAGE_SIZE,
+        ...(q ? { q } : {}),
+        ...(type ? { type } : {}),
+        ...(status ? { status } : {}),
+        ...(priority ? { priority } : {}),
+        ...(divisionId && Number.isInteger(parsedDivisionId) && parsedDivisionId > 0
+          ? { division_id: parsedDivisionId }
+          : {}),
+        ...(dateFrom ? { date_from: dateFrom } : {}),
+        ...(dateTo ? { date_to: dateTo } : {}),
+        sort,
+        _refresh: refreshSeed,
+      };
+    },
+    [dateFrom, dateTo, divisionId, page, priority, q, refreshSeed, sort, status, type],
   );
 
   const { data, error, loading, invalidateAll } = useJobRequestList(params);
@@ -318,7 +386,11 @@ export function JobRequestList() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => alert('Advanced filters arrive in Phase 6 Slice 2.')}
+              className={clsx(
+                isAdvancedOpen && 'border-accent bg-accent/10 text-accent hover:bg-accent/15',
+              )}
+              onClick={() => setIsAdvancedOpen((open) => !open)}
+              aria-expanded={isAdvancedOpen}
             >
               <Filter size={14} strokeWidth={1.5} aria-hidden="true" />
               Advanced Filters
@@ -343,6 +415,85 @@ export function JobRequestList() {
             )}
           </div>
         </div>
+
+        {isAdvancedOpen ? (
+          <div className="border-t border-slate-200 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Division</span>
+                <Select
+                  value={divisionId}
+                  onChange={(e) => { setDivisionId(e.target.value); setPage(1); }}
+                  disabled={divisionsLoading}
+                  aria-label="Filter by division"
+                >
+                  <option value="">{divisionsLoading ? 'Loading divisions...' : 'All Divisions'}</option>
+                  {divisions.map((division) => {
+                    const id = division.division_id ?? division.id ?? division.SM_ID ?? division.sm_id;
+                    const code = division.code ?? division.division_code ?? division.SM_SHORTNAME ?? division.short_name;
+                    const name = division.name ?? division.division_name ?? division.SM_NAME;
+                    return (
+                      <option key={id} value={id}>
+                        {code || name || `Division ${id}`}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Priority</span>
+                <Select
+                  value={priority}
+                  onChange={(e) => { setPriority(e.target.value); setPage(1); }}
+                  aria-label="Filter by priority"
+                >
+                  <option value="">All Priorities</option>
+                  {PRIORITY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Submitted From</span>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                  aria-label="Filter by submitted from date"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Submitted To</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                  aria-label="Filter by submitted to date"
+                />
+              </label>
+              <label className="space-y-1 lg:col-span-2">
+                <span className="block text-[11px] font-semibold uppercase text-ink-soft">Sort By</span>
+                <Select
+                  value={sort}
+                  onChange={(e) => { setSort(e.target.value); setPage(1); }}
+                  aria-label="Sort job requests"
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs text-danger">
+                {divisionsError || null}
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleResetAdvancedFilters}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ── Error banner ───────────────────────────────────── */}
@@ -360,6 +511,7 @@ export function JobRequestList() {
         loading={loading}
         emptyMessage={
           q || type || status
+          || priority || divisionId || dateFrom || dateTo || sort !== '-created_at'
             ? 'No job requests match your filters.'
             : 'No job requests yet.'
         }
