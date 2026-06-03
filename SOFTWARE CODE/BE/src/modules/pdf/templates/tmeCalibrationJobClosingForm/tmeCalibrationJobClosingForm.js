@@ -99,7 +99,7 @@ function sectionTitle(doc, title, y) {
   return y + 16;
 }
 
-function header(doc) {
+function header(doc, subtitle = 'T&ME CALIBRATION') {
   const y = 24;
   if (ISRO_LOGO) doc.image(ISRO_LOGO, M + 2, y, { fit: [60, 52], align: 'center', valign: 'center' });
   if (SAC_LOGO) doc.image(SAC_LOGO, PAGE_W - M - 62, y + 2, { fit: [60, 48], align: 'center', valign: 'center' });
@@ -113,7 +113,7 @@ function header(doc) {
   doc.font('Helvetica-Bold').fontSize(13)
     .text('JOB CLOSURE REPORT', cx, y + 38, { width: cw, align: 'center' });
   doc.font('Helvetica').fontSize(9)
-    .text('T&ME CALIBRATION', cx, y + 56, { width: cw, align: 'center' });
+    .text(subtitle, cx, y + 56, { width: cw, align: 'center' });
   return y + 76;
 }
 
@@ -171,7 +171,7 @@ function drawAdjustmentRow(doc, y, row) {
   return y + 24;
 }
 
-function renderTmeCalibrationJobClosingForm(payload, stream) {
+function renderTmeCalibrationJobClosingForm(payload, stream, options = {}) {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
@@ -189,7 +189,7 @@ function renderTmeCalibrationJobClosingForm(payload, stream) {
     return yPos + neededHeight > CONTENT_BOTTOM_Y ? newContentPage() : yPos;
   }
 
-  let y = header(doc);
+  let y = header(doc, options.subtitle || 'T&ME CALIBRATION');
   y = ensureSpace(y, 18 * 3 + 10);
   labelValueRow(doc, M, y, [
     { label: 'Job Card No.', value: jcCode(payload), lw: 86, vw: 166 },

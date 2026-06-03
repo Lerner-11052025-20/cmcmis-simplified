@@ -36,6 +36,7 @@ const { renderFpeCalibrationJrf }   = require('./templates/fpeCalibrationJrf/fpe
 const { renderFpeRepairJrf }        = require('./templates/fpeRepairJrf/fpeRepairJrf');
 const { renderTmeCalibrationJobClosingForm } = require('./templates/tmeCalibrationJobClosingForm/tmeCalibrationJobClosingForm');
 const { renderTmeRepairJobClosingForm } = require('./templates/tmeRepairJobClosingForm/tmeRepairJobClosingForm');
+const { renderFpeCalibrationJobClosingForm } = require('./templates/fpeCalibrationJobClosingForm/fpeCalibrationJobClosingForm');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -81,11 +82,16 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
     && (payload.work_type || payload.jr_job_type) === 'CALIBRATION';
   const isTmeRepair = (payload.job_category || payload.jr_job_category) === 'TME'
     && (payload.work_type || payload.jr_job_type) === 'REPAIR';
+  const category = String(payload.job_category || payload.jr_job_category || '').replace('&', '');
+  const type = payload.work_type || payload.jr_job_type;
+  const isFpeCalibration = category === 'FPE' && type === 'CALIBRATION';
   const filename = isTmeCalibration
     ? `${jcCode(payload)}_TME_Calibration_JobClosingForm.pdf`
     : isTmeRepair
       ? `${jcCode(payload)}_TME_Repair_JobClosingForm.pdf`
-      : `${jcCode(payload)}_certificate.pdf`;
+      : isFpeCalibration
+        ? `${jcCode(payload)}_FPE_Calibration_JobClosingForm.pdf`
+        : `${jcCode(payload)}_certificate.pdf`;
   return {
     filename,
     render: (stream) => {
@@ -95,6 +101,10 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
       }
       if (isTmeRepair) {
         renderTmeRepairJobClosingForm(payload, stream, { generated_by: actor });
+        return;
+      }
+      if (isFpeCalibration) {
+        renderFpeCalibrationJobClosingForm(payload, stream, { generated_by: actor });
         return;
       }
       renderJobCardCertificate(payload, stream, { generated_by: actor });
