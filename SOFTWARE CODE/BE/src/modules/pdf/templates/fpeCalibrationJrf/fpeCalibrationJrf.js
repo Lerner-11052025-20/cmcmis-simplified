@@ -16,7 +16,7 @@ function renderFpeCalibrationJrf(payload, stream) {
     title: 'JOB REQUEST OF F&PE FOR CALIBRATION',
     equipmentLayout: 'fpe',
     equipmentSectionTitle: 'EQUIPMENT DETAILS',
-    showAccessories: true,
+    showAccessories: false,
     systemInformation: true,
     systemStatusValue: payload.remarks || payload.linked_job_status_display || '',
     instructionTitle: 'Instructions for User:',
