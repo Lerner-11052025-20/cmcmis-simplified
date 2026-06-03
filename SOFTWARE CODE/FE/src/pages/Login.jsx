@@ -42,6 +42,7 @@ import { Badge } from '../components/ui/Badge.jsx';
 import { Spinner } from '../components/ui/Spinner.jsx';
 import { useAuth } from '../lib/auth-context.jsx';
 import { loginSchema } from '../lib/schemas/loginSchema.js';
+import isroLogo from '../assets/isro-logo.svg';
 
 // NOTE — authorship credit is rendered globally by the watchdog (loaded via
 // the side-effect import in src/main.jsx). It paints itself in the
@@ -237,6 +238,15 @@ export function Login() {
           >
             {/* Subtle decorative color border header */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent/30 via-accent to-accent/30" />
+
+            <div className="mb-5 flex justify-center">
+              <img
+                src={isroLogo}
+                alt="ISRO"
+                className="h-20 w-auto object-contain"
+                draggable="false"
+              />
+            </div>
 
             <h2 className="text-lg font-bold text-slate-800 mb-5 tracking-tight font-sans">Sign In</h2>
 
