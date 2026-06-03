@@ -42,6 +42,7 @@ const {
   FOOTER_HEIGHT,
   COLORS,
 } = require('../pdf/templates/_isroHeader');
+const { formatJrCode, formatJcCode } = require('../../utils/jrCodeGenerator');
 
 const PAGE_MARGIN_TOP = 36;
 
@@ -79,6 +80,21 @@ function rangeLabel(filters) {
   if (filters.date_from) return `From ${filters.date_from}`;
   if (filters.date_to)   return `Until ${filters.date_to}`;
   return 'All time';
+}
+
+function displayText(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  return String(v).replace(/_/g, ' ');
+}
+
+function fmtJrCode(v, row) {
+  if (v === null || v === undefined || v === '') return row?.request_code || '—';
+  return formatJrCode(v, row?.submitted_date || row?.received_date);
+}
+
+function fmtJcCode(v, row) {
+  if (v === null || v === undefined || v === '') return row?.job_card_no || '—';
+  return formatJcCode(v, row?.received_date || row?.completed_date);
 }
 
 // ── HEADER (ISRO/SAC seal + title block) ───────────────────────────────
@@ -224,8 +240,8 @@ function drawTable(doc, sectionTitle, rightHint, columns, rows, reportTitle) {
 
   function drawHeaderRow() {
     const hy = doc.y;
-    doc.rect(leftX, hy, tableW, HEADER_H).fillAndStroke(COLORS.accent, COLORS.border);
-    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(7.5);
+    doc.rect(leftX, hy, tableW, HEADER_H).fillAndStroke('#F8FAFC', '#DBE3EF');
+    doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(7.5);
     let cx = leftX;
     columns.forEach((c, i) => {
       doc.text(c.label, cx + ROW_PAD, hy + 4, {
@@ -284,17 +300,17 @@ function drawTable(doc, sectionTitle, rightHint, columns, rows, reportTitle) {
 
     const ry = doc.y;
     const isOdd = rowIdx % 2 !== 0;
-    const rowBgColor = isOdd ? '#EDF1F7' : '#FFFFFF';
+    const rowBgColor = isOdd ? '#F8FAFC' : '#FFFFFF';
     rowIdx++;
 
     doc.lineWidth(0.25);
-    doc.rect(leftX, ry, tableW, rowH).fillAndStroke(rowBgColor, COLORS.border);
+    doc.rect(leftX, ry, tableW, rowH).fillAndStroke(rowBgColor, '#E2E8F0');
 
     let cx = leftX;
     columns.forEach((c, i) => {
       const raw = row[c.key];
       const v = c.format ? c.format(raw, row) : (raw === null || raw === undefined ? '—' : String(raw));
-      doc.fillColor(COLOR_TITLE).font('Helvetica').fontSize(7.5);
+      doc.fillColor('#334155').font('Helvetica').fontSize(7.5);
       doc.text(v, cx + ROW_PAD, ry + ROW_PAD, {
         width: widths[i] - 2 * ROW_PAD,
         align: c.align || 'left',
@@ -438,10 +454,8 @@ function renderCalibrationDuePdf(payload, stream) {
       { key: 'equipment_name',    label: 'Equipment Name',    width: 160 },
       { key: 'serial_number',     label: 'Serial Number',     width: 90 },
       { key: 'division',          label: 'Division',          width: 80 },
-      { key: 'last_cal_date',     label: 'Last Calibration',  width: 80, format: fmtDate },
-      { key: 'next_cal_due_date', label: 'Next Due',          width: 80, format: fmtDate },
-      { key: 'calibration_status',label: 'Cal Status',        width: 70 },
-      { key: 'equipment_status',  label: 'Equipment Status',  width: 95 },
+      { key: 'calibration_status',label: 'Cal Status',        width: 80, format: displayText },
+      { key: 'equipment_status',  label: 'Equipment Status',  width: 110, format: displayText },
     ],
     payload.rows,
     payload.meta.report_title,
@@ -480,10 +494,11 @@ function renderPendingJobsPdf(payload, stream) {
     '3. DETAILED PENDING JOBS REPORT DATA',
     'RESPECTIVELY MAPPED REPORT COLUMNS',
     [
-      { key: 'request_code',           label: 'Job Request ID',     width: 85 },
+      { key: 'job_request_id',         label: 'Job Request ID',     width: 100, format: fmtJrCode },
       { key: 'equipment_name',         label: 'Equipment Name',     width: 130 },
       { key: 'job_type',               label: 'Job Type',           width: 75 },
-      { key: 'status',                 label: 'Status',             width: 75 },
+      { key: 'status',                 label: 'Status',             width: 75, format: displayText },
+      { key: 'priority',               label: 'Priority',           width: 60, format: displayText },
       { key: 'submitted_by_name',      label: 'Submitted By',       width: 110 },
       { key: 'submitted_date',         label: 'Submitted On',       width: 75, format: fmtDate },
       { key: 'division',               label: 'Division',           width: 70 },
@@ -533,7 +548,7 @@ function renderEquipmentUtilizationPdf(payload, stream) {
       { key: 'equipment_type',   label: 'Equipment Type',width: 110 },
       { key: 'total_job_cards',  label: 'Total Job Cards',width: 80, align: 'right' },
       { key: 'division',         label: 'Division',       width: 80 },
-      { key: 'equipment_status', label: 'Status',         width: 110 },
+      { key: 'equipment_status', label: 'Status',         width: 110, format: displayText },
     ],
     payload.rows,
     payload.meta.report_title,
@@ -575,6 +590,7 @@ function renderEngineerSummaryPdf(payload, stream) {
       { key: 'engineer_employee_id', label: 'Engineer ID',     width: 80 },
       { key: 'engineer_name',        label: 'Engineer Name',   width: 180 },
       { key: 'total_assigned',       label: 'Total Assigned',  width: 90, align: 'right' },
+      { key: 'assigned',             label: 'Assigned',        width: 75, align: 'right' },
       { key: 'completed',            label: 'Completed',       width: 80, align: 'right' },
       { key: 'in_progress',          label: 'In Progress',     width: 80, align: 'right' },
       { key: 'verified_closed',      label: 'Verified/Closed', width: 90, align: 'right' },
@@ -608,25 +624,26 @@ function renderJobCardSummaryPdf(payload, stream) {
 
   const s = payload.summary;
   drawSummaryBlock(doc, [
-    { label: 'Total JCs',      value: s.total,           subtitle: 'all in range' },
-    { label: 'Open/Assigned',  value: s.open_assigned,   subtitle: 'awaiting start' },
-    { label: 'In Progress',    value: s.in_progress,     subtitle: 'currently being worked' },
-    { label: 'Verified/Closed',value: s.verified_closed, subtitle: 'final state' },
+    { label: 'Total Job Cards', value: s.total,         subtitle: 'in selected range' },
+    { label: 'Open Assigned',   value: s.open_assigned, subtitle: 'awaiting start' },
+    { label: 'In Progress',     value: s.in_progress,   subtitle: 'currently being worked' },
+    { label: 'Completed JCs',   value: s.completed,     subtitle: 'finished work' },
   ]);
 
   drawTable(doc,
     '3. DETAILED JOB CARD SUMMARY REPORT DATA',
     'RESPECTIVELY MAPPED REPORT COLUMNS',
     [
-      { key: 'job_card_no',             label: 'Job Card No',      width: 85 },
+      { key: 'job_card_id',             label: 'Job Card ID',      width: 100, format: fmtJcCode },
       { key: 'equipment_name',          label: 'Equipment Name',   width: 150 },
       { key: 'job_type',                label: 'Job Type',         width: 80 },
-      { key: 'status',                  label: 'Status',           width: 90 },
+      { key: 'status',                  label: 'Status',           width: 90, format: displayText },
       { key: 'assigned_engineer_name',  label: 'Engineer',         width: 110 },
       { key: 'received_date',           label: 'Received',         width: 70, format: fmtDate },
       { key: 'completed_date',          label: 'Completed',        width: 70, format: fmtDate },
       { key: 'verified_date',           label: 'Verified',         width: 70, format: fmtDate },
       { key: 'division',                label: 'Division',         width: 60 },
+      { key: 'workflow_type',           label: 'Workflow',         width: 70, format: displayText },
     ],
     payload.rows,
     payload.meta.report_title,
@@ -665,12 +682,14 @@ function renderJobRequestSummaryPdf(payload, stream) {
     '3. DETAILED JOB REQUEST SUMMARY REPORT DATA',
     'RESPECTIVELY MAPPED REPORT COLUMNS',
     [
-      { key: 'request_code',           label: 'Request ID',        width: 80 },
+      { key: 'job_request_id',         label: 'Job Request ID',    width: 100, format: fmtJrCode },
       { key: 'equipment_name',         label: 'Equipment Name',    width: 140 },
       { key: 'job_type',               label: 'Job Type',          width: 70 },
-      { key: 'status',                 label: 'Status',            width: 90 },
+      { key: 'status',                 label: 'Status',            width: 90, format: displayText },
+      { key: 'priority',               label: 'Priority',          width: 60, format: displayText },
       { key: 'submitted_by_name',      label: 'Submitted By',      width: 100 },
       { key: 'submitted_date',         label: 'Submitted On',      width: 70, format: fmtDate },
+      { key: 'assigned_engineer_name', label: 'Engineer',          width: 90 },
       { key: 'approved_by_name',       label: 'Approved By',       width: 90 },
       { key: 'rejected_by_name',       label: 'Rejected By',       width: 80 },
       { key: 'division',               label: 'Division',          width: 65 },

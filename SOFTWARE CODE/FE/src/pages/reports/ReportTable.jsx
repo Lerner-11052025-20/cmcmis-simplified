@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import clsx from 'clsx';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 
-import { formatIstDate } from '../../lib/time.js';
+import { displayText, formatReportValue } from './reportValueFormat.js';
 
 const STATUS_BADGE = {
   VALID: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
@@ -31,43 +31,13 @@ const STATUS_BADGE = {
   URGENT: 'bg-red-50 text-red-700 ring-red-100',
 };
 
-function displayText(value) {
-  return String(value).replaceAll('_', ' ');
-}
-
-function extractYear(value) {
-  if (!value) return new Date().getFullYear();
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string' && /^\d{4}/.test(value)) return value.slice(0, 4);
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
-}
-
-function formatDisplayCode(prefix, id, dateValue, fallback) {
-  if (id === null || id === undefined || id === '') return fallback || '';
-  return `${prefix}-${extractYear(dateValue)}-${String(id).padStart(4, '0')}`;
-}
-
 function renderCell(col, value, row) {
   if (value === null || value === undefined || value === '') {
     return <span className="text-slate-300">-</span>;
   }
 
-  if (col.display === 'jrCode') {
-    return formatDisplayCode('JR', value, row?.submitted_date || row?.received_date, row?.request_code);
-  }
-
-  if (col.display === 'jcCode') {
-    return formatDisplayCode('JC', value, row?.received_date || row?.completed_date, row?.card_code || row?.job_card_no);
-  }
-
-  if (col.kind === 'date') {
-    const d = dayjs(value);
-    return d.isValid() ? formatIstDate(value) : String(value);
-  }
-
   if (col.kind === 'number') {
-    return <span className="tabular-nums">{Number(value).toLocaleString()}</span>;
+    return <span className="tabular-nums">{formatReportValue(col, row)}</span>;
   }
 
   if (col.kind === 'badge') {
@@ -80,7 +50,7 @@ function renderCell(col, value, row) {
     );
   }
 
-  return <span className={clsx(col.mono && 'font-mono text-xs')}>{String(value)}</span>;
+  return <span className={clsx(col.mono && 'font-mono text-xs')}>{formatReportValue(col, row)}</span>;
 }
 
 function compareValues(a, b) {

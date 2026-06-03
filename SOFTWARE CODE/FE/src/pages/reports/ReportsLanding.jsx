@@ -165,8 +165,8 @@ export function ReportsLanding() {
             reportKey={cfg.key}
             reportTitle={cfg.title}
             columns={cfg.columns}
-            rows={reportQ.data?.rows || []}
             params={params}
+            total={reportQ.data?.total ?? 0}
           />
         ) : null}
       </div>
