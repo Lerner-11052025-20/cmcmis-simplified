@@ -224,6 +224,7 @@ async function loadJobCardFull(sectionJobNo) {
     [calibrationEquipment],
     [calibrationAdjustments],
     [repairEquipment],
+    [certificateTasks],
   ] = await Promise.all([
     pool.query(
       `SELECT sr_no, defect_description, observation, action_taken, remarks,
@@ -306,6 +307,17 @@ async function loadJobCardFull(sectionJobNo) {
         ORDER BY sr_no ASC, id ASC`,
       [sectionJobNo],
     ),
+    pool.query(
+      `SELECT c.id, c.task_id, c.task_text, c.task_type,
+              c.task_result, c.is_completed, c.order_index,
+              t.TSK_NAME AS master_task_name,
+              t.TSK_TYPE AS master_task_type
+         FROM jc_calibration_task_checklist c
+         LEFT JOIN cmms_task_mst t ON t.TSK_ID = c.task_id
+        WHERE c.jc_section_no = ?
+        ORDER BY c.order_index ASC, c.id ASC`,
+      [sectionJobNo],
+    ),
   ]);
 
   return {
@@ -321,6 +333,7 @@ async function loadJobCardFull(sectionJobNo) {
       calibration_equipment: calibrationEquipment,
       calibration_adjustments: calibrationAdjustments,
       repair_equipment: repairEquipment,
+      certificate_tasks: certificateTasks,
     },
   };
 }

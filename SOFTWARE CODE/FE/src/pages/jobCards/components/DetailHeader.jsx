@@ -28,6 +28,9 @@ import { useAuth } from '../../../lib/auth-context.jsx';
 import {
   downloadJobCardCertificate,
   downloadJobRequestDetails,
+  downloadTmeCalibrationCombinedCertificate,
+  downloadTmeCalibrationNablCertificate,
+  downloadTmeCalibrationNonNablCertificate,
   isCertificateEligible,
 } from '../../../lib/api/pdf.js';
 
@@ -37,6 +40,9 @@ export function DetailHeader({ jc }) {
   const canDownloadCert    = perms.includes('job_card:download-certificate');
   const canDownloadDetails = perms.includes('job_card:download-details');
   const parentJrNo = jc.parent_jr_no || jc.jr_no;
+  const category = String(jc.job_category || jc.category || jc.jr_job_category || '').replace('&', '');
+  const type = jc.work_type || jc.job_type || jc.jr_job_type;
+  const isTmeCalibration = category === 'TME' && type === 'CALIBRATION';
 
   // Tooltip + disabled-reason logic — keep the UX explicit about WHY a
   // download is unavailable. The BE is the real gate; this is just a
@@ -50,7 +56,7 @@ export function DetailHeader({ jc }) {
       : `Download Job Card Certificate (${jc.section_job_no})`;
 
   // Local "busy" flag so the button shows feedback while the BE streams.
-  const [busy, setBusy] = useState(null);  // 'cert' | 'details' | null
+  const [busy, setBusy] = useState(null);  // cert/details/nabl/nonNabl/calCert/null
 
   async function onDownloadCert() {
     setBusy('cert');
@@ -79,6 +85,22 @@ export function DetailHeader({ jc }) {
       const msg = e.response?.data?.error?.message
               || e.message
               || 'Failed to download JR form';
+      toast.error(msg, { id });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onDownloadTmeCalCertificate(kind, label, downloader) {
+    setBusy(kind);
+    const id = toast.loading(`Preparing ${label} PDF...`);
+    try {
+      const { filename } = await downloader(jc.section_job_no);
+      toast.success(`Downloaded ${filename}`, { id });
+    } catch (e) {
+      const msg = e.response?.data?.error?.message
+              || e.message
+              || `Failed to download ${label}`;
       toast.error(msg, { id });
     } finally {
       setBusy(null);
@@ -117,7 +139,41 @@ export function DetailHeader({ jc }) {
           <StatusPill status={jc.status} />
 
           {/* ── PDF download buttons ─────────────────────────── */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isTmeCalibration ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={certDisabled || busy === 'nabl'}
+                  title={certTooltip}
+                  onClick={() => onDownloadTmeCalCertificate('nabl', 'NABL Certificate', downloadTmeCalibrationNablCertificate)}
+                >
+                  <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                  {busy === 'nabl' ? 'Preparing...' : 'NABL Certificate'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={certDisabled || busy === 'nonNabl'}
+                  title={certTooltip}
+                  onClick={() => onDownloadTmeCalCertificate('nonNabl', 'Non-NABL Certificate', downloadTmeCalibrationNonNablCertificate)}
+                >
+                  <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                  {busy === 'nonNabl' ? 'Preparing...' : 'Non-NABL Certificate'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={certDisabled || busy === 'calCert'}
+                  title={certTooltip}
+                  onClick={() => onDownloadTmeCalCertificate('calCert', 'Certificate', downloadTmeCalibrationCombinedCertificate)}
+                >
+                  <FileDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                  {busy === 'calCert' ? 'Preparing...' : 'Certificate'}
+                </Button>
+              </>
+            ) : null}
             {canDownloadDetails ? (
               <Button
                 variant="secondary"

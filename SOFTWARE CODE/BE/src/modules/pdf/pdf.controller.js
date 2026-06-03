@@ -59,6 +59,36 @@ async function jobCardDetails(req, res, next) {
 }
 
 // ── PDF #3 — JR Details ────────────────────────────────────────────────
+async function jobCardNablCertificate(req, res, next) {
+  try {
+    const { filename, render } = await service.prepareTmeCalibrationCertificate(
+      req.params.id, actorFromReq(req), 'nabl',
+    );
+    preparePdfHeaders(res, filename);
+    render(res);
+  } catch (e) { next(e); }
+}
+
+async function jobCardNonNablCertificate(req, res, next) {
+  try {
+    const { filename, render } = await service.prepareTmeCalibrationCertificate(
+      req.params.id, actorFromReq(req), 'non-nabl',
+    );
+    preparePdfHeaders(res, filename);
+    render(res);
+  } catch (e) { next(e); }
+}
+
+async function jobCardCombinedCertificate(req, res, next) {
+  try {
+    const { filename, render } = await service.prepareTmeCalibrationCertificate(
+      req.params.id, actorFromReq(req), 'certificate',
+    );
+    preparePdfHeaders(res, filename);
+    render(res);
+  } catch (e) { next(e); }
+}
+
 async function jobRequestDetails(req, res, next) {
   try {
     // Normal Users (no job_request:read-all) → row-level scope to own JRs.
@@ -79,5 +109,8 @@ async function jobRequestDetails(req, res, next) {
 module.exports = {
   jobCardCertificate,
   jobCardDetails,
+  jobCardNablCertificate,
+  jobCardNonNablCertificate,
+  jobCardCombinedCertificate,
   jobRequestDetails,
 };

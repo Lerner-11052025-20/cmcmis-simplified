@@ -79,6 +79,27 @@ export function downloadJobCardCertificate(sectionJobNo) {
   );
 }
 
+export function downloadTmeCalibrationNablCertificate(sectionJobNo) {
+  return fetchPdfBlob(
+    `/job-cards/${encodeURIComponent(sectionJobNo)}/certificates/nabl.pdf`,
+    'NABL_Certificate.pdf',
+  );
+}
+
+export function downloadTmeCalibrationNonNablCertificate(sectionJobNo) {
+  return fetchPdfBlob(
+    `/job-cards/${encodeURIComponent(sectionJobNo)}/certificates/non-nabl.pdf`,
+    'NON-NABL_Certificate.pdf',
+  );
+}
+
+export function downloadTmeCalibrationCombinedCertificate(sectionJobNo) {
+  return fetchPdfBlob(
+    `/job-cards/${encodeURIComponent(sectionJobNo)}/certificates/certificate.pdf`,
+    'Certificate.pdf',
+  );
+}
+
 // ── PDF #2 — Job Card Full Details ─────────────────────────────────────
 export function downloadJobCardDetails(sectionJobNo) {
   return fetchPdfBlob(

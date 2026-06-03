@@ -38,6 +38,9 @@ const { renderTmeCalibrationJobClosingForm } = require('./templates/tmeCalibrati
 const { renderTmeRepairJobClosingForm } = require('./templates/tmeRepairJobClosingForm/tmeRepairJobClosingForm');
 const { renderFpeCalibrationJobClosingForm } = require('./templates/fpeCalibrationJobClosingForm/fpeCalibrationJobClosingForm');
 const { renderFpeRepairJobClosingForm } = require('./templates/fpeRepairJobClosingForm/fpeRepairJobClosingForm');
+const { renderTmeCalibrationNablCertificate } = require('./templates/tmeCalibrationNablCertificate/tmeCalibrationNablCertificate');
+const { renderTmeCalibrationNonNablCertificate } = require('./templates/tmeCalibrationNonNablCertificate/tmeCalibrationNonNablCertificate');
+const { renderTmeCalibrationCombinedCertificate } = require('./templates/tmeCalibrationCertificate/tmeCalibrationCertificate');
 
 // Certificate is reserved for "this work is done" states only.
 const CERT_ELIGIBLE = new Set(['COMPLETED', 'VERIFIED_CLOSED']);
@@ -123,6 +126,51 @@ async function prepareJobCardCertificate(sectionJobNo, actor) {
 
 // ── PDF #2 — JC Details ────────────────────────────────────────────────
 
+async function prepareTmeCalibrationCertificate(sectionJobNo, actor, variant) {
+  const payload = await repo.loadJobCardFull(sectionJobNo);
+  if (!payload) throw errors.notFound(`Job Card not found: ${sectionJobNo}`);
+
+  if (!CERT_ELIGIBLE.has(payload.status)) {
+    throw errors.conflict(
+      `Certificate is available only for COMPLETED or VERIFIED_CLOSED job cards (current: ${payload.status})`,
+      { current_status: payload.status, eligible: [...CERT_ELIGIBLE] },
+    );
+  }
+
+  const category = String(payload.job_category || payload.jr_job_category || '').replace('&', '');
+  const type = payload.work_type || payload.jr_job_type;
+  if (category !== 'TME' || type !== 'CALIBRATION') {
+    throw errors.conflict(
+      'This certificate is available only for TME Calibration job cards.',
+      { job_category: payload.job_category || payload.jr_job_category, job_type: type },
+    );
+  }
+
+  const config = {
+    nabl: {
+      filename: 'NABL_Certificate.pdf',
+      render: renderTmeCalibrationNablCertificate,
+    },
+    'non-nabl': {
+      filename: 'NON-NABL_Certificate.pdf',
+      render: renderTmeCalibrationNonNablCertificate,
+    },
+    certificate: {
+      filename: 'Certificate.pdf',
+      render: renderTmeCalibrationCombinedCertificate,
+    },
+  }[variant];
+
+  if (!config) {
+    throw errors.notFound(`Certificate variant not found: ${variant}`);
+  }
+
+  return {
+    filename: config.filename,
+    render: (stream) => config.render(payload, stream, { generated_by: actor }),
+  };
+}
+
 async function prepareJobCardDetails(sectionJobNo, actor) {
   const payload = await repo.loadJobCardFull(sectionJobNo);
   if (!payload) throw errors.notFound(`Job Card not found: ${sectionJobNo}`);
@@ -192,6 +240,7 @@ async function prepareJobRequestDetails(jrNo, actor, rowScope) {
 
 module.exports = {
   prepareJobCardCertificate,
+  prepareTmeCalibrationCertificate,
   prepareJobCardDetails,
   prepareJobRequestDetails,
   // exported for tests:

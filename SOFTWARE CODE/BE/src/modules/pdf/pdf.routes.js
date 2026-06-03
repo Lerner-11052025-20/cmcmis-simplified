@@ -56,6 +56,30 @@ jobCardPdfRouter.get(
 
 
 // ── Job Request PDF endpoint (details) ─────────────────────────────────
+jobCardPdfRouter.get(
+  '/:id/certificates/nabl.pdf',
+  authenticate,
+  authorize('job_card:download-certificate'),
+  validate(v.sectionJobNoSchema, 'params'),
+  ctrl.jobCardNablCertificate,
+);
+
+jobCardPdfRouter.get(
+  '/:id/certificates/non-nabl.pdf',
+  authenticate,
+  authorize('job_card:download-certificate'),
+  validate(v.sectionJobNoSchema, 'params'),
+  ctrl.jobCardNonNablCertificate,
+);
+
+jobCardPdfRouter.get(
+  '/:id/certificates/certificate.pdf',
+  authenticate,
+  authorize('job_card:download-certificate'),
+  validate(v.sectionJobNoSchema, 'params'),
+  ctrl.jobCardCombinedCertificate,
+);
+
 const jobRequestPdfRouter = express.Router({ mergeParams: true });
 
 jobRequestPdfRouter.get(
