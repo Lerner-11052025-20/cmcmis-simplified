@@ -20,6 +20,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   UserCircle,
   Users,
   Wrench,
@@ -354,63 +355,156 @@ const superAdminModules = [
 const commonSections = [
   {
     id: 'sa-common-topbar',
-    title: 'Top Bar and Sidebar Control',
-    subtitle: 'Use the top bar and sidebar to move quickly without losing context.',
+    title: 'Top Bar Use Cases',
+    subtitle: 'Use the top bar for quick search, notifications, help context, and account actions from any page.',
     icon: Monitor,
+    accent: 'bg-sky-50 text-sky-600',
+    to: '/dashboard',
+    action: 'Open Dashboard',
+    visual: 'common-topbar',
     steps: [
-      'Use the sidebar to open main modules by group.',
-      'Use the top-left menu button to collapse or expand the sidebar.',
-      'Use top-bar icons for information, notifications, and profile actions.',
-      'Use route titles and active sidebar highlight to confirm the current module.',
+      'Look at the top area of the screen after login.',
+      'Use the menu button to expand or collapse the sidebar when you need more space.',
+      'Use the global search box to find equipment, job requests, vendors, or job cards.',
+      'Use the right-side icons to open information, notifications, and profile actions.',
     ],
+    tips: ['The top bar stays available across most pages.', 'Start from global search when you are not sure which module contains the record.'],
   },
   {
     id: 'sa-common-search',
-    title: 'Global and In-Module Search',
-    subtitle: 'Use global search for cross-system discovery and module search for exact table filtering.',
+    title: 'Global Search Bar',
+    subtitle: 'Find important records quickly without opening every module one by one.',
     icon: Search,
+    accent: 'bg-indigo-50 text-indigo-600',
+    to: '/inquiry',
+    action: 'Open Inquiry',
+    visual: 'common-global-search',
     steps: [
-      'Use the top global search when you do not know which module contains the record.',
-      'Search by JR ID, job card number, equipment ID, vendor, employee, or keyword.',
-      'Use in-module search when you are already inside the correct list.',
-      'Combine filters with search for faster Super Admin review.',
+      'Click the search field in the top bar.',
+      'Type an equipment ID, job request ID, job card number, vendor name, or keyword.',
+      'Review the visible matches.',
+      'Select the correct result to open the related page.',
     ],
+    tips: ['Use fewer words if search results are too narrow.', 'Use exact IDs when you have them.'],
+  },
+  {
+    id: 'sa-common-module-search',
+    title: 'In-Module Search and Filters',
+    subtitle: 'Use local search boxes inside pages to narrow table rows and lists.',
+    icon: SlidersHorizontal,
+    accent: 'bg-emerald-50 text-emerald-600',
+    to: '/reports',
+    action: 'Open Reports',
+    visual: 'common-module-search',
+    steps: [
+      'Open a module such as Equipment, Job Requests, Job Cards, Inquiry, Reports, or Schedule.',
+      'Use the page search box to type the exact ID, name, status, or keyword.',
+      'Apply filters such as status, category, lab, or date when available.',
+      'Clear the search or filter when you want to return to the full list.',
+    ],
+    tips: ['Module search is best when you already know which module contains the data.', 'Filters help reduce long lists into readable rows.'],
   },
   {
     id: 'sa-common-notifications',
     title: 'Notifications',
-    subtitle: 'Track system alerts and workflow updates from one place.',
+    subtitle: 'Review system updates, assigned work, approvals, and important activity alerts.',
     icon: Bell,
+    accent: 'bg-amber-50 text-amber-600',
+    to: '/notifications',
+    action: 'Open Notifications',
+    visual: 'common-notifications',
     steps: [
-      'Open the notification icon from the top bar.',
-      'Read unread items first.',
-      'Open linked records from notifications when available.',
-      'Use notifications for awareness, then verify details in the related module.',
+      'Click the notification icon in the top bar or open Notifications from the sidebar if visible.',
+      'Read the latest messages and status updates.',
+      'Open any linked record if the notification includes one.',
+      'Use notifications to follow changes without manually checking every module.',
     ],
+    tips: ['Unread items help identify what needs attention.', 'Some roles may see fewer notifications based on permission.'],
   },
   {
-    id: 'sa-common-profile',
-    title: 'Profile, Dropdown, and Logout',
-    subtitle: 'Use the top-right profile area for account review and secure logout.',
+    id: 'sa-common-profile-menu',
+    title: 'Top-Right Profile Dropdown and Logout',
+    subtitle: 'Open your account dropdown from the top-right profile area.',
     icon: UserCircle,
+    accent: 'bg-violet-50 text-violet-600',
+    to: '/profile',
+    action: 'Open Profile',
+    visual: 'common-account-menu',
     steps: [
       'Click the top-right profile avatar, name, or dropdown arrow.',
-      'Open Profile to verify role and employee details.',
-      'Use Logout after completing administrative work.',
+      'Choose Profile to review your account details.',
+      'Choose Logout when your work is complete.',
       'Do not leave a Super Admin session active on shared systems.',
     ],
+    tips: ['Always logout from shared systems.', 'The dropdown is the fastest place to open profile settings.'],
+  },
+  {
+    id: 'sa-common-profile-page',
+    title: 'Profile Page',
+    subtitle: 'Check your role, employee information, and account details.',
+    icon: UserCircle,
+    accent: 'bg-rose-50 text-rose-600',
+    to: '/profile',
+    action: 'Open Profile',
+    visual: 'common-profile',
+    steps: [
+      'Open Profile from the sidebar or top-right account dropdown.',
+      'Review your name, employee ID, email, role, and account status.',
+      'Confirm that the displayed role matches your expected access.',
+      'Contact the administrator if any profile information is incorrect.',
+    ],
+    tips: ['Your role decides which modules are visible.', 'Profile is read-friendly and helps confirm your access level.'],
   },
   {
     id: 'sa-common-about',
     title: 'About Page',
-    subtitle: 'Use About Us for project purpose, system context, and onboarding explanation.',
+    subtitle: 'Understand the purpose, team, and system context of CMCMIS.',
     icon: Info,
+    accent: 'bg-slate-100 text-slate-700',
+    to: '/about',
+    action: 'Open About',
+    visual: 'common-about',
     steps: [
       'Open About Us from the sidebar.',
-      'Read system purpose and project information.',
-      'Use this page when introducing CMCMIS to a new user.',
-      'Return to the role guide when the user needs operational steps.',
+      'Read the system purpose and usage context.',
+      'Review project or team information when needed.',
+      'Use this page when explaining CMCMIS to a new user.',
     ],
+    tips: ['About page is informational only.', 'It is useful during onboarding and demonstrations.'],
+  },
+  {
+    id: 'sa-common-navigation',
+    title: 'Common Navigation and Account Controls',
+    subtitle: 'Move around the system safely with consistent sidebar, top-bar, and account controls.',
+    icon: MousePointerClick,
+    accent: 'bg-cyan-50 text-cyan-600',
+    to: '/home',
+    action: 'Open Home',
+    visual: 'common-navigation',
+    steps: [
+      'Use the sidebar group labels to find the correct module area.',
+      'Click the ISRO logo to return to the CMCMIS home landing page.',
+      'Use the Guide badge in the top bar to open the correct role guide.',
+      'Use Profile and Logout from the account area when needed.',
+    ],
+    tips: ['Navigation is designed to stay consistent across modules.', 'Use Home and Guide whenever a new user needs orientation.'],
+  },
+  {
+    id: 'sa-common-core',
+    title: 'Main Core Features and UI/UX Ease',
+    subtitle: 'Review why CMCMIS is easy to use for administrative and non-technical workflows.',
+    icon: Sparkles,
+    accent: 'bg-indigo-50 text-indigo-600',
+    to: '/home',
+    action: 'Open Home',
+    visual: 'common-core',
+    steps: [
+      'Use role-wise modules to avoid unnecessary options.',
+      'Use search, filters, and tables to move from broad review to exact records.',
+      'Use timelines, status cards, and notifications to understand work progress.',
+      'Use reports, exports, and audit views for formal review.',
+    ],
+    tips: ['The interface is designed around daily work flow.', 'Cards, filters, and exports reduce manual effort.'],
   },
 ];
 
@@ -453,11 +547,11 @@ export function SuperAdminGuide() {
         text="These common controls make daily administration faster and safer."
       />
 
-      <section className="grid gap-4 md:grid-cols-2">
-        {commonSections.map((section) => (
-          <CommonCard key={section.id} section={section} />
+      <div className="space-y-6">
+        {commonSections.map((section, index) => (
+          <CommonUseCase key={section.id} section={section} index={superAdminModules.length + index} />
         ))}
-      </section>
+      </div>
 
       <Guidelines />
       <CoreFeatures />
@@ -639,6 +733,59 @@ function CommonCard({ section }) {
   );
 }
 
+function CommonUseCase({ section, index }) {
+  const Icon = section.icon;
+  return (
+    <section id={section.id} className="scroll-mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.045)]">
+      <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="border-b border-slate-100 p-6 md:p-8 lg:border-b-0 lg:border-r">
+          <div className="flex items-start gap-4">
+            <span className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${section.accent}`}>
+              <Icon size={23} strokeWidth={1.9} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Use Case {index + 1}</p>
+              <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{section.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{section.subtitle}</p>
+            </div>
+          </div>
+
+          <ol className="mt-6 space-y-3">
+            {section.steps.map((step, stepIndex) => (
+              <li key={step} className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-sky-700 ring-1 ring-sky-100">
+                  {stepIndex + 1}
+                </span>
+                <span className="text-sm font-medium leading-6 text-slate-700">{step}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+              <CheckCircle2 size={17} strokeWidth={2} aria-hidden="true" />
+              Helpful notes
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {section.tips.map((tip) => (
+                <li key={tip} className="text-sm leading-6 text-emerald-900">{tip}</li>
+              ))}
+            </ul>
+          </div>
+
+          <Link to={section.to} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus:outline-none focus:ring-4 focus:ring-sky-100">
+            {section.action}
+            <ArrowRight size={16} strokeWidth={1.9} aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="bg-slate-50 p-6 md:p-8">
+          <ModuleVisual type={section.visual} title={section.title} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Guidelines() {
   return (
     <section id="guidelines" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm md:p-8">
@@ -733,6 +880,15 @@ function ModuleVisual({ type, title }) {
   if (type === 'verify') return <VerifyVisual />;
   if (type === 'settings') return <SettingsVisual title={title} />;
   if (type === 'audit') return <AuditVisual />;
+  if (type === 'common-topbar') return <CommonTopBarVisual />;
+  if (type === 'common-global-search') return <CommonGlobalSearchVisual />;
+  if (type === 'common-module-search') return <CommonModuleSearchVisual />;
+  if (type === 'common-notifications') return <CommonNotificationsVisual />;
+  if (type === 'common-account-menu') return <CommonAccountMenuVisual />;
+  if (type === 'common-profile') return <CommonProfileVisual />;
+  if (type === 'common-about') return <CommonAboutVisual />;
+  if (type === 'common-navigation') return <CommonNavigationVisual />;
+  if (type === 'common-core') return <CommonCoreVisual />;
   return <TableVisual title={title} />;
 }
 
@@ -930,6 +1086,162 @@ function AuditVisual() {
   );
 }
 
+function CommonTopBarVisual() {
+  return (
+    <BrowserFrame title="Common top bar">
+      <TopBarMock />
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <MiniFeature icon={Search} label="Search records" />
+        <MiniFeature icon={Bell} label="Read alerts" />
+        <MiniFeature icon={UserCircle} label="Open account" />
+      </div>
+      <div className="mt-4 rounded-xl bg-slate-950 px-4 py-3 text-center text-xs font-bold text-white">Use this from any page</div>
+    </BrowserFrame>
+  );
+}
+
+function CommonGlobalSearchVisual() {
+  return (
+    <BrowserFrame title="Global search">
+      <TopBarMock />
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <SearchBar text="JR-2026-2430" />
+        <div className="mt-4 space-y-2">
+          <RowPreview title="JR-2026-2430" subtitle="Job Request Detail" tag="Open" />
+          <RowPreview title="Equipment-1" subtitle="Related equipment" tag="Open" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonModuleSearchVisual() {
+  return (
+    <BrowserFrame title="In-module search and filters">
+      <SearchBar text="Search inside this module" />
+      <div className="mt-3 flex flex-wrap gap-2">
+        {['Status', 'Category', 'Date', 'Lab'].map((item) => (
+          <span key={item} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">{item}</span>
+        ))}
+      </div>
+      <div className="mt-4 h-28 rounded-xl bg-slate-100" />
+    </BrowserFrame>
+  );
+}
+
+function CommonNotificationsVisual() {
+  return (
+    <BrowserFrame title="/notifications">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Bell size={18} className="text-amber-600" />
+          Notifications
+        </div>
+        <RowPreview title="Job request approved" subtitle="Open the linked request for details" tag="View" />
+        <div className="mt-2">
+          <RowPreview title="Job card assigned" subtitle="Check assigned work" tag="Open" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonAccountMenuVisual() {
+  return (
+    <BrowserFrame title="Profile dropdown">
+      <TopBarMock />
+      <div className="ml-auto mt-4 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">SA</span>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">System User</p>
+            <p className="text-xs text-slate-500">Super Admin</p>
+          </div>
+        </div>
+        <MiniMenuRow icon={UserCircle} label="Profile" />
+        <MiniMenuRow icon={ArrowRight} label="Logout" danger />
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonProfileVisual() {
+  return (
+    <BrowserFrame title="/profile">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-base font-bold text-white">SA</span>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">System Super Admin</p>
+            <p className="text-sm text-slate-500">Role and employee details</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {['Employee ID', 'Role', 'Email', 'Account Status'].map((item) => (
+            <div key={item} className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">Available</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonAboutVisual() {
+  return (
+    <BrowserFrame title="/about">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+            <Info size={22} />
+          </span>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">About CMCMIS</p>
+            <p className="text-sm text-slate-500">Purpose, context, and system information</p>
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          <div className="h-3 w-3/4 rounded bg-slate-200" />
+          <div className="h-3 w-5/6 rounded bg-slate-100" />
+          <div className="h-3 w-2/3 rounded bg-slate-100" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonNavigationVisual() {
+  return (
+    <BrowserFrame title="Common navigation">
+      <div className="grid gap-4 md:grid-cols-[130px_1fr]">
+        <MiniSidebar active="Dashboard" />
+        <div className="space-y-3">
+          <RowPreview title="ISRO logo" subtitle="Opens CMCMIS home" tag="Home" />
+          <RowPreview title="Guide badge" subtitle="Opens role-specific guide" tag="Guide" />
+          <RowPreview title="Account menu" subtitle="Profile and logout controls" tag="Menu" />
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function CommonCoreVisual() {
+  return (
+    <BrowserFrame title="Main core features">
+      <div className="grid gap-3 md:grid-cols-2">
+        {['Role-wise access', 'Fast search', 'Status tracking', 'Reports export', 'Audit review', 'Readable UI'].map((item) => (
+          <div key={item} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <CheckCircle2 size={20} className="text-emerald-600" />
+            <p className="mt-3 text-sm font-semibold text-slate-900">{item}</p>
+          </div>
+        ))}
+      </div>
+    </BrowserFrame>
+  );
+}
+
 function TopBarMock() {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -956,6 +1268,24 @@ function MiniSidebar({ active }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MiniFeature({ icon: Icon, label }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+      <Icon className="mx-auto text-sky-600" size={22} />
+      <p className="mt-2 text-xs font-semibold text-slate-700">{label}</p>
+    </div>
+  );
+}
+
+function MiniMenuRow({ icon: Icon, label, danger }) {
+  return (
+    <div className={`mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-700 hover:bg-slate-50'}`}>
+      <Icon size={16} />
+      {label}
     </div>
   );
 }
