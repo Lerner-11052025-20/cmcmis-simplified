@@ -55,6 +55,7 @@ const EquipmentVerification = lazy(() => import('./pages/admin/equipment/Equipme
 const TermsManagement = lazy(() => import('./pages/admin/terms/TermsManagement.jsx').then(m => ({ default: m.TermsManagement })));
 const ProjectManagement = lazy(() => import('./pages/admin/projects/ProjectManagement.jsx').then(m => ({ default: m.ProjectManagement })));
 const TaskManagement = lazy(() => import('./pages/admin/tasks/TaskManagement.jsx').then(m => ({ default: m.TaskManagement })));
+const ChecklistManagement = lazy(() => import('./pages/admin/checklists/ChecklistManagement.jsx').then(m => ({ default: m.ChecklistManagement })));
 const LabCapacity = lazy(() => import('./pages/admin/capacity/LabCapacity.jsx').then(m => ({ default: m.LabCapacity })));
 const ReportsLanding = lazy(() => import('./pages/reports/ReportsLanding.jsx').then(m => ({ default: m.ReportsLanding })));
 const Analytics = lazy(() => import('./pages/analytics/Analytics.jsx').then(m => ({ default: m.Analytics })));
@@ -397,6 +398,21 @@ export function App() {
               element={
                 <ProtectedRoute requiredPermission="tasks:manage">
                   <Layout><TaskManagement /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/checklists"
+              element={
+                <ProtectedRoute requiredRole={[
+                  'SUPER_ADMIN',
+                  'LAB_IN_CHARGE',
+                  'TME_CAL_LAB_IN_CHARGE',
+                  'FPE_CAL_LAB_IN_CHARGE',
+                  'TME_REPAIR_LAB_IN_CHARGE',
+                  'FPE_REPAIR_LAB_IN_CHARGE',
+                ]}>
+                  <Layout><ChecklistManagement /></Layout>
                 </ProtectedRoute>
               }
             />

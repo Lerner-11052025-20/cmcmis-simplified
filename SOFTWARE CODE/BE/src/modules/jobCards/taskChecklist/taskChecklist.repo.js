@@ -16,7 +16,7 @@ const pool = require('../../../config/db');
 async function listTasksForJc(sectionJobNo, isCalibration = false) {
   const table = isCalibration ? 'jc_calibration_task_checklist' : 'jc_task_checklist';
   const selectFields = isCalibration
-    ? 'id, jc_section_no, task_id, task_text, task_type, task_result, is_custom, is_completed, completed_by_employee_id, completed_at, order_index, created_by_employee_id, created_at'
+    ? 'id, jc_section_no, checklist_id, task_id, task_text, task_type, task_result, is_custom, is_completed, completed_by_employee_id, completed_at, order_index, created_by_employee_id, created_at'
     : 'id, jc_section_no, task_id, task_text, is_custom, is_completed, completed_by_employee_id, completed_at, order_index, created_by_employee_id, created_at';
   const [rows] = await pool.query(
     `SELECT ${selectFields}

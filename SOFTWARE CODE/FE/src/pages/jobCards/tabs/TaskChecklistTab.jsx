@@ -17,7 +17,7 @@
 // ============================================================================
 
 import { useMemo, useState, useEffect } from 'react';
-import { Plus, Trash2, Check, FileText } from 'lucide-react';
+import { Plus, Trash2, Check, FileText, ClipboardList } from 'lucide-react';
 import { useJobCardTasks, invalidateJobCardTasks } from '../../../lib/hooks/useJobCardTasks.js';
 import { useTaskLibrary } from '../../../lib/hooks/useTaskLibrary.js';
 import { Button } from '../../../components/ui/Button.jsx';
@@ -26,6 +26,7 @@ import { Select } from '../../../components/ui/Select.jsx';
 import {
   addJobCardTask, toggleJobCardTask, deleteJobCardTask,
 } from '../../../lib/api/jobCards.js';
+import { applyChecklistToJobCard, fetchChecklistsForEquipment } from '../../../lib/api/checklists.js';
 
 // Map JC's workflow_type to the task library category.
 function workflowToCategory(workflowType) {
@@ -50,6 +51,9 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
   const [customText, setCustomText] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [availableChecklists, setAvailableChecklists] = useState([]);
+  const [checklistsLoading, setChecklistsLoading] = useState(false);
+  const [selectedChecklistId, setSelectedChecklistId] = useState('');
 
   // Calibration checklist state
   const [selectedTypes, setSelectedTypes] = useState({}); // task.id -> 'NABL' | 'NON-NABL' | 'BOTH'
@@ -67,6 +71,20 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       setSelectedTypes(types);
     }
   }, [tasks, isCalibration]);
+
+  useEffect(() => {
+    if (!isCalibration || !jc.equipment_type || !jc.equipment_id) return;
+    const ctrl = new AbortController();
+    setChecklistsLoading(true);
+    fetchChecklistsForEquipment(jc.equipment_type, jc.equipment_id, ctrl.signal)
+      .then((items) => setAvailableChecklists(items || []))
+      .catch((e) => {
+        if (e.name === 'CanceledError' || e.code === 'ERR_CANCELED') return;
+        setAvailableChecklists([]);
+      })
+      .finally(() => setChecklistsLoading(false));
+    return () => ctrl.abort();
+  }, [isCalibration, jc.equipment_type, jc.equipment_id]);
 
   const completedCount = useMemo(() => (tasks || []).filter((t) => t.is_completed).length, [tasks]);
   const totalCount = tasks?.length || 0;
@@ -176,6 +194,26 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
     } catch (e) {
       const msg = e?.response?.data?.error?.message;
       alert('Could not delete task: ' + (msg || 'Unknown error'));
+    }
+  }
+
+  async function handleApplyChecklist() {
+    if (!selectedChecklistId || !canWrite) return;
+    const hasExisting = totalCount > 0;
+    if (hasExisting && !window.confirm('This will add all tasks from the selected checklist to the current task list. Continue?')) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await applyChecklistToJobCard(jc.section_job_no, Number(selectedChecklistId));
+      setSelectedChecklistId('');
+      invalidateJobCardTasks(jc.section_job_no);
+      refetchTasks();
+    } catch (e) {
+      const msg = e?.response?.data?.error?.message;
+      alert('Could not apply checklist: ' + (msg || 'Unknown error'));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -379,6 +417,78 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
           </div>
         </div>
       </li>
+    );
+  }
+
+  if (isCalibration) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-950">Task Checklist</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Select a checklist configured for this equipment. Tasks and their types will be loaded automatically.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-indigo-700">
+            <ClipboardList size={22} />
+            <span className="text-base font-semibold">Select Checklist</span>
+            <span className="text-sm font-medium text-indigo-500">
+              filtered for Equipment: {jc.equipment_type}-{jc.equipment_id}
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Select
+              value={selectedChecklistId}
+              onChange={(e) => setSelectedChecklistId(e.target.value)}
+              disabled={!canWrite || busy || checklistsLoading}
+              className="h-12 flex-1 rounded-xl border-blue-300 bg-white text-sm"
+            >
+              <option value="">{checklistsLoading ? 'Loading checklists...' : '- Select a checklist -'}</option>
+              {availableChecklists.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.checklist_name} ({Number(item.task_count || 0)} tasks)
+                </option>
+              ))}
+            </Select>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleApplyChecklist}
+              disabled={!canWrite || !selectedChecklistId || busy}
+              className="h-12 rounded-xl bg-indigo-600 px-5 hover:bg-indigo-700"
+            >
+              <Plus size={16} />
+              Add Checklist Tasks
+            </Button>
+          </div>
+          {!checklistsLoading && availableChecklists.length === 0 ? (
+            <p className="mt-3 text-sm font-medium text-slate-500">
+              No checklist has been configured for this equipment yet.
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-base font-semibold text-slate-700">
+            Calibration Tasks ({totalCount})
+          </h3>
+          {tasksLoading && !tasks ? (
+            <div className="text-sm text-slate-500">Loading tasks...</div>
+          ) : totalCount === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center">
+              <ClipboardList className="mx-auto h-12 w-12 text-slate-300" />
+              <p className="mt-4 text-base font-medium text-slate-500">No checklist selected</p>
+              <p className="mt-2 text-sm text-slate-400">Select a checklist above to load the task list for this equipment.</p>
+            </div>
+          ) : (
+            <ol className="space-y-2">
+              {tasks.map((t, i) => renderCalibrationRow(t, i))}
+            </ol>
+          )}
+        </div>
+      </div>
     );
   }
 

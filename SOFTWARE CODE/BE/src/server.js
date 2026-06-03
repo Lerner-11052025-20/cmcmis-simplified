@@ -97,7 +97,7 @@ app.use(
   cors({
     origin: env.CORS_ORIGIN,
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
     // Browsers respect this; CORS pre-flight responses cache for 10 min,
     // saving an OPTIONS round-trip on every subsequent request.
@@ -308,6 +308,10 @@ app.use(`${env.API_BASE_PATH}/projects`, projectsRoutes);
 // ── Tasks module (Phase 16) ─────────────────────────────────────────────
 const tasksRoutes = require('./modules/tasks/tasks.routes');
 app.use(`${env.API_BASE_PATH}/tasks`, tasksRoutes);
+
+// Calibration checklist master module.
+const checklistsRoutes = require('./modules/checklists/checklists.routes');
+app.use(`${env.API_BASE_PATH}/checklists`, checklistsRoutes);
 
 
 // ── Audit Log Viewer (Phase 14) ─────────────────────────────────────────

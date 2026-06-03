@@ -51,6 +51,7 @@ import {
   User,
   Info,
   BookOpen,
+  ListChecks,
 } from 'lucide-react';
 
 /**
@@ -91,6 +92,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'Admin · Terms & Conditions', to: '/admin/terms', icon: ScrollText, requires: 'terms:manage' },
   { label: 'Admin · Projects', to: '/admin/projects', icon: Settings, requires: 'projects:manage' },
   { label: 'Admin · Tasks', to: '/admin/tasks', icon: ClipboardList, requires: 'tasks:manage' },
+  { label: 'Checklist Mgmt', to: '/admin/checklists', icon: ListChecks, requires: 'job_card:update-tasks' },
   { label: 'Admin · Lab Capacity', to: '/admin/lab-capacity', icon: LineChart, requires: 'analytics:view' },
 
   // Phase 14 — Audit Log Viewer (Super Admin only). STRICTLY read-only.
@@ -147,6 +149,15 @@ const LAB_ENGINEER_GUIDE_ROLES = new Set([
   'FPE_CAL_LAB_ENG',
 ]);
 
+const CHECKLIST_MANAGER_ROLES = new Set([
+  'SUPER_ADMIN',
+  'LAB_IN_CHARGE',
+  'TME_CAL_LAB_IN_CHARGE',
+  'FPE_CAL_LAB_IN_CHARGE',
+  'TME_REPAIR_LAB_IN_CHARGE',
+  'FPE_REPAIR_LAB_IN_CHARGE',
+]);
+
 /**
  * Returns the subset of nav items the given permissions array unlocks.
  *
@@ -164,6 +175,7 @@ export function visibleNavItems(permissions, role) {
     if (item.label === 'Lab In-Charge Guide') return LAB_IN_CHARGE_GUIDE_ROLES.has(role);
     if (item.label === 'Lab Engineer Guide') return LAB_ENGINEER_GUIDE_ROLES.has(role);
     if (item.label === 'Super Admin Guide') return role === 'SUPER_ADMIN';
+    if (item.label === 'Checklist Mgmt') return CHECKLIST_MANAGER_ROLES.has(role);
     if (GLOBAL_HIDDEN_NAV_LABELS.has(item.label)) return false;
     if (SUPER_ADMIN_ONLY_NAV_LABELS.has(item.label) && role !== 'SUPER_ADMIN') return false;
     if (item.label === 'Admin · Lab Capacity' && role !== 'SUPER_ADMIN' && role !== 'LAB_IN_CHARGE' && role !== 'LAB_IN_CHARGE_SCOPED') return false;

@@ -42,6 +42,7 @@ async function listTasks({ sectionJobNo, actor }) {
   const rows = await repo.listTasksForJc(sectionJobNo, isCalibration);
   return rows.map((r) => ({
     id:            r.id,
+    checklist_id:  r.checklist_id || null,
     task_id:       r.task_id,
     task_text:     r.task_text,
     is_custom:     !!r.is_custom,

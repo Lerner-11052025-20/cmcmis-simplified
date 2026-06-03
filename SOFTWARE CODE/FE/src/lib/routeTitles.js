@@ -31,6 +31,7 @@ export const ROUTE_TITLES = [
   { path: '/admin/employees/new', title: 'New Employee', page: 'Employee Form', access: 'master:employees:manage' },
   { path: '/admin/employees/:id/edit', title: 'Edit Employee', page: 'Employee Form', access: 'master:employees:manage' },
   { path: '/admin/equipment-verification', title: 'Equipment Verification', page: 'Equipment Verification', access: 'equipment:verify + SUPER_ADMIN' },
+  { path: '/admin/checklists', title: 'Checklist Management', page: 'Checklist Management', access: 'SUPER_ADMIN / Calibration Lab In-Charge' },
   { path: '/audit', title: 'Audit Log', page: 'Audit Viewer', access: 'audit:read-list' },
 ];
 
