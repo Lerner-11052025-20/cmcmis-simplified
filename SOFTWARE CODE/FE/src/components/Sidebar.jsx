@@ -120,15 +120,15 @@ export function Sidebar({ collapsed = false, onToggle }) {
         )}
       >
         <div className="flex items-center gap-3.5">
-          <div className="relative group">
+          <NavLink to="/home" className="relative group rounded-xl focus:outline-none focus:ring-4 focus:ring-sky-100" title="Open CMCMIS Home" aria-label="Open CMCMIS Home">
             {/* Elegant telemetry glow ring around the logo block */}
             <div className="absolute -inset-0.5 bg-gradient-to-tr from-accent/20 to-accent/0 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-            <div className="relative h-14 w-14 rounded-xl p-1 bg-white border border-slate-200 shadow-md flex items-center justify-center ring-1 ring-slate-100/30">
+            <div className="relative h-14 w-14 rounded-xl p-1 bg-white border border-slate-200 shadow-md flex items-center justify-center ring-1 ring-slate-100/30 transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
               <Logo />
             </div>
             {/* Technical LED indicator badge with continuous heartbeat pulse */}
             <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-success ring-2 ring-white animate-pulse-radar"></span>
-          </div>
+          </NavLink>
 
           {!collapsed ? (
             <div className="leading-tight font-sans">

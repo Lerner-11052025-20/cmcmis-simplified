@@ -36,6 +36,7 @@ import { ROUTE_TITLES, formatDocumentTitle } from './lib/routeTitles.js';
 
 // Lazy load all page components to enable chunk-splitting
 const Login = lazy(() => import('./pages/Login.jsx').then(m => ({ default: m.Login })));
+const HomeLanding = lazy(() => import('./pages/home/HomeLanding.jsx').then(m => ({ default: m.HomeLanding })));
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard.jsx').then(m => ({ default: m.Dashboard })));
 const Inquiry = lazy(() => import('./pages/inquiry/Inquiry.jsx').then(m => ({ default: m.Inquiry })));
 const EquipmentList = lazy(() => import('./pages/equipment/EquipmentList.jsx').then(m => ({ default: m.EquipmentList })));
@@ -87,6 +88,14 @@ export function App() {
           <Routes>
             {/* ── Public ─────────────────────────────────────────── */}
             <Route path="/login" element={<Login />} />
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <Layout><HomeLanding /></Layout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* ── Dashboard (Phase 8 Slice 1) ─────────────────────── */}
             <Route

@@ -2,6 +2,7 @@ export const APP_NAME = 'CMCMIS';
 
 export const ROUTE_TITLES = [
   { path: '/login', title: 'Sign In', page: 'Login', access: 'Public' },
+  { path: '/home', title: 'Home', page: 'CMCMIS Home', access: 'Signed-in user' },
   { path: '/dashboard', title: 'Dashboard', page: 'Dashboard', access: 'dashboard:view' },
   { path: '/profile', title: 'Profile', page: 'Profile', access: 'Signed-in user' },
   { path: '/about', title: 'About Us', page: 'About Us', access: 'Signed-in user' },
