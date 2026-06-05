@@ -89,6 +89,7 @@ export const ALL_NAV_ITEMS = [
   { label: 'Admin · Users',     to: '/admin/users',     icon: Users,    requires: 'user:read-list' },
   { label: 'Admin · Employees', to: '/admin/employees', icon: IdCard,   requires: 'master:employees:manage' },
   { label: 'Admin · Equipment Verification', to: '/admin/equipment-verification', icon: BadgeCheck, requires: 'equipment:verify' },
+  { label: 'Admin · Master Data Corrections', to: '/admin/master-data-corrections', icon: BadgeCheck, requires: 'master_data_correction:read-list' },
   { label: 'Admin · Terms & Conditions', to: '/admin/terms', icon: ScrollText, requires: 'terms:manage' },
   { label: 'Admin · Projects', to: '/admin/projects', icon: Settings, requires: 'projects:manage' },
   { label: 'Admin · Tasks', to: '/admin/tasks', icon: ClipboardList, requires: 'tasks:manage' },

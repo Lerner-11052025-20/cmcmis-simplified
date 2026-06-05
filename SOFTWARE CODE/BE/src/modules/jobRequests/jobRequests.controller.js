@@ -34,6 +34,7 @@ async function create(req, res, next) {
         employeeId:  req.user.employeeId,
         role:        req.user.role,
         userId:      req.user.userId,
+        authSource:  req.user.authSource || 'PASSWORD',
         permissions: req.user.permissions,
         laneScopes:  req.user.laneScopes || [],
       },

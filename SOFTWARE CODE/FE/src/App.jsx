@@ -45,6 +45,7 @@ const EquipmentDetailPlaceholder = lazy(() => import('./pages/equipment/Equipmen
 const JobRequestList = lazy(() => import('./pages/jobRequests/JobRequestList.jsx').then(m => ({ default: m.JobRequestList })));
 const JobRequestNew = lazy(() => import('./pages/jobRequests/JobRequestNew.jsx').then(m => ({ default: m.JobRequestNew })));
 const JobRequestDetail = lazy(() => import('./pages/jobRequests/JobRequestDetail.jsx').then(m => ({ default: m.JobRequestDetail })));
+const MasterDataCorrectionNew = lazy(() => import('./pages/masterDataCorrections/MasterDataCorrectionNew.jsx').then(m => ({ default: m.MasterDataCorrectionNew })));
 const JobCardList = lazy(() => import('./pages/jobCards/JobCardList.jsx').then(m => ({ default: m.JobCardList })));
 const JobCardDetail = lazy(() => import('./pages/jobCards/JobCardDetail.jsx').then(m => ({ default: m.JobCardDetail })));
 const Conversion = lazy(() => import('./pages/conversion/Conversion.jsx').then(m => ({ default: m.Conversion })));
@@ -57,6 +58,7 @@ const ProjectManagement = lazy(() => import('./pages/admin/projects/ProjectManag
 const TaskManagement = lazy(() => import('./pages/admin/tasks/TaskManagement.jsx').then(m => ({ default: m.TaskManagement })));
 const ChecklistManagement = lazy(() => import('./pages/admin/checklists/ChecklistManagement.jsx').then(m => ({ default: m.ChecklistManagement })));
 const LabCapacity = lazy(() => import('./pages/admin/capacity/LabCapacity.jsx').then(m => ({ default: m.LabCapacity })));
+const MasterDataCorrectionReview = lazy(() => import('./pages/admin/masterDataCorrections/MasterDataCorrectionReview.jsx').then(m => ({ default: m.MasterDataCorrectionReview })));
 const ReportsLanding = lazy(() => import('./pages/reports/ReportsLanding.jsx').then(m => ({ default: m.ReportsLanding })));
 const Analytics = lazy(() => import('./pages/analytics/Analytics.jsx').then(m => ({ default: m.Analytics })));
 const Notifications = lazy(() => import('./pages/notifications/Notifications.jsx').then(m => ({ default: m.Notifications })));
@@ -219,6 +221,14 @@ export function App() {
               element={
                 <ProtectedRoute requiredPermission="job_request:create">
                   <Layout><JobRequestNew /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/master-data-corrections/new"
+              element={
+                <ProtectedRoute requiredPermission="master_data_correction:create">
+                  <Layout><MasterDataCorrectionNew /></Layout>
                 </ProtectedRoute>
               }
             />
@@ -413,6 +423,14 @@ export function App() {
                   'FPE_REPAIR_LAB_IN_CHARGE',
                 ]}>
                   <Layout><ChecklistManagement /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/master-data-corrections"
+              element={
+                <ProtectedRoute requiredPermission="master_data_correction:read-list" requiredRole={['SUPER_ADMIN', 'LAB_IN_CHARGE']}>
+                  <Layout><MasterDataCorrectionReview /></Layout>
                 </ProtectedRoute>
               }
             />

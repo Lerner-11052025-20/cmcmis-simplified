@@ -32,6 +32,7 @@ const jcRepo = require('../jobCards/jobCards.repo');
 const lookupsRepo = require('../lookups/lookups.repo');
 const { WORKFLOW_BUCKET } = require('./jobRequests.validators');
 const { deriveLaneCode, canAccessLane, scopeCanAccessLane } = require('../../utils/lanes');
+const masterDataCorrections = require('../masterDataCorrections/masterDataCorrections.service');
 
 // Phase 12 — workflow events emit in-app notifications. The emitter must
 // be called INSIDE the same transaction as audit + status-history so a
@@ -112,11 +113,12 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
   // denormalised snapshot columns. Pull from cmms_emp_mst keyed on
   // employee_id. If the row is missing, fall back to JWT claims and a
   // blank designation — the request still saves.
-  const profile = await usersRepo.findEmployeeProfile(actor.employeeId)
-    .catch(() => null);
+  const profile = actor.authSource === 'SSO'
+    ? await usersRepo.findSsoEmployeeProfile(actor.employeeId).catch(() => null)
+    : await usersRepo.findEmployeeProfile(actor.employeeId).catch(() => null);
   const submittedBy = {
     submitted_by_employee_id: actor.employeeId,
-    submitted_by_name:        profile?.display_name || actor.employeeId,
+    submitted_by_name:        profile?.display_name || profile?.full_name || actor.employeeId,
     submitted_by_designation: profile?.designation  || '',
     submitted_by_email:       profile?.email        || '',
   };
@@ -126,6 +128,8 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
   if (!canAccessLane(actor, laneCode)) {
     throw errors.forbidden('Cannot create a Job Request outside your assigned lane');
   }
+
+  await masterDataCorrections.assertSsoEquipmentDivisionAllowed({ actor, body });
 
   // Cross-field guard (defence in depth — zod already enforces this).
   if (wantsSubmit && body.tnc_accepted !== true) {

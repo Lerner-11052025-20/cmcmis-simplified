@@ -253,6 +253,9 @@ app.use(`${env.API_BASE_PATH}/job-requests`, jobRequestsRoutes);
 // ── Job Cards module (Phase 6 Slice 1) ──────────────────────────────────
 // Mounted at /api/v1/job-cards. List implemented; lifecycle transitions
 // (start/complete/verify/reopen) + detail + PDF stubbed with 404.
+const masterDataCorrectionRoutes = require('./modules/masterDataCorrections/masterDataCorrections.routes');
+app.use(`${env.API_BASE_PATH}/master-data-corrections`, masterDataCorrectionRoutes);
+
 const jobCardsRoutes = require('./modules/jobCards/jobCards.routes');
 app.use(`${env.API_BASE_PATH}/job-cards`, jobCardsRoutes);
 

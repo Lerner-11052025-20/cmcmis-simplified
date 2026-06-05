@@ -38,6 +38,7 @@ const baseObject = z.object({
   model_no:               z.string().max(120).optional().or(z.literal('')),
   serial_no:              z.string().max(120).optional().or(z.literal('')),
   equipment_type:         z.string().max(60).optional().or(z.literal('')),
+  equipment_master_type:  z.string().max(25).optional().or(z.literal('')),
   options_description:    z.string().max(2000).optional().or(z.literal('')),
   accessories:            z.array(accessorySchema).max(20).optional().default([]),
   lab_phone:              z.string().max(40).optional().or(z.literal('')),

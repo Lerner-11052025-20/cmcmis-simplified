@@ -23,7 +23,8 @@ import {
   User, 
   FileText, 
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -127,6 +128,7 @@ export function JobRequestNew() {
     model_no: '',
     serial_no: '',
     equipment_type: EQUIPMENT_TYPE_OPTIONS[0],
+    equipment_master_type: '',
     options_description: '',
     lab_phone: '',
     room_phone: '',
@@ -166,6 +168,7 @@ export function JobRequestNew() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [divisionMismatch, setDivisionMismatch] = useState(null);
 
   // ── Division + Project dropdowns — fetched once on mount ──────────
   const [divisions, setDivisions] = useState([]);
@@ -246,6 +249,7 @@ export function JobRequestNew() {
                 model_no: matched.model_no || '',
                 serial_no: matched.serial_no || '',
                 equipment_type: normalizeEquipmentType(matched.eqm_type),
+                equipment_master_type: matched.eqm_type || '',
                 accessories: [],
               };
             });
@@ -277,6 +281,7 @@ export function JobRequestNew() {
   function onEquipmentQueryChange(value) {
     setEquipmentSearchText(value);
     update('equipment_id', null);
+    update('equipment_master_type', '');
     if (eqDebRef.current) clearTimeout(eqDebRef.current);
     if (!value || value.length < 2) { setEqOpts([]); return; }
     eqDebRef.current = setTimeout(async () => {
@@ -299,6 +304,7 @@ export function JobRequestNew() {
       model_no: opt.model_no || '',
       serial_no: opt.serial_no || '',
       equipment_type: normalizeEquipmentType(opt.eqm_type),
+      equipment_master_type: opt.eqm_type || '',
       accessories: [],
     }));
     setEquipmentSearchText(equipmentIdDisplay(opt));
@@ -367,6 +373,7 @@ export function JobRequestNew() {
     model_no: form.model_no.trim(),
     serial_no: form.serial_no.trim(),
     equipment_type: form.equipment_type || '',
+    equipment_master_type: form.equipment_master_type || '',
     options_description: form.options_description.trim(),
     accessories: form.accessories,
     lab_phone: form.lab_phone.trim(),
@@ -440,6 +447,7 @@ export function JobRequestNew() {
   // ── Submit handlers ──────────────────────────────────────────────
   async function handleSave(submitNow) {
     setFormError(null);
+    setDivisionMismatch(null);
     setFieldErrors({});
 
     const parse = submitNow ? submitParse : draftParse;
@@ -479,6 +487,17 @@ export function JobRequestNew() {
       navigate('/job-requests');
     } catch (err) {
       const apiErr = err?.response?.data?.error;
+      if (apiErr?.code === 'DIVISION_MISMATCH') {
+        setDivisionMismatch(apiErr.details || {});
+        setFormError(null);
+        window.requestAnimationFrame(() => {
+          const banner = document.querySelector('[data-division-mismatch]');
+          if (banner && typeof banner.scrollIntoView === 'function') {
+            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+        return;
+      }
       if (apiErr?.details && Array.isArray(apiErr.details)) {
         const f = {};
         apiErr.details.forEach((d) => { if (d.path) f[d.path] = d.message; });
@@ -576,6 +595,45 @@ export function JobRequestNew() {
                 <p className="text-xs font-medium text-slate-600 whitespace-pre-line leading-relaxed mt-2">
                   {formError}
                 </p>
+              </div>
+            </div>
+          ) : null}
+
+          {divisionMismatch ? (
+            <div
+              data-division-mismatch
+              role="alert"
+              className="rounded-2xl border border-red-200 bg-red-50/80 p-5 shadow-[0_2px_10px_rgba(239,68,68,0.08)]"
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="flex gap-3">
+                  <AlertTriangle size={20} className="mt-0.5 shrink-0 text-red-600" aria-hidden="true" />
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-red-700">
+                      Division Mismatch
+                    </h3>
+                    <p className="mt-2 text-sm font-semibold leading-relaxed text-red-700">
+                      Your division and the selected equipment division are mismatched. Please call or email TIMCD, then raise a master data correction request.
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs font-bold text-red-700 sm:grid-cols-2">
+                      <span>SSO Division: {divisionMismatch.sso_egd_name || '-'}</span>
+                      <span>Equipment Division: {divisionMismatch.equipment?.division_code || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="shrink-0 bg-red-600 shadow-red-600/20 hover:bg-red-700"
+                  onClick={() => {
+                    const eq = divisionMismatch.equipment || {};
+                    const url = `/master-data-corrections/new?eqm_type=${encodeURIComponent(eq.eqm_type || form.equipment_master_type || form.equipment_type)}&eqm_id=${encodeURIComponent(eq.eqm_id || form.equipment_id || '')}`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  Master Data Correction
+                  <ExternalLink size={14} className="ml-2" aria-hidden="true" />
+                </Button>
               </div>
             </div>
           ) : null}
