@@ -51,6 +51,25 @@ async function findEmployeeProfile(employeeId) {
   return profile;
 }
 
+async function findSsoEmployeeProfile(employeeId) {
+  const [rows] = await pool.query(
+    `SELECT full_name     AS display_name,
+            designation   AS designation,
+            email         AS email,
+            telephone     AS room_phone,
+            lab_telephone AS lab_phone,
+            egd_name      AS division_code,
+            egd_name      AS division_name,
+            is_active,
+            last_sso_login_at
+       FROM employee_sso_directory
+      WHERE employee_id = ?
+      LIMIT 1`,
+    [employeeId],
+  );
+  return rows[0] || null;
+}
+
 /**
  * Read the users table account metadata for a user.
  */
@@ -80,4 +99,9 @@ async function findUserLoginHistory(employeeId) {
   return rows;
 }
 
-module.exports = { findEmployeeProfile, findUserAccountDetails, findUserLoginHistory };
+module.exports = {
+  findEmployeeProfile,
+  findSsoEmployeeProfile,
+  findUserAccountDetails,
+  findUserLoginHistory,
+};

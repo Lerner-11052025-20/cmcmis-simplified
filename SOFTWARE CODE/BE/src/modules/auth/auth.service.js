@@ -35,7 +35,9 @@ const jwtCfg = require('../../config/jwt');
 const { errors } = require('../../middleware/errorHandler');
 
 const usersRepo = require('./users.repo');
+const ssoRepo = require('./sso.repo');
 const refreshRepo = require('./refreshTokens.repo');
+const ssoRefreshRepo = require('./ssoRefreshTokens.repo');
 const auditRepo = require('./loginAudit.repo');
 
 // ── Local helpers ────────────────────────────────────────────────────────
@@ -58,6 +60,19 @@ function buildAccessPayload(user, role_code, permissions, lane_scopes = []) {
     permissions,
     laneScopes: Array.isArray(lane_scopes) ? lane_scopes : [],
     tv:  user.token_version,
+    authSource: 'PASSWORD',
+  };
+}
+
+function buildSsoAccessPayload(user, role_code, permissions, lane_scopes = []) {
+  return {
+    sub: user.employee_id,
+    uid: user.sso_user_id,
+    role: role_code,
+    permissions,
+    laneScopes: Array.isArray(lane_scopes) ? lane_scopes : [],
+    tv: 1,
+    authSource: 'SSO',
   };
 }
 
@@ -81,12 +96,24 @@ function signAccess(payload, userId) {
  */
 function signRefresh(user) {
   return jwt.sign(
-    { sub: user.employee_id, uid: user.user_id, type: 'refresh' },
+    { sub: user.employee_id, uid: user.user_id, type: 'refresh', authSource: 'PASSWORD' },
     jwtCfg.refreshSecret,
     {
       algorithm: jwtCfg.alg,
       expiresIn: jwtCfg.refreshTtlSec,
       jwtid: `ref_${Date.now()}_${user.user_id}`,
+    },
+  );
+}
+
+function signSsoRefresh(user) {
+  return jwt.sign(
+    { sub: user.employee_id, uid: user.sso_user_id, type: 'refresh', authSource: 'SSO' },
+    jwtCfg.refreshSecret,
+    {
+      algorithm: jwtCfg.alg,
+      expiresIn: jwtCfg.refreshTtlSec,
+      jwtid: `sso_ref_${Date.now()}_${user.sso_user_id}`,
     },
   );
 }
@@ -171,6 +198,70 @@ async function login({ employeeId, password, ipAddress, userAgent }) {
   return { accessToken, refreshToken, user: accessPayload };
 }
 
+async function loginSsoByEmployeeId({ employeeId, ipAddress, userAgent }) {
+  const GENERIC_FAIL = 'Invalid SSO credentials';
+
+  const ssoUser = await ssoRepo.findByEmployeeId(employeeId);
+  if (!ssoUser) {
+    await auditRepo.record({
+      employeeId,
+      outcome: 'FAILED_NOT_FOUND',
+      ipAddress,
+      userAgent,
+      notes: 'SSO employee_id not found in employee_sso_directory',
+    });
+    throw errors.unauthorized(GENERIC_FAIL);
+  }
+
+  if (!ssoUser.is_active) {
+    await auditRepo.record({
+      employeeId,
+      outcome: 'FAILED_USER_INACTIVE',
+      ipAddress,
+      userAgent,
+      notes: 'SSO directory row inactive',
+    });
+    throw errors.unauthorized(GENERIC_FAIL);
+  }
+
+  const { role_code, permissions, lane_scopes } =
+    await ssoRepo.loadRoleAndPermissions(ssoUser.sso_user_id);
+  if (!role_code) {
+    await auditRepo.record({
+      employeeId,
+      outcome: 'FAILED_USER_INACTIVE',
+      ipAddress,
+      userAgent,
+      notes: 'SSO user has no sso_user_roles row',
+    });
+    throw errors.unauthorized(GENERIC_FAIL);
+  }
+
+  const accessPayload = buildSsoAccessPayload(ssoUser, role_code, permissions, lane_scopes);
+  const accessToken = signAccess(accessPayload, `sso_${ssoUser.sso_user_id}`);
+  const refreshToken = signSsoRefresh(ssoUser);
+
+  const expiresAt = dayjs().add(jwtCfg.refreshTtlSec, 'second').toDate();
+  await ssoRefreshRepo.persist({
+    ssoUserId: ssoUser.sso_user_id,
+    rawToken: refreshToken,
+    expiresAt,
+    userAgent,
+    ipAddress,
+  });
+
+  await ssoRepo.recordSuccessfulLogin(ssoUser.sso_user_id, ipAddress);
+  await auditRepo.record({
+    employeeId,
+    outcome: 'SUCCESS',
+    ipAddress,
+    userAgent,
+    notes: 'SSO employee_id login',
+  });
+
+  return { accessToken, refreshToken, user: accessPayload };
+}
+
 // ────────────────────────────────────────────────────────────────────────
 //  refresh  —  with rotation + theft detection
 // ────────────────────────────────────────────────────────────────────────
@@ -211,6 +302,50 @@ async function refresh({ rawRefreshToken, ipAddress, userAgent }) {
     });
   } catch (_e) {
     throw errors.unauthorized('Invalid refresh token');
+  }
+
+  if (payload.authSource === 'SSO') {
+    const stored = await ssoRefreshRepo.findValid(rawRefreshToken);
+    if (!stored) {
+      await ssoRefreshRepo.revokeAllForUser(payload.uid, 'ADMIN_REVOKE');
+      throw errors.unauthorized('Refresh token not recognised — please sign in again');
+    }
+
+    await ssoRefreshRepo.revoke(rawRefreshToken, 'ROTATED');
+
+    const ssoUser = await ssoRepo.findByEmployeeId(payload.sub);
+    if (!ssoUser || !ssoUser.is_active) {
+      throw errors.unauthorized('SSO account is no longer active');
+    }
+
+    const { role_code, permissions, lane_scopes } =
+      await ssoRepo.loadRoleAndPermissions(ssoUser.sso_user_id);
+    if (!role_code) {
+      throw errors.unauthorized('SSO account has no role');
+    }
+
+    const accessPayload = buildSsoAccessPayload(ssoUser, role_code, permissions, lane_scopes);
+    const accessToken = signAccess(accessPayload, `sso_${ssoUser.sso_user_id}`);
+    const newRefreshToken = signSsoRefresh(ssoUser);
+
+    const expiresAt = dayjs().add(jwtCfg.refreshTtlSec, 'second').toDate();
+    await ssoRefreshRepo.persist({
+      ssoUserId: ssoUser.sso_user_id,
+      rawToken: newRefreshToken,
+      expiresAt,
+      userAgent,
+      ipAddress,
+    });
+
+    await auditRepo.record({
+      employeeId: ssoUser.employee_id,
+      outcome: 'TOKEN_REFRESH',
+      ipAddress,
+      userAgent,
+      notes: 'SSO refresh',
+    });
+
+    return { accessToken, refreshToken: newRefreshToken, user: accessPayload };
   }
 
   // 2) Must exist + be unrevoked + unexpired in our DB
@@ -274,10 +409,11 @@ async function refresh({ rawRefreshToken, ipAddress, userAgent }) {
 async function logout({ rawRefreshToken, employeeId, ipAddress, userAgent }) {
   if (rawRefreshToken) {
     await refreshRepo.revoke(rawRefreshToken, 'LOGOUT');
+    await ssoRefreshRepo.revoke(rawRefreshToken, 'LOGOUT');
   }
   if (employeeId) {
     await auditRepo.record({ employeeId, outcome: 'LOGOUT', ipAddress, userAgent });
   }
 }
 
-module.exports = { login, refresh, logout };
+module.exports = { login, loginSsoByEmployeeId, refresh, logout };

@@ -49,7 +49,7 @@ import isroLogo from '../assets/isro-logo.svg';
 // bottom-right corner and is self-healing. No inline credit on this page.
 
 export function Login() {
-  const { login, user, loading } = useAuth();
+  const { login, ssoEmployeeLogin, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,6 +58,10 @@ export function Login() {
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [isSsoOpen, setIsSsoOpen] = useState(false);
+  const [ssoEmployeeId, setSsoEmployeeId] = useState('');
+  const [ssoError, setSsoError] = useState('');
+  const [isSsoSubmitting, setIsSsoSubmitting] = useState(false);
   
   // Track active form submission state to prevent the boot-time useEffect
   // from immediately redirecting when the context user hydrates.
@@ -111,6 +115,34 @@ export function Login() {
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
   };
+
+  async function onSsoSubmit(event) {
+    event.preventDefault();
+    const employeeId = ssoEmployeeId.trim().toUpperCase();
+    if (!employeeId) {
+      setSsoError('Employee ID is required');
+      return;
+    }
+
+    setSsoError('');
+    setIsSsoSubmitting(true);
+    setIsLoggingIn(true);
+    try {
+      await ssoEmployeeLogin(employeeId);
+      const target = location.state?.from?.pathname || '/dashboard';
+      navigate(target, { replace: true });
+    } catch (err) {
+      setIsLoggingIn(false);
+      const apiMessage =
+        err?.response?.data?.error?.message ||
+        (err?.response?.status === 429
+          ? 'Too many attempts. Please try again later.'
+          : 'SSO sign-in failed. Please try again.');
+      setSsoError(apiMessage);
+    } finally {
+      setIsSsoSubmitting(false);
+    }
+  }
 
   // While the silent refresh is in flight, render a centred spinner so
   // we don't flash the form just to hide it a tick later.
@@ -352,13 +384,14 @@ export function Login() {
             <Button
               variant="secondary"
               className="w-full border border-border/80 text-slate-700 hover:text-slate-800 flex items-center justify-center gap-2 font-sans"
-              disabled
-              title="Active Directory SSO will be enabled in a future release."
+              type="button"
+              onClick={() => {
+                setSsoEmployeeId('');
+                setSsoError('');
+                setIsSsoOpen(true);
+              }}
             >
               <span className="text-xs font-semibold">Continue with SSO</span>
-              <Badge color="ink" className="text-[9px] px-1.5 py-0 bg-base-elev text-slate-500 border border-border/40 font-sans font-medium">
-                Soon
-              </Badge>
             </Button>
 
             {/* Compliance footer */}
@@ -369,6 +402,68 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {isSsoOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-white/70 bg-white p-5 shadow-2xl animate-fade-in">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 font-sans">Continue with SSO</h3>
+                <p className="mt-1 text-xs font-medium text-slate-500 font-sans">
+                  Enter your organization Employee ID.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSsoOpen(false)}
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title="Close"
+              >
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <form onSubmit={onSsoSubmit} className="mt-5 space-y-4">
+              <FormField label="Employee ID" error={ssoError} htmlFor="sso_employee_id">
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-accent transition-colors">
+                    <User size={18} strokeWidth={1.75} />
+                  </span>
+                  <Input
+                    id="sso_employee_id"
+                    value={ssoEmployeeId}
+                    onChange={(event) => setSsoEmployeeId(event.target.value.toUpperCase())}
+                    autoComplete="username"
+                    spellCheck={false}
+                    autoFocus
+                    className="pl-9 pr-3 focus:ring-accent/25 focus:ring-offset-0 focus:border-accent font-sans text-slate-800"
+                    invalid={Boolean(ssoError)}
+                  />
+                </div>
+              </FormField>
+
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full flex items-center justify-center gap-2 font-sans"
+                disabled={isSsoSubmitting}
+              >
+                {isSsoSubmitting ? (
+                  <>
+                    <Spinner size={14} className="text-white" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continue</span>
+                    <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
 
     </main>

@@ -27,6 +27,7 @@ async function getMe(req, res, next) {
     role: req.user.role,
     permissions: req.user.permissions,
     laneScopes: req.user.laneScopes || [],
+    authSource: req.user.authSource || 'PASSWORD',
     // Default the profile fields so the FE never reads undefined. Phase 6
     // adds lab_phone / room_phone / division_id|code|name for the JR form
     // Section 4 auto-fill (BR-JR-06).
@@ -43,7 +44,9 @@ async function getMe(req, res, next) {
   // Enrich from cmms_emp_mst, users, and login_audit (best effort). If any query fails,
   // we still return 200 with the base payload.
   try {
-    const profile = await repo.findEmployeeProfile(req.user.employeeId);
+    const profile = req.user.authSource === 'SSO'
+      ? await repo.findSsoEmployeeProfile(req.user.employeeId)
+      : await repo.findEmployeeProfile(req.user.employeeId);
     if (profile) {
       payload.display_name = profile.display_name || '';
       payload.designation = profile.designation || '';
@@ -55,13 +58,20 @@ async function getMe(req, res, next) {
       payload.division_name = profile.division_name || '';
     }
 
-    const account = await repo.findUserAccountDetails(req.user.userId);
-    if (account) {
-      payload.is_active = account.is_active;
-      payload.is_locked = account.is_locked;
-      payload.last_login_at = account.last_login_at;
-      payload.created_at = account.created_at;
-      payload.token_version = account.token_version;
+    if (req.user.authSource === 'SSO') {
+      payload.is_active = profile?.is_active ?? 1;
+      payload.is_locked = 0;
+      payload.last_login_at = profile?.last_sso_login_at || null;
+      payload.token_version = 1;
+    } else {
+      const account = await repo.findUserAccountDetails(req.user.userId);
+      if (account) {
+        payload.is_active = account.is_active;
+        payload.is_locked = account.is_locked;
+        payload.last_login_at = account.last_login_at;
+        payload.created_at = account.created_at;
+        payload.token_version = account.token_version;
+      }
     }
 
     const loginHistory = await repo.findUserLoginHistory(req.user.employeeId);

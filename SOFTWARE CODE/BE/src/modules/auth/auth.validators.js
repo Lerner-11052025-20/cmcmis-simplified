@@ -60,6 +60,20 @@ const loginSchema = z
   // smuggle keys like { employee_id, password, isAdmin: true } past us.
   .strict();
 
+// POST /api/v1/auth/sso/employee-login - temporary SSO mode.
+// Future real SSO will call the same service with a verified email from
+// the organization; for now the popup proves identity by employee_id only.
+const ssoEmployeeLoginSchema = z
+  .object({
+    employee_id: z
+      .string()
+      .trim()
+      .min(1, 'Employee ID is required')
+      .max(EMP_ID_MAX, `Employee ID must be ${EMP_ID_MAX} characters or fewer`)
+      .transform((v) => v.toUpperCase()),
+  })
+  .strict();
+
 // POST /api/v1/auth/refresh — body schema (must be empty; refresh comes
 // from the httpOnly cookie + the CSRF header). .strict() means any body
 // payload at all causes a 422.
@@ -68,4 +82,5 @@ const refreshSchema = z.object({}).strict();
 module.exports = {
   loginSchema,
   refreshSchema,
+  ssoEmployeeLoginSchema,
 };

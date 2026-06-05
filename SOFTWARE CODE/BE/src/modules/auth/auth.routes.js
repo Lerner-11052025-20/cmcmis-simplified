@@ -30,7 +30,7 @@ const validate = require('../../middleware/validate');
 const { loginLimiter, refreshLimiter } = require('../../middleware/rateLimit');
 const authenticate = require('../../middleware/authenticate');
 
-const { loginSchema } = require('./auth.validators');
+const { loginSchema, ssoEmployeeLoginSchema } = require('./auth.validators');
 const ctrl = require('./auth.controller');
 
 const router = express.Router();
@@ -41,6 +41,13 @@ router.post(
   loginLimiter,
   validate(loginSchema, 'body'),
   ctrl.postLogin,
+);
+
+router.post(
+  '/sso/employee-login',
+  loginLimiter,
+  validate(ssoEmployeeLoginSchema, 'body'),
+  ctrl.postSsoEmployeeLogin,
 );
 
 // Public-with-cookie — rate-limited; CSRF + cookie validation lives in ctrl

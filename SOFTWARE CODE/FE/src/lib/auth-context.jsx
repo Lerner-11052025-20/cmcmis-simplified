@@ -156,6 +156,25 @@ export function AuthProvider({ children }) {
     return enriched;
   }, []);
 
+  const ssoEmployeeLogin = useCallback(async (employeeId) => {
+    const r = await api.post('/auth/sso/employee-login', {
+      employee_id: employeeId,
+    });
+    setAccessToken(r.data.data.accessToken);
+    setCsrfToken(r.data.data.csrfToken);
+    const base = r.data.data.user;
+    setUser(base);
+    let enriched = base;
+    try {
+      const me = await api.get('/me');
+      enriched = { ...base, ...me.data.data };
+      setUser(enriched);
+    } catch {
+      // ignore - base user stays
+    }
+    return enriched;
+  }, []);
+
   const logout = useCallback(async () => {
     // Best effort: ignore errors. The user is logging out — even if the
     // backend call fails (network blip, already-revoked token) we still
@@ -191,8 +210,8 @@ export function AuthProvider({ children }) {
   // relevant has changed — prevents needless re-renders in every
   // consumer of useAuth().
   const value = useMemo(
-    () => ({ user, loading, login, logout, hasPermission, hasAny }),
-    [user, loading, login, logout, hasPermission, hasAny],
+    () => ({ user, loading, login, ssoEmployeeLogin, logout, hasPermission, hasAny }),
+    [user, loading, login, ssoEmployeeLogin, logout, hasPermission, hasAny],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

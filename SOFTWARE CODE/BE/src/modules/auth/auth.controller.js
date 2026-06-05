@@ -69,6 +69,31 @@ async function postLogin(req, res, next) {
   }
 }
 
+// POST /api/v1/auth/sso/employee-login
+async function postSsoEmployeeLogin(req, res, next) {
+  try {
+    const { employee_id } = req.body;
+
+    const { accessToken, refreshToken, user } = await service.loginSsoByEmployeeId({
+      employeeId: employee_id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] || '',
+    });
+
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOpts(env));
+
+    const csrfToken = randomToken();
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, csrfCookieOpts(env));
+
+    return res.json({
+      data: { accessToken, csrfToken, user },
+    });
+  } catch (e) {
+    return next(e);
+  }
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────
 // POST /api/v1/auth/refresh
 // ─────────────────────────────────────────────────────────────────────────
@@ -138,4 +163,4 @@ async function postLogout(req, res, next) {
   }
 }
 
-module.exports = { postLogin, postRefresh, postLogout };
+module.exports = { postLogin, postSsoEmployeeLogin, postRefresh, postLogout };

@@ -76,6 +76,19 @@ async function authenticate(req, _res, next) {
     return next(errors.unauthorized());
   }
 
+  if (payload.authSource === 'SSO') {
+    req.user = {
+      employeeId: payload.sub,
+      userId: payload.uid,
+      role: payload.role,
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+      laneScopes: Array.isArray(payload.laneScopes) ? payload.laneScopes : [],
+      tokenVersion: (typeof payload.tv === 'number') ? payload.tv : 1,
+      authSource: 'SSO',
+    };
+    return next();
+  }
+
   // ── 3. PHASE 7 — TOKEN VERSION CHECK (D-7.2) ─────────────────────────
   // The JWT claim `tv` is the user's token_version at issue time. The
   // current value lives in users.token_version and is bumped atomically
@@ -128,6 +141,7 @@ async function authenticate(req, _res, next) {
     permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
     laneScopes: Array.isArray(payload.laneScopes) ? payload.laneScopes : [],
     tokenVersion: claimTv,
+    authSource: payload.authSource || 'PASSWORD',
   };
 
   return next();
