@@ -58,12 +58,16 @@ export function MasterDataCorrectionNew() {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
+    let active = true;
     const ctrl = new AbortController();
+    setLoading(true);
+    setError(null);
     Promise.all([
       fetchMasterDataCorrectionContext({ eqm_type: eqmType, eqm_id: eqmId }, ctrl.signal),
       fetchDivisions(ctrl.signal),
     ])
       .then(([ctx, divs]) => {
+        if (!active) return;
         setContext(ctx);
         setDivisions(divs || []);
         const firstHead = (ctx.heads || [])[0] || {};
@@ -79,11 +83,18 @@ export function MasterDataCorrectionNew() {
         }));
       })
       .catch((err) => {
+        if (!active) return;
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || err.name === 'AbortError') return;
         const apiErr = err?.response?.data?.error;
         setError(apiErr?.message || err.message || 'Could not load correction context.');
       })
-      .finally(() => setLoading(false));
-    return () => ctrl.abort();
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      ctrl.abort();
+    };
   }, [eqmType, eqmId]);
 
   const options = useMemo(() => ({
