@@ -6,7 +6,7 @@
 // the master via the typeahead.
 //
 //   GET /lookups/divisions          → authenticate → authorize('job_request:create')
-//   GET /lookups/equipment/search   → authenticate → authorize('job_request:create')
+//   GET /lookups/equipment/search   → authenticate → authorizeAny(job_request/create, equipment/read, job_card/detail)
 //
 // Note: equipment:read-list would be a softer gate, but the form auto-fill
 // is the only consumer in slice 1, and that path already requires
@@ -44,7 +44,7 @@ router.get('/submitter-context',
 
 router.get('/equipment/search',
   authenticate,
-  authorizeAny('job_request:create', 'equipment:read-list'),
+  authorizeAny('job_request:create', 'equipment:read-list', 'job_card:read-detail'),
   ctrl.getEquipmentSearch,
 );
 

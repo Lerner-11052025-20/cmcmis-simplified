@@ -22,6 +22,7 @@ import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import { useCalibrationPeople } from '../../../lib/hooks/useCalibrationPeople.js';
+import { searchEquipment } from '../../../lib/api/lookups.js';
 import {
   useCalibrationAdjustmentRows,
   useCalibrationEquipmentRows,
@@ -562,6 +563,132 @@ function tableInputProps({ drafts, setDrafts, rowId, field, disabled, commitFiel
   };
 }
 
+function equipmentOptionCode(option) {
+  if (!option) return '';
+  if (option.eqm_id == null) return '';
+  return String(option.eqm_id);
+}
+
+function EquipmentMasterSearchInput({
+  value,
+  disabled,
+  placeholder,
+  jobCategory,
+  onTextChange,
+  onBlurCommit,
+  onSelect,
+}) {
+  const [query, setQuery] = useState(value || '');
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ignoreBlurRef = useRef(false);
+
+  useEffect(() => {
+    setQuery(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    if (disabled) {
+      setOptions([]);
+      setLoading(false);
+      return undefined;
+    }
+    const clean = String(query || '').trim();
+    if (clean.length < 1) {
+      setOptions([]);
+      setLoading(false);
+      return undefined;
+    }
+
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      try {
+        const items = await searchEquipment(clean, 12, ctrl.signal, jobCategory || null);
+        setOptions(Array.isArray(items) ? items : []);
+        setOpen(true);
+      } catch (e) {
+        if (e?.name !== 'CanceledError' && e?.name !== 'AbortError') setOptions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 220);
+
+    return () => {
+      window.clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [query, disabled, jobCategory]);
+
+  function handleChange(e) {
+    const next = e.target.value;
+    setQuery(next);
+    setOpen(true);
+    onTextChange(next);
+  }
+
+  function handleBlur() {
+    window.setTimeout(() => {
+      if (ignoreBlurRef.current) {
+        ignoreBlurRef.current = false;
+        return;
+      }
+      setOpen(false);
+      onBlurCommit(query);
+    }, 120);
+  }
+
+  async function chooseOption(option) {
+    const code = equipmentOptionCode(option);
+    setQuery(code);
+    setOpen(false);
+    await onSelect(option);
+  }
+
+  return (
+    <div>
+      <Input
+        value={query}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={handleChange}
+        onFocus={() => {
+          if (options.length) setOpen(true);
+        }}
+        onBlur={handleBlur}
+      />
+      {open && !disabled ? (
+        <div className="mt-2 h-56 w-full overflow-y-auto rounded-md border border-border bg-white shadow-lg">
+          {loading ? (
+            <div className="px-3 py-2 text-sm text-ink-soft">Searching...</div>
+          ) : options.length ? options.map((option) => (
+            <button
+              key={option.id || `${option.eqm_type}-${option.eqm_id}`}
+              type="button"
+              className="block w-full px-3 py-2 text-left hover:bg-accent/10 focus:bg-accent/10 focus:outline-none"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                ignoreBlurRef.current = true;
+              }}
+              onClick={() => chooseOption(option)}
+            >
+              <span className="block text-sm font-semibold text-ink">
+                {equipmentOptionCode(option)} {option.name ? `- ${option.name}` : ''}
+              </span>
+              <span className="block text-xs text-ink-soft">
+                {[option.model_no, option.make, option.serial_no].filter(Boolean).join(' | ') || 'Equipment master'}
+              </span>
+            </button>
+          )) : (
+            <div className="px-3 py-2 text-sm text-ink-soft">No equipment found.</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
   const { items: rows, loading, refetch } = useCalibrationEquipmentRows(jc.section_job_no);
   const [drafts, setDrafts] = useState({});
@@ -615,6 +742,28 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
     }
   }
 
+  async function commitEquipmentSelection(rowId, option) {
+    const next = {
+      equipment_id: equipmentOptionCode(option),
+      equipment_name: option?.name || '',
+    };
+    setDrafts((p) => ({
+      ...p,
+      [rowId]: { ...(p[rowId] || {}), ...next, _dirty: false },
+    }));
+    setBusyRow(rowId);
+    setError(null);
+    try {
+      await patchCalibrationEquipmentRow(jc.section_job_no, rowId, next);
+      invalidateCalibrationEquipmentRows(jc.section_job_no);
+      refetch();
+    } catch (e) {
+      setError(e?.response?.data?.error?.message || 'Could not save selected equipment.');
+    } finally {
+      setBusyRow(null);
+    }
+  }
+
   async function handleDelete(rowId) {
     if (!window.confirm('Delete this equipment row? This cannot be undone.')) return;
     setError(null);
@@ -656,12 +805,19 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
               <tr key={row.id} className="border-t border-border">
                 <td className="px-3 py-3 text-center">{row.sr_no || idx + 1}</td>
                 <td className="px-3 py-2">
-                  <Input
+                  <EquipmentMasterSearchInput
                     placeholder="1481"
-                    {...tableInputProps({
-                      drafts, setDrafts, rowId: row.id, field: 'equipment_id',
-                      disabled: !canWrite || busyRow === row.id, commitField,
-                    })}
+                    value={drafts[row.id]?.equipment_id || ''}
+                    disabled={!canWrite || busyRow === row.id}
+                    jobCategory={jc.job_category}
+                    onTextChange={(v) => {
+                      setDrafts((p) => ({
+                        ...p,
+                        [row.id]: { ...(p[row.id] || {}), equipment_id: v, _dirty: true },
+                      }));
+                    }}
+                    onBlurCommit={(v) => commitField(row.id, 'equipment_id', v)}
+                    onSelect={(option) => commitEquipmentSelection(row.id, option)}
                   />
                 </td>
                 <td className="px-3 py-2">

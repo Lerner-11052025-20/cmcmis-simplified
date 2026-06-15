@@ -21,7 +21,6 @@ export const ALL_TABS = [
   { key: 'contract',        label: 'Contract / Warranty' },
   { key: 'observations',    label: 'Observations' },
   { key: 'tasks',           label: 'Task Checklist' },
-  { key: 'documents',       label: 'Documents' },
   { key: 'mark-complete',   label: 'Mark as Complete' },     // conditional
   { key: 'closure',         label: 'Closure' },              // conditional
 ];
@@ -34,7 +33,6 @@ export const CALIBRATION_TABS = [
   { key: 'cal-details', label: 'Calibration Details' },
   { key: 'cal-equipment-used', label: 'Equipment Used Details' },
   { key: 'cal-adjustments', label: 'Adjustments Details' },
-  { key: 'documents', label: 'Documents' },
   { key: 'job-closing', label: 'Job Closing' },
 ];
 

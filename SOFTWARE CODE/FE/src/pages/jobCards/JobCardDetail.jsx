@@ -26,7 +26,6 @@ import { Button } from '../../components/ui/Button.jsx';
 import { useJobCardDetail, invalidateJobCardDetail } from '../../lib/hooks/useJobCardDetail.js';
 import { invalidateJobCardHistory } from '../../lib/hooks/useJobCardHistory.js';
 import { invalidateJobCardTasks } from '../../lib/hooks/useJobCardTasks.js';
-import { invalidateJobCardDocuments } from '../../lib/hooks/useJobCardDocuments.js';
 import { startWorkJobCard } from '../../lib/api/jobCards.js';
 import { formatIstTimestamp } from '../../lib/time.js';
 
@@ -47,13 +46,11 @@ import {
 import { MaintenanceDetailsTab } from './tabs/MaintenanceDetailsTab.jsx';
 import { SparesUsedTab } from './tabs/SparesUsedTab.jsx';
 import { TaskChecklistTab } from './tabs/TaskChecklistTab.jsx';
-import { DocumentsTab }     from './tabs/DocumentsTab.jsx';
 import { MarkCompleteTab }  from './tabs/MarkCompleteTab.jsx';
 import { ClosureTab }       from './tabs/ClosureTab.jsx';
 import {
   CalibrationAdjustmentsTab,
   CalibrationDetailsTab,
-  CalibrationDocumentsTab,
   CalibrationEquipmentUsedTab,
   CalibrationJobClosingTab,
 } from './tabs/CalibrationWorkflowTabs.jsx';
@@ -129,7 +126,6 @@ export function JobCardDetail() {
         'cal-details',
         'cal-equipment-used',
         'cal-adjustments',
-        'documents',
         'job-closing',
       ]);
     }
@@ -157,7 +153,7 @@ export function JobCardDetail() {
       'plug-in', 'submitted-recv', 'job-card-details',
       'maintenance', 'equipments-used', 'awaiting',
       'spares', 'contract', 'observations',
-      'tasks', 'documents',
+      'tasks',
     ]);
     if (canMarkComplete) keys.add('mark-complete');
     if (canVerifyClose) keys.add('closure');
@@ -200,7 +196,6 @@ export function JobCardDetail() {
     invalidateJobCardDetail(id);
     invalidateJobCardHistory(id);
     invalidateJobCardTasks(id);
-    invalidateJobCardDocuments(id);
   }
 
   // ── Loading / error states ─────────────────────────────────────────
@@ -228,7 +223,7 @@ export function JobCardDetail() {
   // ── Per-tab write-gate resolution (hotfix 2026-05-19) ───────────────
   //
   // `canWrite` (computed near the top of this function) is the gate for
-  // the 9 data tabs + Task Checklist + Documents — all of which require
+  // the 9 data tabs + Task Checklist — all of which require
   // status='IN_PROGRESS'. But two tabs have DIFFERENT status requirements:
   //
   //   • Mark Complete tab : requires status='IN_PROGRESS'  (canMarkComplete)
@@ -268,7 +263,6 @@ export function JobCardDetail() {
     case 'contract':        body = <ContractWarrantyTab {...tabProps} />; break;
     case 'observations':    body = <ObservationsTab {...tabProps} />; break;
     case 'tasks':           body = <TaskChecklistTab {...tabProps} />; break;
-    case 'documents':       body = <DocumentsTab {...tabProps} />; break;
     case 'mark-complete':   body = <MarkCompleteTab {...tabProps} />; break;
     case 'closure':         body = <ClosureTab {...tabProps} />; break;
     case 'cal-details':     body = <CalibrationDetailsTab {...tabProps} />; break;
@@ -283,10 +277,6 @@ export function JobCardDetail() {
     case 'repair-contract': body = <RepairContractWarrantyTab {...tabProps} />; break;
     case 'repair-fault-analysis': body = <RepairFaultAnalysisTab {...tabProps} />; break;
     default:                body = <PlugInAccessoriesTab {...tabProps} />;
-  }
-
-  if (isCalibrationWorkflow && activeTab === 'documents') {
-    body = <CalibrationDocumentsTab {...tabProps} />;
   }
 
   return (
