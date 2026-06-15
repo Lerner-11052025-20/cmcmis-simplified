@@ -199,6 +199,15 @@ export function EquipmentForm() {
 
   const selectedMake = watch('make_id');
   const selectedType = watch('equipment_type_id');
+  const selectedCategory = watch('job_category');
+
+  useEffect(() => {
+    if (selectedCategory === 'T&ME') {
+      setValue('eqm_type', 'Instrument', { shouldValidate: true, shouldDirty: true });
+    } else if (selectedCategory === 'F&PE') {
+      setValue('eqm_type', 'Equipment', { shouldValidate: true, shouldDirty: true });
+    }
+  }, [selectedCategory, setValue]);
 
   const FIELD_LABELS = {
     name: 'Equipment Name',
@@ -434,6 +443,14 @@ export function EquipmentForm() {
                   <div className="rounded-xl bg-slate-50 border border-slate-200/60 text-slate-500 text-xs px-4 py-3 font-semibold select-none flex items-center gap-2">
                     <Info size={14} className="text-slate-400" />
                     Equipment ID will be auto-generated upon successful registration and physical verification.
+                  </div>
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-indigo-700">
+                    <span>Category Mapping</span>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-indigo-600 shadow-sm">T&amp;ME = Instrument</span>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-indigo-600 shadow-sm">F&amp;PE = Equipment</span>
                   </div>
                 </div>
 
