@@ -44,6 +44,11 @@ export async function rejectEquipment(id) {
   return r.data.data;
 }
 
+export async function updateEquipment(id, body) {
+  const r = await api.patch(`/equipment/${encodeURIComponent(id)}`, body);
+  return r.data.data;
+}
+
 /** Equipment-type dropdown options. */
 export async function fetchTypes(signal) {
   const r = await api.get('/equipment/types', { signal });

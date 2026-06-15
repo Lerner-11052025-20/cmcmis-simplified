@@ -178,8 +178,11 @@ async function getEquipmentByCompositeId(eqmType, eqmId) {
        e.EQM_ID AS eqm_id,
        e.category AS category,
        e.EQM_NAME AS name,
+       e.EQM_INST_TYPE AS equipment_type_id,
        p.PROD_NAME AS type_name,
+       e.EQM_MFRID AS make_id,
        m.CMM_CONT_NAME AS make,
+       e.EQM_DIVID AS division_id,
        e.EQM_MFG_MODEL_NAME AS mfg_model_name,
        e.EQM_MODELNO AS model_no,
        e.EQM_SRNO AS serial_no,
@@ -275,6 +278,18 @@ async function findBySerialNo(serialNo) {
   const [rows] = await pool.query(
     `SELECT EQM_TYPE, EQM_ID FROM cmms_eqip_mst WHERE EQM_SRNO = ? LIMIT 1`,
     [serialNo],
+  );
+  return rows[0] || null;
+}
+
+async function findBySerialNoExcept(serialNo, eqmType, eqmId) {
+  const [rows] = await pool.query(
+    `SELECT EQM_TYPE, EQM_ID
+       FROM cmms_eqip_mst
+      WHERE EQM_SRNO = ?
+        AND NOT (EQM_TYPE = ? AND EQM_ID = ?)
+      LIMIT 1`,
+    [serialNo, eqmType, eqmId],
   );
   return rows[0] || null;
 }
@@ -464,6 +479,57 @@ async function verifyEquipment(conn, eqmType, eqmId, actorEmpId) {
   return result.affectedRows;
 }
 
+async function updateEquipmentDetails(conn, eqmType, eqmId, payload) {
+  const [result] = await conn.query(
+    `UPDATE cmms_eqip_mst
+        SET category = ?,
+            EQM_NAME = ?,
+            EQM_DIVID = ?,
+            EQM_INST_TYPE = ?,
+            EQM_MFRID = ?,
+            EQM_MFG_MODEL_NAME = ?,
+            EQM_SRNO = ?,
+            EQM_MODELNO = ?,
+            EQM_OPTIONNDESC = ?,
+            EQM_PONO = ?,
+            EQM_PODATE = ?,
+            EQM_EQIPCOST = ?,
+            EQM_COSTCURRENCY = ?,
+            EQM_CAL_FREQ = ?,
+            EQM_WRNTY_EXPIRY_DATE = ?,
+            EQM_DIV_ABBR = ?,
+            EQM_SECTION_ID = ?,
+            EQM_UPDATED_BY = ?,
+            EQM_UPDATED_ON = NOW(6)
+      WHERE EQM_TYPE = ?
+        AND EQM_ID = ?
+        AND EQM_MVP_STATUS = 'PENDING_VERIFICATION'`,
+    [
+      payload.category,
+      payload.EQM_NAME,
+      payload.EQM_DIVID,
+      payload.EQM_INST_TYPE,
+      payload.EQM_MFRID,
+      payload.EQM_MFG_MODEL_NAME,
+      payload.EQM_SRNO,
+      payload.EQM_MODELNO,
+      payload.EQM_OPTIONNDESC,
+      payload.EQM_PONO,
+      payload.EQM_PODATE,
+      payload.EQM_EQIPCOST,
+      payload.EQM_COSTCURRENCY,
+      payload.EQM_CAL_FREQ,
+      payload.EQM_WRNTY_EXPIRY_DATE,
+      payload.EQM_DIV_ABBR,
+      payload.EQM_SECTION_ID,
+      payload.EQM_UPDATED_BY,
+      eqmType,
+      eqmId,
+    ],
+  );
+  return result.affectedRows;
+}
+
 async function listProjects() {
   const [rows] = await pool.query(
     `SELECT PR_ID AS project_id, PR_NAME AS name
@@ -563,6 +629,7 @@ module.exports = {
   listProjects,
   findSectionByCategory,
   findBySerialNo,
+  findBySerialNoExcept,
   nextEqmIdForType,
   insertEquipment,
   writeAuditLog,
@@ -575,6 +642,7 @@ module.exports = {
   // Phase 15 addition:
   bulkMarkCalibrationDone,
   verifyEquipment,
+  updateEquipmentDetails,
   getEquipmentForExport,
   SORT_COLUMNS,
 };

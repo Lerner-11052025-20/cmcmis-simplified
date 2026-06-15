@@ -172,11 +172,13 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
   // tolerate that (the row is still valid; legacy EQM_DIVID is authoritative).
 
   // Compute warranty expiry from PO date + warranty months.
-  let warrantyExpiry = null;
-  if (body.warranty_months && body.warranty_months > 0) {
+  let warrantyExpiry = existing.warranty_expiry_date || null;
+  if (body.warranty_months !== undefined && body.warranty_months > 0) {
     warrantyExpiry = dayjs(body.po_date)
       .add(body.warranty_months, 'month')
       .toDate();
+  } else if (body.warranty_months === 0) {
+    warrantyExpiry = null;
   }
 
   // Resolve a placeholder EQM_DIV_ABBR if we can — use first 4 chars of
@@ -364,6 +366,73 @@ async function verifyEquipment({ id, actor }) {
   }
 }
 
+async function updateEquipment({ id, body, actor }) {
+  const { eqmType, eqmId } = parseCompositeId(id);
+
+  const existing = await repo.getEquipmentByCompositeId(eqmType, eqmId);
+  if (!existing) throw errors.notFound('Equipment not found');
+  if (existing.status !== 'PENDING_VERIFICATION') {
+    throw errors.conflict('Only pending equipment registrations can be edited before verification');
+  }
+
+  const dup = await repo.findBySerialNoExcept(body.serial_no, eqmType, eqmId);
+  if (dup) {
+    throw errors.conflict('Serial number already registered', { field: 'serial_no' });
+  }
+
+  let warrantyExpiry = null;
+  if (body.warranty_months && body.warranty_months > 0) {
+    warrantyExpiry = dayjs(body.po_date)
+      .add(body.warranty_months, 'month')
+      .toDate();
+  }
+
+  const sectionCategory = body.job_category === 'T&ME' ? 'TME' : 'FPE';
+  const sectionId = await repo.findSectionByCategory(sectionCategory);
+
+  let divAbbr = null;
+  if (body.division_id) {
+    const divs = await repo.listDivisions();
+    const found = divs.find((d) => d.division_id === body.division_id);
+    if (found) divAbbr = (found.code || '').slice(0, 50);
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const affected = await repo.updateEquipmentDetails(conn, eqmType, eqmId, {
+      category: body.job_category,
+      EQM_NAME: body.name,
+      EQM_DIVID: body.division_id,
+      EQM_INST_TYPE: body.equipment_type_id || null,
+      EQM_MFRID: body.make_id || null,
+      EQM_MFG_MODEL_NAME: body.mfg_model_name || null,
+      EQM_SRNO: body.serial_no,
+      EQM_MODELNO: body.model_no || null,
+      EQM_OPTIONNDESC: body.options_description || null,
+      EQM_PONO: body.po_number,
+      EQM_PODATE: body.po_date,
+      EQM_EQIPCOST: body.cost,
+      EQM_COSTCURRENCY: body.cost_currency,
+      EQM_CAL_FREQ: String(body.maintenance_frequency_months),
+      EQM_WRNTY_EXPIRY_DATE: warrantyExpiry,
+      EQM_DIV_ABBR: divAbbr,
+      EQM_SECTION_ID: sectionId,
+      EQM_UPDATED_BY: actor.employeeId,
+    });
+    if (!affected) throw errors.conflict('Equipment is not pending verification or was not found');
+    await conn.commit();
+    kpiCache.invalidateByPrefix(KPI_KEYS.ORG);
+    kpiCache.invalidateByPrefix(KPI_KEYS.PERSONAL_PREFIX);
+    return getEquipmentDetail(id);
+  } catch (err) {
+    try { await conn.rollback(); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 async function deleteEquipment({ id, actor }) {
   const { eqmType, eqmId } = parseCompositeId(id);
   const conn = await pool.getConnection();
@@ -443,5 +512,6 @@ module.exports = {
   // Phase 15 addition:
   bulkMarkCalibrationDone,
   verifyEquipment,
+  updateEquipment,
   prepareEquipmentPdfExport,
 };

@@ -37,7 +37,7 @@ const authorize = require('../../middleware/authorize');
 const validate = require('../../middleware/validate');
 const { errors } = require('../../middleware/errorHandler');
 
-const { listQuerySchema, createEquipmentSchema } = require('./equipment.validators');
+const { listQuerySchema, createEquipmentSchema, updateEquipmentSchema } = require('./equipment.validators');
 const ctrl = require('./equipment.controller');
 
 const router = express.Router();
@@ -97,7 +97,10 @@ router.get('/:id',
 const PHASE6 = (_req, _res, next) => next(errors.notFound('Ships in Phase 6'));
 
 router.patch('/:id',
-  authenticate, authorize('equipment:update'),      PHASE6);
+  authenticate,
+  authorize('equipment:update'),
+  validate(updateEquipmentSchema, 'body'),
+  ctrl.patchEquipment);
 router.post('/:id/verify',
   authenticate, authorize('equipment:verify'),      requireSuperAdmin, ctrl.postVerify);
 router.post('/:id/condemn',

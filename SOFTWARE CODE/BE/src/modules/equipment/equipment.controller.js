@@ -107,6 +107,21 @@ async function postVerify(req, res, next) {
   } catch (e) { return next(e); }
 }
 
+async function patchEquipment(req, res, next) {
+  try {
+    const result = await service.updateEquipment({
+      id: req.params.id,
+      body: req.body,
+      actor: {
+        employeeId: req.user.employeeId,
+        role:       req.user.role,
+        userId:     req.user.userId,
+      },
+    });
+    return res.json({ data: result });
+  } catch (e) { return next(e); }
+}
+
 async function deleteEquipment(req, res, next) {
   try {
     const result = await service.deleteEquipment({
@@ -139,4 +154,4 @@ async function exportPdf(req, res, next) {
   } catch (e) { next(e); }
 }
 
-module.exports = { getList, getDetail, postCreate, getTypes, getMakes, getDivisions, getProjects, postBulkCalibrationDone, postVerify, deleteEquipment, exportPdf };
+module.exports = { getList, getDetail, postCreate, getTypes, getMakes, getDivisions, getProjects, postBulkCalibrationDone, postVerify, patchEquipment, deleteEquipment, exportPdf };

@@ -90,7 +90,7 @@ const createEquipmentSchema = z
     line_item_code: z.string().min(1).max(40),
     cost: z.coerce.number().nonnegative(),
     cost_currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
-    warranty_months: z.coerce.number().int().nonnegative().max(600).optional().default(0),
+    warranty_months: z.coerce.number().int().nonnegative().max(600).optional(),
     maintenance_frequency_months: z.coerce.number().int().positive().max(99),
 
     // §5 — Submitter context (auto-fill done client-side; server IGNORES
@@ -107,8 +107,31 @@ const createEquipmentSchema = z
   })
   .strict();
 
+const updateEquipmentSchema = z
+  .object({
+    job_category: z.enum(['T&ME', 'F&PE']),
+    name: z.string().min(2).max(100),
+    make_id: z.coerce.number().int().positive().optional().nullable(),
+    model_no: z.string().max(50).optional().default(''),
+    mfg_model_name: z.string().max(100).optional().default(''),
+    serial_no: z.string().min(1).max(50),
+    equipment_type_id: z.coerce.number().int().positive().optional().nullable(),
+    options_description: z.string().max(250).optional().default(''),
+    po_number: z.string().min(1).max(50),
+    po_date: z.string().regex(ISO_DATE, 'Use YYYY-MM-DD'),
+    cost: z.coerce.number().nonnegative(),
+    cost_currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
+    warranty_months: z.coerce.number().int().nonnegative().max(600).optional().default(0),
+    maintenance_frequency_months: z.coerce.number().int().positive().max(99),
+    division_id: z.coerce.number().int().positive(),
+    subsystem: z.string().max(80).optional().default(''),
+    project: z.string().max(120).optional().default(''),
+  })
+  .strict();
+
 module.exports = {
   listQuerySchema,
   createEquipmentSchema,
+  updateEquipmentSchema,
   STATUS_VALUES,
 };
