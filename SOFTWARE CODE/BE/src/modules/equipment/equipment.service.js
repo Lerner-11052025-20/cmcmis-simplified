@@ -172,7 +172,7 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
   // tolerate that (the row is still valid; legacy EQM_DIVID is authoritative).
 
   // Compute warranty expiry from PO date + warranty months.
-  let warrantyExpiry = existing.warranty_expiry_date || null;
+  let warrantyExpiry = null;
   if (body.warranty_months !== undefined && body.warranty_months > 0) {
     warrantyExpiry = dayjs(body.po_date)
       .add(body.warranty_months, 'month')

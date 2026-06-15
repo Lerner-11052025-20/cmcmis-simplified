@@ -178,14 +178,20 @@ export function EquipmentVerification() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  async function saveCurrentDetails() {
+    if (!selectedId) return;
+    const updated = await updateEquipment(selectedId, toPayload(form));
+    setDetail(updated);
+    setForm(formFromDetail(updated));
+    refreshList();
+    return updated;
+  }
+
   async function onSave() {
     if (!selectedId) return;
     setBusyId(selectedId);
     try {
-      const updated = await updateEquipment(selectedId, toPayload(form));
-      setDetail(updated);
-      setForm(formFromDetail(updated));
-      refreshList();
+      await saveCurrentDetails();
     } catch (err) {
       alert(err.response?.data?.error?.message || err.message || 'Could not save equipment details.');
     } finally {
@@ -198,6 +204,9 @@ export function EquipmentVerification() {
     if (!id) return;
     setBusyId(id);
     try {
+      if (selectedId && id === selectedId) {
+        await saveCurrentDetails();
+      }
       await verifyEquipment(id);
       refreshList();
       setSelectedId(null);
