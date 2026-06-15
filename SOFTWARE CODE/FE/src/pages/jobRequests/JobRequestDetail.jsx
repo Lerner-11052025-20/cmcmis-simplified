@@ -52,6 +52,7 @@ import { DetailComplaintCard }     from './components/DetailComplaintCard.jsx';
 import { DetailTimelineCard }      from './components/DetailTimelineCard.jsx';
 import { DetailLinkedJobCardCard } from './components/DetailLinkedJobCardCard.jsx';
 import { DetailActionBar }         from './components/DetailActionBar.jsx';
+import { DetailApprovingAuthorityCard } from './components/DetailApprovingAuthorityCard.jsx';
 import { deleteJobRequest }        from '../../lib/api/jobRequests.js';
 
 import { ConvertToJobCardModal } from '../conversion/components/ConvertToJobCardModal.jsx';
@@ -187,18 +188,29 @@ export function JobRequestDetail() {
         />
       </div>
 
-      {/* Linked Job Card + Accessories side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {jr.linked_job_card ? (
+      {/* Approving Authority & Accessories side by side, or empty slot */}
+      {jr.approving_authority ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DetailApprovingAuthorityCard approvingAuthority={jr.approving_authority} />
+          <DetailComplaintCard accessories={jr.accessories} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div />
+          <DetailComplaintCard accessories={jr.accessories} />
+        </div>
+      )}
+
+      {/* Linked Job Card (if exists) */}
+      {jr.linked_job_card ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <DetailLinkedJobCardCard
             linkedJobCard={jr.linked_job_card}
             assignedEngineer={jr.assigned_engineer}
           />
-        ) : <div />}
-        <DetailComplaintCard
-          accessories={jr.accessories}
-        />
-      </div>
+          <div />
+        </div>
+      ) : null}
 
       <DetailActionBar
         jr={jr}

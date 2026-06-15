@@ -61,11 +61,11 @@ function formatStatus(status) {
   if (!status) return '—';
   const MAP = {
     DRAFT: 'Draft',
-    SUBMITTED: 'Pending',
-    ASSIGNED: 'Approved',
-    IN_PROGRESS: 'In Progress',
-    COMPLETED: 'Completed',
-    VERIFIED_CLOSED: 'Verified',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
     REJECTED: 'Rejected',
     REOPENED: 'Reopened',
   };

@@ -42,10 +42,10 @@ import { fetchEngineers } from '../../lib/api/lookups.js';
 import { formatIstDate } from '../../lib/time.js';
 
 const STATUS_OPTIONS = [
-  { value: 'ASSIGNED',        label: 'Assigned' },
-  { value: 'IN_PROGRESS',     label: 'In Progress' },
-  { value: 'COMPLETED',       label: 'Completed' },
-  { value: 'VERIFIED_CLOSED', label: 'Verified' },
+  { value: 'ASSIGNED',        label: 'Job In Queue' },
+  { value: 'IN_PROGRESS',     label: 'Job On Hand' },
+  { value: 'COMPLETED',       label: 'Review Pending' },
+  { value: 'VERIFIED_CLOSED', label: 'Completed' },
   { value: 'REOPENED',        label: 'Reopened' },
 ];
 const SORT_OPTIONS = [

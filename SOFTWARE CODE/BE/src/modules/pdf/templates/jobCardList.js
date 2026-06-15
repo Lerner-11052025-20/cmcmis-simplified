@@ -60,10 +60,10 @@ function formatJobCategoryType(row = {}) {
 function formatStatus(status) {
   if (!status) return '—';
   const MAP = {
-    ASSIGNED: 'Assigned',
-    IN_PROGRESS: 'In Progress',
-    COMPLETED: 'Completed',
-    VERIFIED_CLOSED: 'Verified',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
     REOPENED: 'Reopened',
   };
   return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());

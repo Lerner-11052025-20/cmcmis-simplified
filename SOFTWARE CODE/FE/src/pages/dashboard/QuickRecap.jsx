@@ -31,8 +31,21 @@ const STATUS_STYLE = {
 
 const EMPTY_VALUE = '-';
 
+const STATUS_LABELS = {
+  SUBMITTED:       'Pending For Conversion',
+  ASSIGNED:        'Job In Queue',
+  IN_PROGRESS:     'Job On Hand',
+  COMPLETED:       'Review Pending',
+  VERIFIED_CLOSED: 'Completed',
+  DRAFT:           'Draft',
+  CANCELLED:       'Cancelled',
+  REOPENED:        'Reopened',
+  REJECTED:        'Rejected',
+};
+
 function cleanStatusLabel(status) {
-  return (status || EMPTY_VALUE)
+  if (!status) return EMPTY_VALUE;
+  return STATUS_LABELS[status] || status
     .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/^\w/, (c) => c.toUpperCase());

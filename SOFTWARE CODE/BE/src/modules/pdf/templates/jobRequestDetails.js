@@ -41,6 +41,22 @@ const {
   fmtText,
 } = require('./_isroHeader');
 
+function formatStatus(status) {
+  if (!status) return '—';
+  const MAP = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
+    REJECTED: 'Rejected',
+    REOPENED: 'Reopened',
+    CANCELLED: 'Cancelled',
+  };
+  return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 // ── Layout helpers (mirror the JC details template) ────────────────────
 
 function sectionBanner(doc, letter, title) {
@@ -205,7 +221,7 @@ function renderJobRequestDetails(payload, stream, meta = {}) {
   const code = jrCode(payload);
   gridKV(doc, [
     { label: 'Job Request Code', value: code },
-    { label: 'Status',           value: payload.status },
+    { label: 'Status',           value: formatStatus(payload.status) },
     { label: 'Priority',         value: payload.priority_db },
     { label: 'Submitted On',     value: fmtDate(payload.created_at || payload.submitted_at_legacy) },
     { label: 'Generated On',     value: fmtDateTime(new Date()) },
@@ -283,7 +299,7 @@ function renderJobRequestDetails(payload, stream, meta = {}) {
     gridKV(doc, [
       { label: 'Section Job No.',      value: payload.linked_job_card_section_no },
       { label: 'JC No.',               value: payload.linked_job_card_no },
-      { label: 'Status',               value: payload.linked_job_card_status },
+      { label: 'Status',               value: formatStatus(payload.linked_job_card_status) },
       { label: 'Workflow Type',        value: payload.linked_job_card_workflow_type },
       { label: 'Target Completion',    value: fmtDate(payload.linked_job_card_target_end_date) },
       { label: 'JC Created At',        value: fmtDateTime(payload.linked_job_card_created_at) },
@@ -306,8 +322,8 @@ function renderJobRequestDetails(payload, stream, meta = {}) {
   // ── H. Status History ─────────────────────────────────────────────
   sectionBanner(doc, 'H', `Status Transition History (${(payload.children?.history || []).length} entries)`);
   drawTable(doc, null, [
-    { header: 'From',          key: 'from_status',     width: 100 },
-    { header: 'To',            key: 'to_status',       width: 100 },
+    { header: 'From',          key: 'from_status',     width: 100, format: formatStatus },
+    { header: 'To',            key: 'to_status',       width: 100, format: formatStatus },
     { header: 'When',          key: 'transitioned_at', width: 130, format: fmtDateTime },
     { header: 'By',            key: 'transitioned_by', width: 100 },
     { header: 'Reason',        key: 'reason',          width: 170 },

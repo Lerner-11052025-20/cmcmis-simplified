@@ -48,6 +48,8 @@ import { formatJobCategoryType } from '../../lib/jobLaneLabels.js';
 import { formatIstTimestamp } from '../../lib/time.js';
 
 // ── Filter dropdown option sets (locked to backend enums) ──────────────
+
+// ── Filter dropdown option sets (locked to backend enums) ──────────────
 const TYPE_OPTIONS = [
   { value: 'CALIBRATION',  label: 'Calibration' },
   { value: 'REPAIR',       label: 'Repair' },
@@ -55,11 +57,11 @@ const TYPE_OPTIONS = [
 ];
 const STATUS_OPTIONS = [
   { value: 'DRAFT',           label: 'Draft' },
-  { value: 'SUBMITTED',       label: 'Pending' },
-  { value: 'ASSIGNED',        label: 'Approved' },
-  { value: 'IN_PROGRESS',     label: 'In Progress' },
-  { value: 'COMPLETED',       label: 'Completed' },
-  { value: 'VERIFIED_CLOSED', label: 'Verified' },
+  { value: 'SUBMITTED',       label: 'Pending For Conversion' },
+  { value: 'ASSIGNED',        label: 'Job In Queue' },
+  { value: 'IN_PROGRESS',     label: 'Job On Hand' },
+  { value: 'COMPLETED',       label: 'Review Pending' },
+  { value: 'VERIFIED_CLOSED', label: 'Completed' },
   { value: 'REJECTED',        label: 'Rejected' },
   { value: 'REOPENED',        label: 'Reopened' },
 ];

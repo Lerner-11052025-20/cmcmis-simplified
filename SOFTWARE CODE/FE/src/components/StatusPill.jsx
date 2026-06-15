@@ -24,11 +24,11 @@ import clsx from 'clsx';
 
 const STYLE = {
   DRAFT:           { cls: 'bg-slate-100   text-slate-700',   label: 'Draft' },
-  SUBMITTED:       { cls: 'bg-amber-100   text-amber-700',   label: 'Pending' },
-  ASSIGNED:        { cls: 'bg-violet-100  text-violet-700',  label: 'Approved' },
-  IN_PROGRESS:     { cls: 'bg-blue-100    text-blue-700',    label: 'In Progress' },
-  COMPLETED:       { cls: 'bg-green-100   text-green-700',   label: 'Completed' },
-  VERIFIED_CLOSED: { cls: 'bg-emerald-100 text-emerald-700', label: 'Verified' },
+  SUBMITTED:       { cls: 'bg-amber-100   text-amber-700',   label: 'Pending For Conversion' },
+  ASSIGNED:        { cls: 'bg-violet-100  text-violet-700',  label: 'Job In Queue' },
+  IN_PROGRESS:     { cls: 'bg-blue-100    text-blue-700',    label: 'Job On Hand' },
+  COMPLETED:       { cls: 'bg-green-100   text-green-700',   label: 'Review Pending' },
+  VERIFIED_CLOSED: { cls: 'bg-emerald-100 text-emerald-700', label: 'Completed' },
   REJECTED:        { cls: 'bg-red-100     text-red-700',     label: 'Rejected' },
   REOPENED:        { cls: 'bg-orange-100  text-orange-700',  label: 'Reopened' },
   CANCELLED:       { cls: 'bg-slate-100   text-slate-700',   label: 'Cancelled' },

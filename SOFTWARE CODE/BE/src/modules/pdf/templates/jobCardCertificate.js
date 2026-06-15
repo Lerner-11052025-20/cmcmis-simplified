@@ -57,6 +57,22 @@ const {
   fmtText,
 } = require('./_isroHeader');
 
+function formatStatus(status) {
+  if (!status) return '';
+  const MAP = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
+    REJECTED: 'Rejected',
+    REOPENED: 'Reopened',
+    CANCELLED: 'Cancelled',
+  };
+  return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 // ── Layout constants for this template ──────────────────────────────────
 //   A4 portrait at 72 DPI = 595 × 842 pt. We aim for content height ≤ 760
 //   so the footer never wraps onto a second page even when accessory rows
@@ -282,7 +298,7 @@ function renderJobCardCertificate(payload, stream, meta = {}) {
   kv(doc, stripX + halfW + 12, s5y + 48, halfW,'Engineer In-Charge Signature',
      payload.assigned_engineer_name ? `${payload.assigned_engineer_name} (${payload.assigned_engineer_employee_id})` : '');
   kv(doc, stripX,            s5y + 72, halfW, 'Section Job No.',         payload.section_job_no);
-  kv(doc, stripX + halfW + 12, s5y + 72, halfW,'Job Status',             payload.status);
+  kv(doc, stripX + halfW + 12, s5y + 72, halfW,'Job Status',             formatStatus(payload.status));
   doc.y = s5y + 96;
 
   // ── SECTION 6 — CALIBRATION LAB RECEIPT ────────────────────────────

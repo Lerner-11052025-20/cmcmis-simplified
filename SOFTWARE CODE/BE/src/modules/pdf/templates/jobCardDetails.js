@@ -55,6 +55,22 @@ const {
   fmtText,
 } = require('./_isroHeader');
 
+function formatStatus(status) {
+  if (!status) return '—';
+  const MAP = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
+    REJECTED: 'Rejected',
+    REOPENED: 'Reopened',
+    CANCELLED: 'Cancelled',
+  };
+  return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 
 // ── Layout helpers ─────────────────────────────────────────────────────
 
@@ -270,7 +286,7 @@ function renderJobCardDetails(payload, stream, meta = {}) {
     { label: 'Job Card Code',  value: code },
     { label: 'Section Job No', value: payload.section_job_no },
     { label: 'Parent JR',      value: jrCode(payload) },
-    { label: 'Status',         value: payload.status },
+    { label: 'Status',         value: formatStatus(payload.status) },
     { label: 'Priority',       value: payload.jr_priority_db || '—' },
     { label: 'Workflow Type',  value: payload.workflow_type },
     { label: 'Generated On',   value: fmtDateTime(new Date()) },
@@ -463,8 +479,8 @@ function renderJobCardDetails(payload, stream, meta = {}) {
   // ── O. State History ───────────────────────────────────────────────
   sectionBanner(doc, 'O', `State Transition History (${(payload.children?.history || []).length} entries)`);
   drawTable(doc, null, [
-    { header: 'From',          key: 'from_status',     width: 100 },
-    { header: 'To',            key: 'to_status',       width: 100 },
+    { header: 'From',          key: 'from_status',     width: 100, format: formatStatus },
+    { header: 'To',            key: 'to_status',       width: 100, format: formatStatus },
     { header: 'When',          key: 'transitioned_at', width: 130, format: fmtDateTime },
     { header: 'By',            key: 'transitioned_by', width: 100 },
     { header: 'Reason',        key: 'reason',          width: 150 },

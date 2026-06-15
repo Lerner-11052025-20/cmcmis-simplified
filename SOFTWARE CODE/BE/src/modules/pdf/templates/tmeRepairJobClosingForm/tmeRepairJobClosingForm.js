@@ -13,6 +13,22 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const { COLORS, fmtDate, fmtText } = require('../_isroHeader');
 
+function formatStatus(status) {
+  if (!status) return '';
+  const MAP = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
+    REJECTED: 'Rejected',
+    REOPENED: 'Reopened',
+    CANCELLED: 'Cancelled',
+  };
+  return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 const M = 34;
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
@@ -232,7 +248,7 @@ function renderTmeRepairJobClosingForm(payload, stream, options = {}) {
   ]);
   y += 18;
   labelValueRow(doc, M, y, [
-    { label: 'Repair Status', value: firstText(payload.repair_status, payload.job_status_display, payload.status), lw: 92, vw: 166 },
+    { label: 'Repair Status', value: formatStatus(firstText(payload.repair_status, payload.job_status_display, payload.status)), lw: 92, vw: 166 },
     { label: 'Reason For Not Repaired', value: payload.repair_not_repairable_reason, lw: 136, vw: CONTENT_W - 92 - 166 - 136 },
   ]);
   y += 18;

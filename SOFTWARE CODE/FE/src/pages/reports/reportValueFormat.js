@@ -2,7 +2,24 @@ import dayjs from 'dayjs';
 
 import { formatIstDate } from '../../lib/time.js';
 
+const STATUS_LABELS = {
+  SUBMITTED:       'Pending For Conversion',
+  ASSIGNED:        'Job In Queue',
+  IN_PROGRESS:     'Job On Hand',
+  COMPLETED:       'Review Pending',
+  VERIFIED_CLOSED: 'Completed',
+  DRAFT:           'Draft',
+  CANCELLED:       'Cancelled',
+  REOPENED:        'Reopened',
+  REJECTED:        'Rejected',
+};
+
 export function displayText(value) {
+  if (!value) return '';
+  const key = String(value).toUpperCase();
+  if (STATUS_LABELS[key]) {
+    return STATUS_LABELS[key];
+  }
   return String(value).replaceAll('_', ' ');
 }
 

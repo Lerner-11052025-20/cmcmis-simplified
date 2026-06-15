@@ -619,6 +619,16 @@ async function getJobRequestDetail({ jrNo, scope, actor }) {
     remarks:               row.remarks,
     project_name:          row.project_name,
     subsystem:             row.subsystem,
+    /* approving authority */
+    approving_authority: row.approving_authority_employee_id ? {
+      employee_id:   row.approving_authority_employee_id,
+      name:          row.approving_authority_name || null,
+      email:         row.approving_authority_email || null,
+      designation:   row.approving_authority_designation || null,
+      egd_name:      row.approving_authority_egd_name || null,
+      telephone:     row.approving_authority_telephone || null,
+      lab_telephone: row.approving_authority_lab_telephone || null,
+    } : null,
     /* approver */
     approver: row.approved_by_employee_id ? {
       employee_id: row.approved_by_employee_id,

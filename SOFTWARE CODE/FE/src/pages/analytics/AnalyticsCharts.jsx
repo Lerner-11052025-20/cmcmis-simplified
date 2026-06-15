@@ -1,26 +1,11 @@
 // ============================================================================
 // src/pages/analytics/AnalyticsCharts.jsx  —  12 chart cards (G1..G12)
 // ----------------------------------------------------------------------------
-// PHASE 11 SLICE 3 — the redesigned /analytics dashboard.
-//
-// VISUAL LANGUAGE (consistent across all 12 cards):
-//   • Time-series charts use <AreaChart> with smooth monotone curves +
-//     vertical gradient fills (stock-market wavy look). The gradient defs
-//     live inside each AreaChart so they're scoped per chart.
-//   • Categorical charts use rounded-top bars + transparent fills.
-//   • Pies / donuts use the same palette as the legends.
-//   • All charts share the same TICK / MARGIN / GRID constants from
-//     chartTheme2.js so the dashboard feels like ONE document.
-//
-// DATA FLOW
-//   Each chart calls `useChart(key, params, { refetchInterval, … })` so the
-//   query layer handles polling. The card surfaces `dataUpdatedAt`,
-//   `isFetching` and a per-card `refetch()` for the footer "refresh" button.
-//
-// LAYOUT
-//   The parent <Analytics> page passes a `span` prop into hero charts
-//   (Weekly Activity, Engineer Workload) so they take the full row width.
-//   Other charts default to half-width on lg+ screens.
+// Redesigned with:
+//   • SVG drop-shadow filters for premium glowing line charts.
+//   • Custom Tailwind visual tooltips with circular color markers.
+//   • Rounded-radii bars for a softer look.
+//   • Comprehensive table schemas for the interactive table toggle.
 // ============================================================================
 
 import { useMemo } from 'react';
@@ -45,10 +30,6 @@ import { ChartCard } from './ChartCard.jsx';
 
 // ── Shared helpers ─────────────────────────────────────────────────────
 
-/**
- * Wire react-query for one chart. We refetch every `pollMs` for the
- * "dynamically reloaded" requirement and return the bits ChartCard needs.
- */
 function useChartQ(key, params, pollMs) {
   return useChart(key, params, {
     refetchInterval: pollMs,
@@ -56,7 +37,6 @@ function useChartQ(key, params, pollMs) {
   });
 }
 
-/** CSV download handler factory — common across all cards. */
 function downloadHandler(key, params, title) {
   return async () => {
     try {
@@ -69,45 +49,48 @@ function downloadHandler(key, params, title) {
   };
 }
 
-/** Sum a numeric field across an array — used to render hero stat badges. */
 function sum(rows, key) {
   if (!Array.isArray(rows)) return 0;
   return rows.reduce((a, r) => a + (Number(r[key]) || 0), 0);
 }
 
-/** Smooth area gradient defs scoped to a chart. */
-function GradientDef({ id, color, topOpacity = 0.5, bottomOpacity = 0.0 }) {
-  return (
-    <defs>
-      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="5%"  stopColor={color} stopOpacity={topOpacity} />
-        <stop offset="95%" stopColor={color} stopOpacity={bottomOpacity} />
-      </linearGradient>
-    </defs>
-  );
+/** Custom premium tooltip component */
+function CustomTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-xl border border-slate-100 bg-white/95 p-3 shadow-[0_10px_25px_-5px_rgba(15,23,42,0.08)] backdrop-blur-md font-sans">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{label}</p>
+        <div className="space-y-1.5">
+          {payload.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3 text-xs">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color || item.fill }} />
+              <span className="text-slate-500 font-semibold">{item.name}</span>
+              <span className="font-bold text-slate-800 ml-auto tabular-nums">
+                {Number(item.value).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
-// Recharts default tooltip is fine but we add subtle styling via wrapper props.
-const TOOLTIP_STYLE = {
-  contentStyle: {
-    background: 'white',
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    fontSize: 12,
-    boxShadow: '0 4px 16px -2px rgb(0 0 0 / 0.08)',
-  },
-  labelStyle: { color: '#111827', fontWeight: 600, marginBottom: 4 },
-  itemStyle: { color: '#374151' },
-};
-
-
 // ────────────────────────────────────────────────────────────────────
-//  G1 — Monthly Activity Trends   (AREA, calibrations vs repairs)
+//  G1 — Monthly Activity Trends   (BAR, calibrations vs repairs)
 // ────────────────────────────────────────────────────────────────────
 export function MonthlyActivity({ params, pollMs }) {
   const q = useChartQ('monthlyActivity', params, pollMs);
   const data = q.data || [];
   const total = sum(data, 'calibrations') + sum(data, 'repairs');
+
+  const columns = [
+    { header: 'Month', key: 'month' },
+    { header: 'Calibrations', key: 'calibrations', format: (v) => v.toLocaleString() },
+    { header: 'Repairs', key: 'repairs', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Monthly Throughput Growth"
@@ -119,16 +102,18 @@ export function MonthlyActivity({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('monthlyActivity', params, 'Monthly Activity')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Bar dataKey="calibrations" name="Calibrations" fill={PALETTE[0]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
-          <Bar dataKey="repairs" name="Repairs" fill={PALETTE[2]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.04)' }} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
+          <Bar dataKey="calibrations" name="Calibrations" fill={PALETTE[0]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Bar dataKey="repairs" name="Repairs" fill={PALETTE[2]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -142,6 +127,12 @@ export function EquipmentStatus({ params, pollMs }) {
   const q = useChartQ('equipmentStatus', params, pollMs);
   const data = q.data || [];
   const total = sum(data, 'count');
+
+  const columns = [
+    { header: 'Status', key: 'status' },
+    { header: 'Count', key: 'count', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Equipment Status"
@@ -153,19 +144,21 @@ export function EquipmentStatus({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('equipmentStatus', params, 'Equipment Status')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={data} dataKey="count" nameKey="status"
-               innerRadius="58%" outerRadius="88%" paddingAngle={3}
+               innerRadius="62%" outerRadius="88%" paddingAngle={3}
                animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING}>
             {data.map((d, i) => (
               <Cell key={d.status} fill={STATUS_COLORS[d.status] || PALETTE[i % PALETTE.length]}
-                    stroke="white" strokeWidth={2} />
+                    stroke="white" strokeWidth={2.5} />
             ))}
           </Pie>
-          <Tooltip {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -179,6 +172,13 @@ export function MonthlyJobs({ params, pollMs }) {
   const q = useChartQ('monthlyJobs', params, pollMs);
   const data = q.data || [];
   const totalCompleted = sum(data, 'completed');
+
+  const columns = [
+    { header: 'Month', key: 'month' },
+    { header: 'Completed', key: 'completed', format: (v) => v.toLocaleString() },
+    { header: 'Pending', key: 'pending', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Request Closure Performance"
@@ -190,16 +190,18 @@ export function MonthlyJobs({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('monthlyJobs', params, 'Monthly Jobs')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Bar dataKey="completed" fill={PALETTE[1]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
-          <Bar dataKey="pending"   fill={PALETTE[2]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.04)' }} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
+          <Bar dataKey="completed" name="Completed" fill={PALETTE[1]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Bar dataKey="pending"   name="Pending" fill={PALETTE[2]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -212,6 +214,12 @@ export function MonthlyJobs({ params, pollMs }) {
 export function DivisionWise({ params, pollMs }) {
   const q = useChartQ('divisionWise', params, pollMs);
   const data = q.data || [];
+
+  const columns = [
+    { header: 'Division', key: 'division' },
+    { header: 'Volume', key: 'count', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Division-wise Jobs"
@@ -222,11 +230,13 @@ export function DivisionWise({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('divisionWise', params, 'Division-wise Jobs')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={data} dataKey="count" nameKey="division"
-               outerRadius="80%" paddingAngle={2}
+               outerRadius="82%" paddingAngle={2}
                animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING}
                label={(d) => `${Math.round((d.percent || 0) * 100)}%`}
                labelLine={false}>
@@ -234,8 +244,8 @@ export function DivisionWise({ params, pollMs }) {
               <Cell key={d.division} fill={PALETTE[i % PALETTE.length]} stroke="white" strokeWidth={2} />
             ))}
           </Pie>
-          <Tooltip {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -243,7 +253,7 @@ export function DivisionWise({ params, pollMs }) {
 }
 
 // ────────────────────────────────────────────────────────────────────
-//  G5 — Calibration Completion Trend   (AREA, on-time vs delayed)
+//  G5 — Calibration Completion Trend   (BAR, on-time vs delayed)
 // ────────────────────────────────────────────────────────────────────
 export function CalibrationCompletion({ params, pollMs }) {
   const q = useChartQ('calibrationCompletion', params, pollMs);
@@ -251,6 +261,13 @@ export function CalibrationCompletion({ params, pollMs }) {
   const onTime = sum(data, 'on_time');
   const delayed = sum(data, 'delayed');
   const rate = (onTime + delayed) === 0 ? null : Math.round(onTime / (onTime + delayed) * 100);
+
+  const columns = [
+    { header: 'Month', key: 'month' },
+    { header: 'On Time', key: 'on_time', format: (v) => v.toLocaleString() },
+    { header: 'Delayed', key: 'delayed', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Calibration SLA Trend"
@@ -262,16 +279,18 @@ export function CalibrationCompletion({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('calibrationCompletion', params, 'Calibration Completion')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Bar dataKey="on_time" name="On Time" fill={PALETTE[1]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
-          <Bar dataKey="delayed" name="Delayed" fill={PALETTE[3]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.04)' }} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
+          <Bar dataKey="on_time" name="On Time" fill={PALETTE[1]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Bar dataKey="delayed" name="Delayed" fill={PALETTE[3]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -284,6 +303,12 @@ export function CalibrationCompletion({ params, pollMs }) {
 export function JobTypeDistribution({ params, pollMs }) {
   const q = useChartQ('jobTypeDistribution', params, pollMs);
   const data = q.data || [];
+
+  const columns = [
+    { header: 'Job Type', key: 'job_type' },
+    { header: 'Volume', key: 'count', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Lane Mix by Job Type"
@@ -294,14 +319,16 @@ export function JobTypeDistribution({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('jobTypeDistribution', params, 'Job Type Distribution')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="job_type" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
-          <Bar dataKey="count" fill={PALETTE[4]} radius={[6, 6, 0, 0]} animationDuration={ANIMATION_MS} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.04)' }} content={<CustomTooltip />} />
+          <Bar dataKey="count" name="Volume" fill={PALETTE[4]} radius={[5, 5, 0, 0]} animationDuration={ANIMATION_MS} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -314,6 +341,13 @@ export function JobTypeDistribution({ params, pollMs }) {
 export function EngineerWorkload({ params, pollMs }) {
   const q = useChartQ('engineerWorkload', params, pollMs);
   const data = q.data || [];
+
+  const columns = [
+    { header: 'Engineer Name', key: 'engineer_name' },
+    { header: 'Open Load', key: 'open_load', format: (v) => v.toLocaleString() },
+    { header: 'Completed', key: 'done', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Engineer Workload (Top 10)"
@@ -326,25 +360,27 @@ export function EngineerWorkload({ params, pollMs }) {
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('engineerWorkload', params, 'Engineer Workload')}
       span={2}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 16, right: 24, bottom: 56, left: 4 }}>
+        <BarChart data={data} margin={{ top: 16, right: 16, bottom: 56, left: 4 }}>
           <CartesianGrid {...GRID} />
           <XAxis
             dataKey="engineer_name"
             tick={TICK}
             axisLine={false}
             tickLine={false}
-            angle={-28}
+            angle={-24}
             textAnchor="end"
             interval={0}
             height={64}
           />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Bar dataKey="open_load" name="Open Load" fill={PALETTE[2]} animationDuration={ANIMATION_MS} radius={[6, 6, 0, 0]} />
-          <Bar dataKey="done" name="Completed" fill={PALETTE[1]} animationDuration={ANIMATION_MS} radius={[6, 6, 0, 0]} />
+          <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.04)' }} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
+          <Bar dataKey="open_load" name="Open Load" fill={PALETTE[2]} animationDuration={ANIMATION_MS} radius={[5, 5, 0, 0]} />
+          <Bar dataKey="done" name="Completed" fill={PALETTE[1]} animationDuration={ANIMATION_MS} radius={[5, 5, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -357,10 +393,15 @@ export function EngineerWorkload({ params, pollMs }) {
 export function CalibrationStatusBreakdown({ params, pollMs }) {
   const q = useChartQ('calibrationStatusBreakdown', params, pollMs);
   const data = q.data || [];
-  // Recharts RadialBar wants the colour on each row; we map ours.
   const radialData = data.map((d) => ({ ...d, fill: STATUS_COLORS[d.band] || PALETTE[0] }));
   const total = sum(data, 'count');
   const overdue = data.find((d) => d.band === 'OVERDUE')?.count || 0;
+
+  const columns = [
+    { header: 'Status Band', key: 'band' },
+    { header: 'Count', key: 'count', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Calibration Status Breakdown"
@@ -372,14 +413,16 @@ export function CalibrationStatusBreakdown({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('calibrationStatusBreakdown', params, 'Calibration Status')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart innerRadius="30%" outerRadius="95%" data={radialData}
+        <RadialBarChart innerRadius="35%" outerRadius="95%" data={radialData}
                         startAngle={90} endAngle={-270}>
-          <RadialBar minAngle={8} background={{ fill: '#f3f4f6' }} dataKey="count"
+          <RadialBar minAngle={8} background={{ fill: '#f8fafc' }} dataKey="count"
                      cornerRadius={8} animationDuration={ANIMATION_MS} />
-          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-          <Tooltip {...TOOLTIP_STYLE} />
+          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 500 }} />
+          <Tooltip content={<CustomTooltip />} />
         </RadialBarChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -387,12 +430,19 @@ export function CalibrationStatusBreakdown({ params, pollMs }) {
 }
 
 // ────────────────────────────────────────────────────────────────────
-//  G9 — Weekly Activity Trend   (HERO AREA, 12 weeks, wavy)
+//  G9 — Weekly Activity Trend   (HERO AREA, 12 weeks, wavy/glow)
 // ────────────────────────────────────────────────────────────────────
 export function WeeklyActivity({ params, pollMs }) {
   const q = useChartQ('weeklyActivity', params, pollMs);
   const data = q.data || [];
   const total = sum(data, 'calibrations') + sum(data, 'repairs');
+
+  const columns = [
+    { header: 'Week', key: 'week' },
+    { header: 'Calibrations', key: 'calibrations', format: (v) => v.toLocaleString() },
+    { header: 'Repairs', key: 'repairs', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Weekly Activity Trend"
@@ -406,21 +456,39 @@ export function WeeklyActivity({ params, pollMs }) {
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('weeklyActivity', params, 'Weekly Activity')}
       span={2}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g9-cal" color={PALETTE[0]} topOpacity={0.6} />
-          <GradientDef id="g9-rep" color={PALETTE[5]} topOpacity={0.5} />
+          <defs>
+            <linearGradient id="g9-cal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[0]} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={PALETTE[0]} stopOpacity={0.0} />
+            </linearGradient>
+            <linearGradient id="g9-rep" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[5]} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={PALETTE[5]} stopOpacity={0.0} />
+            </linearGradient>
+            <filter id="glow-g9-cal" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor={PALETTE[0]} floodOpacity={0.15} />
+            </filter>
+            <filter id="glow-g9-rep" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor={PALETTE[5]} floodOpacity={0.15} />
+            </filter>
+          </defs>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="week" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
+          <Tooltip cursor={TOOLTIP_CURSOR} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
           <Area type="natural" dataKey="calibrations" name="Calibrations"
-                stroke={PALETTE[0]} strokeWidth={2.5} fill="url(#g9-cal)"
+                stroke={PALETTE[0]} strokeWidth={3} fill="url(#g9-cal)" filter="url(#glow-g9-cal)"
+                activeDot={{ r: 6, strokeWidth: 0, fill: PALETTE[0] }}
                 animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
           <Area type="natural" dataKey="repairs"      name="Repairs"
-                stroke={PALETTE[5]} strokeWidth={2.5} fill="url(#g9-rep)"
+                stroke={PALETTE[5]} strokeWidth={3} fill="url(#g9-rep)" filter="url(#glow-g9-rep)"
+                activeDot={{ r: 6, strokeWidth: 0, fill: PALETTE[5] }}
                 animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
         </AreaChart>
       </ResponsiveContainer>
@@ -434,13 +502,18 @@ export function WeeklyActivity({ params, pollMs }) {
 export function JcLifecycleFunnel({ params, pollMs }) {
   const q = useChartQ('jcLifecycleFunnel', params, pollMs);
   const data = q.data || [];
-  // Project to funnel-friendly shape with a colour per stage.
   const funnelData = data.map((r) => ({
     name: r.stage,
     value: r.count,
     fill: STATUS_COLORS[r.stage] || PALETTE[0],
   }));
   const totalJCs = sum(data, 'count');
+
+  const columns = [
+    { header: 'Workflow Stage', key: 'stage' },
+    { header: 'Card Count', key: 'count', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Job Card Lifecycle Funnel"
@@ -453,16 +526,18 @@ export function JcLifecycleFunnel({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('jcLifecycleFunnel', params, 'JC Lifecycle Funnel')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <FunnelChart>
-          <Tooltip {...TOOLTIP_STYLE} />
+          <Tooltip content={<CustomTooltip />} />
           <Funnel dataKey="value" data={funnelData} isAnimationActive
                   animationDuration={ANIMATION_MS}>
-            <LabelList position="right" fill="#374151"
-                       stroke="none" dataKey="name" style={{ fontSize: 11 }} />
+            <LabelList position="right" fill="#475569"
+                       stroke="none" dataKey="name" style={{ fontSize: 11, fontWeight: 500 }} />
             <LabelList position="center" fill="#fff" stroke="none"
-                       dataKey="value" style={{ fontSize: 12, fontWeight: 600 }} />
+                       dataKey="value" style={{ fontSize: 12, fontWeight: 700 }} />
           </Funnel>
         </FunnelChart>
       </ResponsiveContainer>
@@ -471,12 +546,18 @@ export function JcLifecycleFunnel({ params, pollMs }) {
 }
 
 // ────────────────────────────────────────────────────────────────────
-//  G11 — Equipment Registration Trend   (AREA, monthly)
+//  G11 — Equipment Registration Trend   (AREA, monthly/glow)
 // ────────────────────────────────────────────────────────────────────
 export function EquipmentRegistrationTrend({ params, pollMs }) {
   const q = useChartQ('equipmentRegistrationTrend', params, pollMs);
   const data = q.data || [];
   const total = sum(data, 'registered');
+
+  const columns = [
+    { header: 'Month', key: 'month' },
+    { header: 'Registered Assets', key: 'registered', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Asset Base Growth"
@@ -489,16 +570,27 @@ export function EquipmentRegistrationTrend({ params, pollMs }) {
       dataUpdatedAt={q.dataUpdatedAt}
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('equipmentRegistrationTrend', params, 'Equipment Registration')}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g11-reg" color={PALETTE[7]} topOpacity={0.6} />
+          <defs>
+            <linearGradient id="g11-reg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[7]} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={PALETTE[7]} stopOpacity={0.0} />
+            </linearGradient>
+            <filter id="glow-g11" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor={PALETTE[7]} floodOpacity={0.15} />
+            </filter>
+          </defs>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
+          <Tooltip cursor={TOOLTIP_CURSOR} content={<CustomTooltip />} />
           <Area type="natural" dataKey="registered" name="Registered" stroke={PALETTE[7]}
-                strokeWidth={2.5} fill="url(#g11-reg)"
+                strokeWidth={3} fill="url(#g11-reg)" filter="url(#glow-g11)"
+                activeDot={{ r: 6, strokeWidth: 0, fill: PALETTE[7] }}
                 animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
         </AreaChart>
       </ResponsiveContainer>
@@ -506,11 +598,19 @@ export function EquipmentRegistrationTrend({ params, pollMs }) {
   );
 }
 
-// ── G12 - Priority Mix Wave   (3-wave dynamic area chart) ──────────────
+// ── G12 - Priority Mix Wave   (3-wave dynamic area chart/glow) ──────────────
 export function PriorityMixTrend({ params, pollMs }) {
   const q = useChartQ('priorityMixTrend', params, pollMs);
   const data = q.data || [];
   const total = sum(data, 'low') + sum(data, 'medium') + sum(data, 'high');
+
+  const columns = [
+    { header: 'Month', key: 'month' },
+    { header: 'Low Priority', key: 'low', format: (v) => v.toLocaleString() },
+    { header: 'Medium Priority', key: 'medium', format: (v) => v.toLocaleString() },
+    { header: 'High Priority', key: 'high', format: (v) => v.toLocaleString() },
+  ];
+
   return (
     <ChartCard
       title="Priority Mix Wave"
@@ -524,25 +624,51 @@ export function PriorityMixTrend({ params, pollMs }) {
       onRefresh={q.refetch}
       onDownloadCsv={downloadHandler('priorityMixTrend', params, 'Priority Mix Wave')}
       span={2}
+      data={data}
+      columns={columns}
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={MARGIN}>
-          <GradientDef id="g12-low" color={PALETTE[1]} topOpacity={0.35} />
-          <GradientDef id="g12-medium" color={PALETTE[2]} topOpacity={0.4} />
-          <GradientDef id="g12-high" color={PALETTE[3]} topOpacity={0.45} />
+          <defs>
+            <linearGradient id="g12-low" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[1]} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={PALETTE[1]} stopOpacity={0.0} />
+            </linearGradient>
+            <linearGradient id="g12-medium" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[2]} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={PALETTE[2]} stopOpacity={0.0} />
+            </linearGradient>
+            <linearGradient id="g12-high" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={PALETTE[3]} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={PALETTE[3]} stopOpacity={0.0} />
+            </linearGradient>
+            <filter id="glow-low" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={PALETTE[1]} floodOpacity={0.12} />
+            </filter>
+            <filter id="glow-medium" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={PALETTE[2]} floodOpacity={0.12} />
+            </filter>
+            <filter id="glow-high" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={PALETTE[3]} floodOpacity={0.12} />
+            </filter>
+          </defs>
           <CartesianGrid {...GRID} />
           <XAxis dataKey="month" tick={TICK} axisLine={false} tickLine={false} />
           <YAxis tick={TICK} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip cursor={TOOLTIP_CURSOR} {...TOOLTIP_STYLE} />
-          <Legend wrapperStyle={{ fontSize: 11 }} iconType="circle" iconSize={8} />
-          <Area type="natural" dataKey="low" name="Low" stroke={PALETTE[1]} strokeWidth={2.25}
-                fill="url(#g12-low)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-          <Area type="natural" dataKey="medium" name="Medium" stroke={PALETTE[2]} strokeWidth={2.25}
-                fill="url(#g12-medium)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
-          <Area type="natural" dataKey="high" name="High" stroke={PALETTE[3]} strokeWidth={2.25}
-                fill="url(#g12-high)" animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
+          <Tooltip cursor={TOOLTIP_CURSOR} content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 11, fontWeight: 500 }} iconType="circle" iconSize={8} />
+          <Area type="natural" dataKey="low" name="Low" stroke={PALETTE[1]} strokeWidth={3}
+                fill="url(#g12-low)" filter="url(#glow-low)" activeDot={{ r: 5, strokeWidth: 0, fill: PALETTE[1] }}
+                animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
+          <Area type="natural" dataKey="medium" name="Medium" stroke={PALETTE[2]} strokeWidth={3}
+                fill="url(#g12-medium)" filter="url(#glow-medium)" activeDot={{ r: 5, strokeWidth: 0, fill: PALETTE[2] }}
+                animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
+          <Area type="natural" dataKey="high" name="High" stroke={PALETTE[3]} strokeWidth={3}
+                fill="url(#g12-high)" filter="url(#glow-high)" activeDot={{ r: 5, strokeWidth: 0, fill: PALETTE[3] }}
+                animationDuration={ANIMATION_MS} animationEasing={ANIMATION_EASING} />
         </AreaChart>
       </ResponsiveContainer>
     </ChartCard>
   );
 }
+

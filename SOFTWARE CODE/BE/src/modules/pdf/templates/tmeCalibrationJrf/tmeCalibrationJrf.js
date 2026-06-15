@@ -13,6 +13,22 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const { COLORS, fmtDate, fmtText } = require('../_isroHeader');
 
+function formatStatus(status) {
+  if (!status) return '';
+  const MAP = {
+    DRAFT: 'Draft',
+    SUBMITTED: 'Pending For Conversion',
+    ASSIGNED: 'Job In Queue',
+    IN_PROGRESS: 'Job On Hand',
+    COMPLETED: 'Review Pending',
+    VERIFIED_CLOSED: 'Completed',
+    REJECTED: 'Rejected',
+    REOPENED: 'Reopened',
+    CANCELLED: 'Cancelled',
+  };
+  return MAP[status] || status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+}
+
 const M = 34;
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
@@ -386,7 +402,7 @@ function renderTmeJrf(payload, stream, config) {
   ]);
   y += 18;
   labelValueRow(doc, M, y, [
-    { label: 'Job Status', value: payload.linked_job_status_display || payload.linked_job_card_status, lw: 78, vw: CONTENT_W - 78 },
+    { label: 'Job Status', value: payload.linked_job_status_display || formatStatus(payload.linked_job_card_status), lw: 78, vw: CONTENT_W - 78 },
   ]);
   y += 23;
 

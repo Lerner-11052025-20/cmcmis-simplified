@@ -57,10 +57,10 @@ const INSTRUMENT_STATUS_ACCENT = {
 
 // Job Card status pill mapping (matches the screenshot's vocabulary).
 const JC_STATUS_LABEL = {
-  ASSIGNED:        'Pending',
-  IN_PROGRESS:     'In Progress',
-  COMPLETED:       'Completed',
-  VERIFIED_CLOSED: 'Verified Closed',
+  ASSIGNED:        'Job In Queue',
+  IN_PROGRESS:     'Job On Hand',
+  COMPLETED:       'Review Pending',
+  VERIFIED_CLOSED: 'Completed',
   REOPENED:        'Reopened',
 };
 

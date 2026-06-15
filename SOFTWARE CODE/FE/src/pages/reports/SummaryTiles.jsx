@@ -19,9 +19,9 @@ const LABELS = {
   due_soon:        ['Due Soon',         'within window'],
   overdue:         ['Overdue',          'past due date'],
   valid:           ['Valid',            'beyond alert window'],
-  total_pending:   ['Total Pending',    'open requests'],
+  total_pending:   ['Pending For Conversion', 'open requests'],
   new_requests:    ['New Requests',     'in range'],
-  assigned:        ['Assigned',         'engineer present'],
+  assigned:        ['Job In Queue',     'engineer present'],
   unassigned:      ['Unassigned',       'no engineer'],
   total_equipment: ['Total Equipment',  'registered assets'],
   used_equipment:  ['Used Equipment',   'with job cards'],
@@ -29,13 +29,13 @@ const LABELS = {
   inactive_low_use:['Inactive / Low',   'no job cards'],
   engineers:       ['Engineers',        'assigned staff'],
   assigned_jcs:    ['Assigned JCs',     'workload total'],
-  completed:       ['Completed',        'final state'],
-  in_progress:     ['In Progress',      'being worked'],
-  verified_closed: ['Verified Closed',  'final state'],
+  completed:       ['Review Pending',   'final state'],
+  in_progress:     ['Job On Hand',      'being worked'],
+  verified_closed: ['Completed',        'final state'],
   open_assigned:   ['Open / Assigned',  'awaiting start'],
   reopened:        ['Reopened',         'returned for rework'],
   draft:           ['Draft',            'not yet submitted'],
-  submitted:       ['Submitted',        'sent for action'],
+  submitted:       ['Pending For Conversion', 'sent for action'],
   rejected:        ['Rejected',         'terminal'],
 };
 
@@ -46,13 +46,13 @@ const REPORT_LABELS = {
   jobCardSummary: {
     total: ['Total Job Cards', 'in selected range'],
     open_assigned: ['Open Assigned', 'awaiting start'],
-    completed: ['Completed JCs', 'finished work'],
+    completed: ['Review Pending JCs', 'finished work'],
   },
   jobRequestSummary: {
     total: ['Total Requests', 'in selected range'],
-    submitted: ['Submitted Requests', 'sent for action'],
-    assigned: ['Assigned Requests', 'engineer present'],
-    verified_closed: ['Verified Requests', 'closed requests'],
+    submitted: ['Pending For Conversion Requests', 'sent for action'],
+    assigned: ['Job In Queue Requests', 'engineer present'],
+    verified_closed: ['Completed Requests', 'closed requests'],
   },
 };
 
