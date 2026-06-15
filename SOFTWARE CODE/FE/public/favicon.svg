@@ -1,54 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CMCMIS ISRO style launch logo">
-  <defs>
-    <linearGradient id="launch" x1="20" x2="46" y1="54" y2="7" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F97316"/>
-      <stop offset=".48" stop-color="#FB923C"/>
-      <stop offset="1" stop-color="#FDBA74"/>
-    </linearGradient>
-    <linearGradient id="panel" x1="10" x2="55" y1="12" y2="26" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#93C5FD"/>
-      <stop offset="1" stop-color="#3B82F6"/>
-    </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.2" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Satellite logo">
+  <rect width="64" height="64" rx="12" fill="#FFFFFF"/>
 
-  <rect width="64" height="64" rx="11" fill="#020617"/>
-  <path d="M9 44.5h21.6" stroke="#F97316" stroke-width="4.6" stroke-linecap="round"/>
-  <path d="M34.5 52.5 45.6 5.5 23.5 38.7l11.2-7.2-.2 21Z" fill="url(#launch)" filter="url(#glow)"/>
-  <path d="M36.3 50.7 44.1 12.4 36.6 54.7Z" fill="#FFF7ED" opacity=".42"/>
-  <path d="M21.3 31.8 45.7 5.5 34.4 52.6" fill="none" stroke="#7C2D12" stroke-width="1.2" stroke-linejoin="round" opacity=".32"/>
+  <g transform="rotate(-18 32 32)">
+    <rect x="24" y="22" width="16" height="20" rx="3" fill="#2563EB"/>
+    <rect x="27" y="25" width="10" height="14" rx="1.5" fill="#EFF6FF" opacity=".92"/>
 
-  <g transform="rotate(8 32 19)">
-    <path d="M10.8 16.3h18.4" stroke="#111827" stroke-width="5.8" stroke-linecap="round"/>
-    <path d="M10.8 16.3h18.4" stroke="url(#panel)" stroke-width="4.3" stroke-linecap="round"/>
-    <path d="M14.8 14.3 12.4 18.1M24.2 14.6l-2.2 3.9" stroke="#020617" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+    <rect x="7" y="24" width="16" height="16" rx="2.5" fill="#60A5FA"/>
+    <rect x="41" y="24" width="16" height="16" rx="2.5" fill="#60A5FA"/>
+
+    <path d="M23 32h-6M41 32h6" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round"/>
+    <path d="M12 24v16M18 24v16M46 24v16M52 24v16M7 32h16M41 32h16" stroke="#DBEAFE" stroke-width="1.5" opacity=".85"/>
+
+    <path d="M32 22v-6" stroke="#1E3A8A" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="32" cy="14" r="2.8" fill="#F97316"/>
+    <path d="M32 42v6" stroke="#1E3A8A" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M27.5 49.5c2.6 2.2 6.4 2.2 9 0" fill="none" stroke="#F97316" stroke-width="2.4" stroke-linecap="round"/>
   </g>
-
-  <g transform="rotate(8 32 19)">
-    <path d="M43.8 19.6h11.9" stroke="#111827" stroke-width="5.8" stroke-linecap="round"/>
-    <path d="M43.8 19.6h11.9" stroke="url(#panel)" stroke-width="4.3" stroke-linecap="round"/>
-    <path d="M48 17.8 45.7 21.5M53.9 18.2l-2.2 3.7" stroke="#020617" stroke-width="2" stroke-linecap="round" opacity=".9"/>
-  </g>
-
-  <path d="M36.8 41.5H58" stroke="#60A5FA" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="38.3" cy="36.2" r="2.9" fill="#60A5FA"/>
-  <path d="M15.5 51.2c3.8-4.6 9.8-5.8 15.1-2.8" fill="none" stroke="#F97316" stroke-width="3.4" stroke-linecap="round"/>
-
-  <style>
-    @media (prefers-reduced-motion: no-preference) {
-      path[filter] {
-        animation: pulse 2.4s ease-in-out infinite;
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: .94; }
-        50% { opacity: 1; }
-      }
-    }
-  </style>
 </svg>
