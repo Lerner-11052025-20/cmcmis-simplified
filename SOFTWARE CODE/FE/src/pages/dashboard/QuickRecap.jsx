@@ -108,7 +108,6 @@ function ActivityTablePanel({
   icon: Icon,
   iconClass,
   iconBg,
-  topBorder,
   viewAllHref,
   rows,
   columns,
@@ -120,8 +119,7 @@ function ActivityTablePanel({
   return (
     <div
       className={clsx(
-        'overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.018)] border-t-[4px]',
-        topBorder,
+        'overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.018)]',
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -266,7 +264,6 @@ function JobRequestsTable({ rows = [], loading }) {
       icon={FileText}
       iconClass="text-indigo-600"
       iconBg="bg-indigo-50 border-indigo-100/50"
-      topBorder="border-t-indigo-500/80"
       viewAllHref="/job-requests"
       rows={tableRows}
       columns={columns}
@@ -334,7 +331,6 @@ function JobCardsTable({ rows = [], loading }) {
       icon={ClipboardList}
       iconClass="text-blue-600"
       iconBg="bg-blue-50 border-blue-100/50"
-      topBorder="border-t-blue-500/80"
       viewAllHref="/job-cards"
       rows={tableRows}
       columns={columns}
@@ -405,7 +401,6 @@ function EquipmentTable({ rows = [], loading }) {
       icon={Box}
       iconClass="text-emerald-600"
       iconBg="bg-emerald-50 border-emerald-100/50"
-      topBorder="border-t-emerald-500/80"
       viewAllHref="/equipment"
       rows={tableRows}
       columns={columns}
