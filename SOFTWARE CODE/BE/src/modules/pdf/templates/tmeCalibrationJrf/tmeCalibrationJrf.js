@@ -335,6 +335,26 @@ function renderTmeJrf(payload, stream, config) {
     y += 30;
   }
 
+  if (payload.approving_authority_employee_id) {
+    y = ensureSpace(y, 20);
+    const authParts = [
+      payload.approving_authority_name
+        ? `${payload.approving_authority_name} (${payload.approving_authority_employee_id})`
+        : payload.approving_authority_employee_id,
+      payload.approving_authority_designation,
+      payload.approving_authority_egd_name,
+      payload.approving_authority_email,
+      payload.approving_authority_telephone ? `Tel: ${payload.approving_authority_telephone}` : null,
+      payload.approving_authority_lab_telephone ? `Lab: ${payload.approving_authority_lab_telephone}` : null,
+    ].filter(Boolean);
+    const authText = authParts.join('  |  ');
+    
+    labelValueRow(doc, M, y, [
+      { label: 'Approving Authority', value: authText, lw: 100, vw: CONTENT_W - 100 },
+    ], 18);
+    y += 23;
+  }
+
   y = ensureSpace(y, 16 + 24 + 18 + 18 + 90 + 6);
   y = sectionTitle(doc, 'REQUEST DETAILS', y);
   const colW = CONTENT_W / 2;

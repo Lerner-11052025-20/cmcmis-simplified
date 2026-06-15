@@ -404,6 +404,14 @@ async function loadJobRequestFull(jrNo) {
        jr.JR_REJECTED_ON             AS rejected_at,
        emp_rej.EMM_NAME              AS rejected_by_name,
        jr.JR_REJECTION_REASON        AS rejection_reason,
+       /* approving authority sso details */
+       jr.JR_APPROVING_AUTHORITY     AS approving_authority_employee_id,
+       sso_auth.full_name            AS approving_authority_name,
+       sso_auth.email                AS approving_authority_email,
+       sso_auth.designation          AS approving_authority_designation,
+       sso_auth.egd_name             AS approving_authority_egd_name,
+       sso_auth.telephone            AS approving_authority_telephone,
+       sso_auth.lab_telephone        AS approving_authority_lab_telephone,
        /* engineer */
        jr.JR_ASSIGNED_ENGINEER       AS assigned_engineer_employee_id,
        emp_eng.EMM_NAME              AS assigned_engineer_name,
@@ -432,6 +440,7 @@ async function loadJobRequestFull(jrNo) {
      LEFT JOIN cmms_emp_mst   emp_eng  ON emp_eng.EMM_ID = jr.JR_ASSIGNED_ENGINEER
      LEFT JOIN cmms_jobcard_mst jc     ON jc.JM_SectionJobNo = jr.JR_SECTIONJOB_NO
      LEFT JOIN cmms_emp_mst   emp_jc_eng ON emp_jc_eng.EMM_ID = jc.JM_ASSIGNED_ENGINEER
+     LEFT JOIN employee_sso_directory sso_auth ON sso_auth.employee_id = jr.JR_APPROVING_AUTHORITY
      WHERE jr.JR_JOBREQUESTNO = ?
      LIMIT 1`,
     [jrNo],

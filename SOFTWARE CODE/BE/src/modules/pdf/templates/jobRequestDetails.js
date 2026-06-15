@@ -281,6 +281,24 @@ function renderJobRequestDetails(payload, stream, meta = {}) {
 
   // ── E. Workflow Actors ────────────────────────────────────────────
   sectionBanner(doc, 'E', 'Workflow Actors');
+
+  if (payload.approving_authority_employee_id) {
+    const authText = [
+      payload.approving_authority_name
+        ? `${payload.approving_authority_name} (${payload.approving_authority_employee_id})`
+        : payload.approving_authority_employee_id,
+      payload.approving_authority_designation,
+      payload.approving_authority_egd_name,
+      payload.approving_authority_email,
+      payload.approving_authority_telephone ? `Tel: ${payload.approving_authority_telephone}` : null,
+      payload.approving_authority_lab_telephone ? `Lab: ${payload.approving_authority_lab_telephone}` : null,
+    ].filter(Boolean).join('  |  ');
+    
+    gridKV(doc, [
+      { label: 'Approving Authority', value: authText },
+    ], 1);
+  }
+
   gridKV(doc, [
     { label: 'Approved By',           value: payload.approved_by_employee_id
         ? `${payload.approved_by_name || ''} (${payload.approved_by_employee_id})` : '—' },
