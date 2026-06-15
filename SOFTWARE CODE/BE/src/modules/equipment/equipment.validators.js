@@ -32,13 +32,6 @@ const STATUS_VALUES = [
   'RETIRED',
 ];
 
-// EQM_TYPE has exactly two values in the live data: 'Instrument' (T&ME)
-// and 'Equipment' (F&PE). The form's "Job Category" UI maps to these.
-const JOB_CATEGORY_TO_EQM_TYPE = {
-  'T&ME': 'Instrument',
-  'F&PE': 'Equipment',
-};
-
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // ── GET /equipment — query params ───────────────────────────────────────
@@ -63,6 +56,7 @@ const createEquipmentSchema = z
     // §1 — Job Type
     job_category: z.enum(['T&ME', 'F&PE']),
     job_type: z.literal('Registration'),
+    eqm_type: z.enum(['Instrument', 'Equipment']),
 
     // §2 — Equipment details
     name: z.string().min(2).max(100),
@@ -97,6 +91,7 @@ const createEquipmentSchema = z
     cost: z.coerce.number().nonnegative(),
     cost_currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
     warranty_months: z.coerce.number().int().nonnegative().max(600).optional().default(0),
+    maintenance_frequency_months: z.coerce.number().int().positive().max(99),
 
     // §5 — Submitter context (auto-fill done client-side; server IGNORES
     // any submitter_* keys and uses req.user instead. We accept lab/room
@@ -116,5 +111,4 @@ module.exports = {
   listQuerySchema,
   createEquipmentSchema,
   STATUS_VALUES,
-  JOB_CATEGORY_TO_EQM_TYPE,
 };

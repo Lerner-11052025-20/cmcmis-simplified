@@ -19,6 +19,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const equipmentSchema = z.object({
   job_category: z.enum(['T&ME', 'F&PE'], { required_error: 'Job Category is required' }),
   job_type: z.literal('Registration'),
+  eqm_type: z.enum(['Instrument', 'Equipment'], { required_error: 'Equipment Type is required' }),
 
   // §2
   name: z.string().trim().min(2, 'Required').max(100),
@@ -59,6 +60,11 @@ export const equipmentSchema = z.object({
   cost: z.coerce.number({ invalid_type_error: 'Required' }).nonnegative('Must be ≥ 0'),
   cost_currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
   warranty_months: z.coerce.number().int().nonnegative().max(600).optional().default(0),
+  maintenance_frequency_months: z.coerce
+    .number({ invalid_type_error: 'Required' })
+    .int('Use whole months')
+    .positive('Required')
+    .max(99, 'Maximum 99 months'),
 
   // §5
   lab_phone: z.string().trim().max(20).optional().default(''),
@@ -80,7 +86,7 @@ export const equipmentSchema = z.object({
   if (data.equipment_type_id === 'other' && (!data.other_equipment_type || data.other_equipment_type.trim() === '')) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'Equipment Type is required',
+      message: 'Instrument / Product Type is required',
       path: ['other_equipment_type'],
     });
   }

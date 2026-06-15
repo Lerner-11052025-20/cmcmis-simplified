@@ -45,6 +45,7 @@ const TC_TEXT = [
 ];
 
 const DRAFT_KEY_PREFIX = 'eqp_draft_';
+const MAINTENANCE_FREQUENCY_OPTIONS = [1, 2, 3, 4, 5, 6, 12, 24, 36];
 
 export function EquipmentForm() {
   const { user } = useAuth();
@@ -140,6 +141,7 @@ export function EquipmentForm() {
     const base = {
       job_category: 'F&PE',
       job_type: 'Registration',
+      eqm_type: 'Equipment',
       name: '',
       make_id: '',
       model_no: '',
@@ -157,6 +159,7 @@ export function EquipmentForm() {
       cost: '',
       cost_currency: 'INR',
       warranty_months: '',
+      maintenance_frequency_months: '',
       lab_phone: '',
       room_phone: '',
       division_id: '',
@@ -199,10 +202,12 @@ export function EquipmentForm() {
 
   const FIELD_LABELS = {
     name: 'Equipment Name',
+    job_category: 'Equipment Category',
+    eqm_type: 'Equipment Type',
     make_id: 'Manufacturer Name',
     mfg_model_name: 'Other Manufacturer Name',
     serial_no: 'Serial No.',
-    equipment_type_id: 'Equipment Type',
+    equipment_type_id: 'Instrument / Product Type',
     other_equipment_type: 'Other Equipment Type',
     po_number: 'PO Number',
     po_date: 'PO Date',
@@ -212,6 +217,7 @@ export function EquipmentForm() {
     cost: 'Cost',
     cost_currency: 'Cost Currency',
     warranty_months: 'Warranty Period',
+    maintenance_frequency_months: 'Equipment maintenance/cal frequency',
     lab_phone: 'Lab Phone',
     room_phone: 'Room Phone',
     division_id: 'Division',
@@ -292,7 +298,7 @@ export function EquipmentForm() {
     );
 
     const firstField = entries[0]?.[0];
-    if (firstField && ['po_number', 'po_date', 'mivr_number', 'mivr_date', 'line_item_code', 'cost', 'cost_currency', 'warranty_months'].includes(firstField)) {
+    if (firstField && ['po_number', 'po_date', 'mivr_number', 'mivr_date', 'line_item_code', 'cost', 'cost_currency', 'warranty_months', 'maintenance_frequency_months'].includes(firstField)) {
       scrollToSection('sec-3');
     } else if (firstField && ['lab_phone', 'room_phone', 'division_id', 'subsystem', 'project'].includes(firstField)) {
       scrollToSection('sec-4');
@@ -384,7 +390,6 @@ export function EquipmentForm() {
 
       <form onSubmit={submitRegistration} noValidate className="space-y-8">
         
-        <input type="hidden" {...register('job_category')} />
         <input type="hidden" {...register('job_type')} />
 
         {/* ── Split Grid Layout (Form left, Sticky Progress Stepper right) ── */}
@@ -432,6 +437,20 @@ export function EquipmentForm() {
                   </div>
                 </div>
 
+                <FormField label="Equipment Category *" error={errors.job_category?.message}>
+                  <Select {...register('job_category')}>
+                    <option value="T&ME">T&ME</option>
+                    <option value="F&PE">F&PE</option>
+                  </Select>
+                </FormField>
+
+                <FormField label="Equipment Type *" error={errors.eqm_type?.message}>
+                  <Select {...register('eqm_type')}>
+                    <option value="Instrument">Instrument</option>
+                    <option value="Equipment">Equipment</option>
+                  </Select>
+                </FormField>
+
                 <div className="col-span-1 md:col-span-2">
                   <FormField label="Equipment Name *" error={errors.name?.message}>
                     <Input placeholder="Enter equipment name" {...register('name')} />
@@ -464,7 +483,7 @@ export function EquipmentForm() {
                   <Input placeholder="Enter serial number" {...register('serial_no')} />
                 </FormField>
 
-                <FormField label="Equipment Type" error={errors.equipment_type_id?.message}>
+                <FormField label="Instrument / Product Type" error={errors.equipment_type_id?.message}>
                   <Select {...register('equipment_type_id')}>
                     <option value="">{mastersLoading ? 'Loading…' : 'Select type'}</option>
                     {types.map((t) => (
@@ -648,6 +667,21 @@ export function EquipmentForm() {
                 </FormField>
                 <FormField label="Warranty Period (months)" error={errors.warranty_months?.message}>
                   <Input type="number" min="0" placeholder="Enter warranty period" {...register('warranty_months')} />
+                </FormField>
+                <FormField label="Equipment maintenance/cal frequency (months) *" error={errors.maintenance_frequency_months?.message}>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="99"
+                    list="maintenance-frequency-options"
+                    placeholder="Select or enter months"
+                    {...register('maintenance_frequency_months')}
+                  />
+                  <datalist id="maintenance-frequency-options">
+                    {MAINTENANCE_FREQUENCY_OPTIONS.map((months) => (
+                      <option key={months} value={months} />
+                    ))}
+                  </datalist>
                 </FormField>
               </div>
             </section>

@@ -25,7 +25,6 @@ const dayjs = require('dayjs');
 const pool = require('../../config/db');
 const repo = require('./equipment.repo');
 const { errors } = require('../../middleware/errorHandler');
-const { JOB_CATEGORY_TO_EQM_TYPE } = require('./equipment.validators');
 // Phase 8: bust the dashboard KPI cache after equipment mutations.
 const kpiCache = require('../../utils/kpiCache');
 const { KEYS: KPI_KEYS } = require('../../utils/kpiCache');
@@ -48,6 +47,7 @@ async function listEquipment(params) {
     equipment_code: formatEquipmentCode(r.eqm_type, r.eqm_id),
     eqm_type: r.eqm_type,
     eqm_id: r.eqm_id,
+    category: r.category || null,
     name: r.name,
     type_name: r.type_name || null,
     make: r.make || null,
@@ -56,6 +56,7 @@ async function listEquipment(params) {
     next_cal_due_date: r.next_cal_due_date
       ? dayjs(r.next_cal_due_date).format('YYYY-MM-DD')
       : null,
+    maintenance_frequency_months: r.maintenance_frequency_months || null,
     division_code: r.division_code || null,
     location_name: r.location_name || null,
     division_abbr: r.division_abbr || null,
@@ -162,11 +163,10 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
     throw errors.conflict('Serial number already registered', { field: 'serial_no' });
   }
 
-  // Resolve EQM_TYPE: Enforce that new equipment always has EQM_TYPE = 'Equipment' per user request
-  const eqmType = 'Equipment';
+  const eqmType = body.eqm_type;
 
-  // Resolve new sections.section_id from Job Category equipment_category.
-  const sectionCategory = 'FPE';
+  // Resolve new sections.section_id from the selected Equipment Category.
+  const sectionCategory = body.job_category === 'T&ME' ? 'TME' : 'FPE';
   const sectionId = await repo.findSectionByCategory(sectionCategory);
   // sectionId may legitimately be null if `sections` is not seeded — we
   // tolerate that (the row is still valid; legacy EQM_DIVID is authoritative).
@@ -210,6 +210,7 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
     }
 
     await repo.insertEquipment(conn, {
+      category: body.job_category,
       EQM_TYPE: eqmType,
       EQM_ID: eqmId,
       EQM_NAME: body.name,
@@ -224,6 +225,7 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
       EQM_PODATE: body.po_date,
       EQM_EQIPCOST: body.cost,
       EQM_COSTCURRENCY: body.cost_currency,
+      EQM_PM_FREQ: String(body.maintenance_frequency_months),
       EQM_WRNTY_EXPIRY_DATE: warrantyExpiry,
       EQM_REMARKS: null,
       EQM_DIV_ABBR: divAbbr,
@@ -267,6 +269,9 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
         subsystem: body.subsystem || '',
         project: body.project || '',
         other_equipment_type: body.other_equipment_type || '',
+        equipment_category: body.job_category,
+        eqm_type: body.eqm_type,
+        maintenance_frequency_months: body.maintenance_frequency_months,
         accessories_count: body.accessories.length,
         tc_all_accepted: true,
       },

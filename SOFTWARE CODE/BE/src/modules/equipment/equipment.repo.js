@@ -135,12 +135,14 @@ async function listEquipment(params) {
     SELECT
       e.EQM_TYPE                        AS eqm_type,
       e.EQM_ID                          AS eqm_id,
+      e.category                        AS category,
       e.EQM_NAME                        AS name,
       p.PROD_NAME                       AS type_name,
       m.CMM_CONT_NAME                   AS make,
       e.EQM_MODELNO                     AS model_no,
       e.EQM_SRNO                        AS serial_no,
       e.EQM_CAL_DUE_DATE                AS next_cal_due_date,
+      e.EQM_PM_FREQ                     AS maintenance_frequency_months,
       COALESCE(s.section_code, e.EQM_DIV_ABBR) AS division_code,
       COALESCE(s.section_name,  ls.SM_SHORTNAME, e.EQM_DIV_ABBR) AS location_name,
       e.EQM_DIV_ABBR                    AS division_abbr,
@@ -174,6 +176,7 @@ async function getEquipmentByCompositeId(eqmType, eqmId) {
     `SELECT
        e.EQM_TYPE AS eqm_type,
        e.EQM_ID AS eqm_id,
+       e.category AS category,
        e.EQM_NAME AS name,
        p.PROD_NAME AS type_name,
        m.CMM_CONT_NAME AS make,
@@ -186,6 +189,7 @@ async function getEquipmentByCompositeId(eqmType, eqmId) {
        e.EQM_EQIPCOST AS cost,
        e.EQM_COSTCURRENCY AS currency,
        e.EQM_WRNTY_EXPIRY_DATE AS warranty_expiry_date,
+       e.EQM_PM_FREQ AS maintenance_frequency_months,
        e.EQM_CAL_DUE_DATE AS next_cal_due_date,
        e.EQM_REMARKS AS remarks,
        COALESCE(s.section_code, e.EQM_DIV_ABBR) AS division_code,
@@ -301,12 +305,12 @@ async function nextEqmIdForType(conn, eqmType) {
 async function insertEquipment(conn, payload) {
   await conn.query(
     `INSERT INTO cmms_eqip_mst (
-       EQM_TYPE, EQM_ID,
+       EQM_TYPE, EQM_ID, category,
        EQM_NAME, EQM_DIVID, EQM_INST_TYPE,
        EQM_MFRID, EQM_MFG_MODEL_NAME,
        EQM_SRNO, EQM_MODELNO, EQM_OPTIONNDESC,
        EQM_PONO, EQM_PODATE,
-       EQM_EQIPCOST, EQM_COSTCURRENCY, EQM_WRNTY_EXPIRY_DATE,
+       EQM_EQIPCOST, EQM_COSTCURRENCY, EQM_PM_FREQ, EQM_WRNTY_EXPIRY_DATE,
        EQM_REMARKS,
        EQM_DIV_ABBR,
        EQM_SECTION_ID,
@@ -315,12 +319,12 @@ async function insertEquipment(conn, payload) {
        EQM_CREATED_BY, EQM_CREATED_ON,
        EQM_UPDATED_BY, EQM_UPDATED_ON
      ) VALUES (
-       ?, ?,
+       ?, ?, ?,
        ?, ?, ?,
        ?, ?,
        ?, ?, ?,
        ?, ?,
-       ?, ?, ?,
+       ?, ?, ?, ?,
        ?,
        ?,
        ?,
@@ -330,12 +334,12 @@ async function insertEquipment(conn, payload) {
        ?, NOW(6)
      )`,
     [
-      payload.EQM_TYPE, payload.EQM_ID,
+      payload.EQM_TYPE, payload.EQM_ID, payload.category,
       payload.EQM_NAME, payload.EQM_DIVID, payload.EQM_INST_TYPE,
       payload.EQM_MFRID, payload.EQM_MFG_MODEL_NAME,
       payload.EQM_SRNO, payload.EQM_MODELNO, payload.EQM_OPTIONNDESC,
       payload.EQM_PONO, payload.EQM_PODATE,
-      payload.EQM_EQIPCOST, payload.EQM_COSTCURRENCY, payload.EQM_WRNTY_EXPIRY_DATE,
+      payload.EQM_EQIPCOST, payload.EQM_COSTCURRENCY, payload.EQM_PM_FREQ, payload.EQM_WRNTY_EXPIRY_DATE,
       payload.EQM_REMARKS,
       payload.EQM_DIV_ABBR,
       payload.EQM_SECTION_ID,
