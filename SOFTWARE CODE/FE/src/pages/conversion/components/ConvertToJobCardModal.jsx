@@ -59,6 +59,10 @@ function todayIso() {
   return todayIstIsoDate();
 }
 
+function dateOnly(value, fallback) {
+  return value ? String(value).slice(0, 10) : fallback;
+}
+
 /**
  * @param {Object} props
  * @param {Object} props.jr        Either the full Detail payload OR the
@@ -82,6 +86,7 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
 
   // ── React Hook Form ─────────────────────────────────────────────
   const today = todayIso();
+  const requestReceivedDate = dateOnly(jr.submitted_at || jr.created_at, today);
   const {
     register, handleSubmit, watch, setError, formState: { errors, isSubmitting, isDirty },
   } = useForm({
@@ -89,6 +94,7 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
     defaultValues: {
       engineer_employee_id:    '',
       workflow_type:           allowedWorkflows[0] || '',
+      job_request_received_date: requestReceivedDate,
       equipment_received_date: today,
       planned_start_date:      today,
       target_end_date:         today,
@@ -140,6 +146,7 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
   // We bind min= on planned_start_date to whatever the user picked for
   // equipment_received_date, and target_end_date to planned_start_date.
   // This is purely a UX nudge; the zod superRefine is the hard gate.
+  const jrReceived = watch('job_request_received_date');
   const eqReceived = watch('equipment_received_date');
   const plannedStart = watch('planned_start_date');
 
@@ -263,12 +270,29 @@ export function ConvertToJobCardModal({ jr, onClose, onSuccess }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
+                <label htmlFor="jr-recd" className="block text-xs font-medium text-ink mb-1">
+                  Job Request Received Date <span className="text-danger">*</span>
+                </label>
+                <Input
+                  id="jr-recd"
+                  type="date"
+                  invalid={!!errors.job_request_received_date}
+                  {...register('job_request_received_date')}
+                />
+                {errors.job_request_received_date ? (
+                  <p className="mt-1 text-xs text-danger">{errors.job_request_received_date.message}</p>
+                ) : (
+                  <p className="mt-1 text-xs text-ink-soft">Stored with the job card planning record.</p>
+                )}
+              </div>
+              <div>
                 <label htmlFor="recd" className="block text-xs font-medium text-ink mb-1">
                   Equipment Received Date <span className="text-danger">*</span>
                 </label>
                 <Input
                   id="recd"
                   type="date"
+                  min={jrReceived || undefined}
                   invalid={!!errors.equipment_received_date}
                   {...register('equipment_received_date')}
                 />

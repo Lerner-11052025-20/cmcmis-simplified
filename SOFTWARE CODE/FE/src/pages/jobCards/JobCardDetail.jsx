@@ -39,6 +39,11 @@ import {
   EquipmentsUsedTab, AwaitingInformationTab, ContractWarrantyTab,
   ObservationsTab,
 } from './tabs/SimpleDataTabs.jsx';
+import {
+  ConversionPlanningDetailsTab,
+  EquipmentDetailsTab,
+  InformationTab,
+} from './tabs/OverviewTabs.jsx';
 import { MaintenanceDetailsTab } from './tabs/MaintenanceDetailsTab.jsx';
 import { SparesUsedTab } from './tabs/SparesUsedTab.jsx';
 import { TaskChecklistTab } from './tabs/TaskChecklistTab.jsx';
@@ -119,6 +124,9 @@ export function JobCardDetail() {
   const visibleKeys = useMemo(() => {
     if (isCalibrationWorkflow) {
       return new Set([
+        'information',
+        'equipment-details',
+        'conversion-planning',
         'tasks',
         'cal-job-details',
         'cal-status',
@@ -131,6 +139,9 @@ export function JobCardDetail() {
     }
     if (isRepairWorkflow) {
       const keys = new Set([
+        'information',
+        'equipment-details',
+        'conversion-planning',
         'repair-plug-in',
         'repair-submitted-recv',
         'repair-job-card-details',
@@ -146,6 +157,7 @@ export function JobCardDetail() {
       return keys;
     }
     const keys = new Set([
+      'information', 'equipment-details', 'conversion-planning',
       'plug-in', 'submitted-recv', 'job-card-details',
       'maintenance', 'equipments-used', 'awaiting',
       'spares', 'contract', 'observations',
@@ -158,7 +170,7 @@ export function JobCardDetail() {
 
   // Active tab from URL (?tab=...) or default to first allowed.
   const requestedTab = searchParams.get('tab');
-  const defaultTab = isCalibrationWorkflow ? 'tasks' : (isRepairWorkflow ? 'repair-plug-in' : 'plug-in');
+  const defaultTab = 'information';
   const activeTab = visibleKeys.has(requestedTab) ? requestedTab : defaultTab;
 
   function changeTab(key) {
@@ -247,6 +259,9 @@ export function JobCardDetail() {
 
   let body = null;
   switch (activeTab) {
+    case 'information':     body = <InformationTab {...tabProps} />; break;
+    case 'equipment-details': body = <EquipmentDetailsTab {...tabProps} />; break;
+    case 'conversion-planning': body = <ConversionPlanningDetailsTab {...tabProps} />; break;
     case 'plug-in':         body = <PlugInAccessoriesTab {...tabProps} />; break;
     case 'submitted-recv':  body = <SubmittedReceivedTab {...tabProps} />; break;
     case 'job-card-details': body = <JobCardDetailsTab {...tabProps} />; break;

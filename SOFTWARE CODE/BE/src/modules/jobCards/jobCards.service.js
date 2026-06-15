@@ -121,8 +121,14 @@ function shapeDetail(row) {
       type:   row.equipment_type,
       id:     row.equipment_id,
       name:   row.equipment_name,
+      make:   row.equipment_make,
       model_no: row.equipment_model_no,
       serial_no: row.equipment_serial_no,
+      equipment_type: row.equipment_type_name,
+      category: row.equipment_category || row.job_category,
+      division: row.equipment_division,
+      calibration_frequency_months: row.equipment_cal_frequency,
+      last_calibration_date: ymd(row.equipment_last_calibration_date),
     },
     /* division */
     division: {
@@ -144,6 +150,8 @@ function shapeDetail(row) {
     complaint_description: row.complaint_description,
     /* dates */
     jc_recd_date:           ymd(row.jc_recd_date),
+    job_request_received_date: ymd(row.job_request_received_date || row.jr_date),
+    conversion_date:        ymd(row.created_at),
     inst_recd_date:         ymd(row.inst_recd_date),
     planned_start_date:     ymd(row.planned_start_date),
     planned_completed_date: ymd(row.planned_completed_date),

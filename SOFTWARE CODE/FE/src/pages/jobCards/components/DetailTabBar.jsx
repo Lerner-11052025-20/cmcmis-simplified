@@ -8,6 +8,9 @@
 import clsx from 'clsx';
 
 export const ALL_TABS = [
+  { key: 'information',     label: 'Information' },
+  { key: 'equipment-details', label: 'Equipment Details' },
+  { key: 'conversion-planning', label: 'Conversion & Planning Details' },
   { key: 'plug-in',         label: 'Plug In / Accessories' },
   { key: 'submitted-recv',  label: 'Submitted & Received' },
   { key: 'job-card-details', label: 'Job Card Details' },
@@ -24,6 +27,9 @@ export const ALL_TABS = [
 ];
 
 export const CALIBRATION_TABS = [
+  { key: 'information', label: 'Information' },
+  { key: 'equipment-details', label: 'Equipment Details' },
+  { key: 'conversion-planning', label: 'Conversion & Planning Details' },
   { key: 'tasks', label: 'Task Checklist' },
   { key: 'cal-job-details', label: 'Job Card Details' },
   { key: 'cal-status', label: 'Calibration Status' },
@@ -35,6 +41,9 @@ export const CALIBRATION_TABS = [
 ];
 
 export const REPAIR_TABS = [
+  { key: 'information', label: 'Information' },
+  { key: 'equipment-details', label: 'Equipment Details' },
+  { key: 'conversion-planning', label: 'Conversion & Planning Details' },
   { key: 'repair-plug-in', label: 'Plug In / Accessories' },
   { key: 'repair-submitted-recv', label: 'Submitted & Received' },
   { key: 'repair-job-card-details', label: 'Job Card Details' },

@@ -186,6 +186,7 @@ const convertSchema = z.object({
     message: 'engineer_employee_id must match ^[A-Z]{2}[0-9]{5}$ (e.g. TE00225)',
   }),
   workflow_type:             workflowTypeEnum,
+  job_request_received_date: isoDate,
   equipment_received_date:   isoDate,
   planned_start_date:        isoDate,
   target_end_date:           isoDate,
@@ -195,8 +196,15 @@ const convertSchema = z.object({
 }).strict()
   .superRefine((v, ctx) => {
     // Cross-field date sanity:
-    //   equipment_received_date  ≤  planned_start_date  ≤  target_end_date
+    //   job_request_received_date <= equipment_received_date <= planned_start_date <= target_end_date
     // We compare as strings — ISO 8601 dates are lexicographically ordered.
+    if (v.equipment_received_date < v.job_request_received_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['equipment_received_date'],
+        message: 'Equipment received date cannot be before job request received date',
+      });
+    }
     if (v.planned_start_date < v.equipment_received_date) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

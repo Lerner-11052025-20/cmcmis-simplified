@@ -131,12 +131,20 @@ export const jobRequestConvertSchema = z.object({
     message: 'Pick an engineer from the list',
   }),
   workflow_type:           z.enum(WORKFLOW_TYPES, { message: 'Pick a workflow type' }),
+  job_request_received_date: isoDate,
   equipment_received_date: isoDate,
   planned_start_date:      isoDate,
   target_end_date:         isoDate,
   required_resources:      z.string().max(2000).optional().or(z.literal('')),
   special_instructions:    z.string().max(2000).optional().or(z.literal('')),
 }).superRefine((v, ctx) => {
+  if (v.equipment_received_date < v.job_request_received_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['equipment_received_date'],
+      message: 'Equipment received cannot be before job request received',
+    });
+  }
   if (v.planned_start_date < v.equipment_received_date) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
