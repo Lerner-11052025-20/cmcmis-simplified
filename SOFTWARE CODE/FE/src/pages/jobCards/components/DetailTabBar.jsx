@@ -69,7 +69,7 @@ export function DetailTabBar({ active, onChange, visibleKeys, tabs: tabsProp = A
     <div
       role="tablist"
       aria-label="Job Card tabs"
-      className="flex items-center gap-1 overflow-x-auto border-b border-border pb-px"
+      className="flex items-center gap-2 overflow-x-auto border-b border-border pb-2"
     >
       {tabs.map((t) => {
         const isActive = t.key === active;

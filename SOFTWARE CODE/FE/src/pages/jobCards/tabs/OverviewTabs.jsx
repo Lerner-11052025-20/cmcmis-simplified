@@ -46,10 +46,10 @@ function StatusBadge({ children, tone = 'accent' }) {
 function DetailCard({ title, tone = 'neutral', children }) {
   const cls = tone === 'planning'
     ? 'border-blue-200 bg-blue-50/50'
-    : 'border-border bg-base-elev/40';
+    : 'border-slate-200 bg-slate-50';
   return (
     <section className={`rounded-lg border ${cls} p-5 md:p-6`}>
-      <h2 className={`mb-6 text-sm font-semibold uppercase tracking-wider ${tone === 'planning' ? 'text-accent' : 'text-ink-soft'}`}>
+      <h2 className={`mb-6 text-sm font-semibold uppercase tracking-wider ${tone === 'planning' ? 'text-indigo-600' : 'text-slate-600'}`}>
         {title}
       </h2>
       {children}
@@ -60,8 +60,11 @@ function DetailCard({ title, tone = 'neutral', children }) {
 function InfoItem({ label, value, highlight = false, badge = null }) {
   return (
     <div>
-      <div className="text-sm font-medium text-ink-soft">{label}</div>
-      <div className={`mt-1 text-base font-semibold ${highlight ? 'text-accent' : 'text-ink'}`}>
+      <div className="text-sm font-medium text-slate-500">{label}</div>
+      <div
+        className={`mt-1 text-base font-semibold ${highlight ? 'text-indigo-600' : 'text-slate-950'}`}
+        style={{ color: highlight ? '#4F5DFF' : '#111827' }}
+      >
         {display(value)}
         {badge ? <span className="ml-2 align-middle">{badge}</span> : null}
       </div>
@@ -86,14 +89,14 @@ export function InformationTab({ jc }) {
 
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div>
-          <div className="text-sm font-medium text-ink-soft">Complaint / Work Description</div>
-          <p className="mt-2 min-h-20 rounded-md border border-border bg-white p-3 text-sm leading-6 text-ink">
+          <div className="text-sm font-medium text-slate-500">Complaint / Work Description</div>
+          <p className="mt-2 min-h-20 rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-950">
             {display(jc.complaint_description)}
           </p>
         </div>
         <div>
-          <div className="text-sm font-medium text-ink-soft">Special Instructions</div>
-          <p className="mt-2 min-h-20 rounded-md border border-border bg-white p-3 text-sm leading-6 text-ink">
+          <div className="text-sm font-medium text-slate-500">Special Instructions</div>
+          <p className="mt-2 min-h-20 rounded-md border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-950">
             {display(jc.special_instructions)}
           </p>
         </div>
