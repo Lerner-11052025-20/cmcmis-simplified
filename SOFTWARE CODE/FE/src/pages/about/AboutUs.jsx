@@ -99,33 +99,33 @@ export function AboutUs() {
             </p>
           </div>
 
-          <div className="border-t border-slate-200 bg-slate-950 p-6 text-white lg:border-l lg:border-t-0 md:p-8 lg:p-10">
+          <div className="border-t border-slate-200 bg-slate-50/70 p-6 text-slate-900 lg:border-l lg:border-t-0 md:p-8 lg:p-10">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-200 ring-1 ring-white/15">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-sky-100 bg-white text-sky-700 shadow-sm">
                 <Sparkles size={22} strokeWidth={2.3} />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Project Focus</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Project Focus</p>
                 <p className="mt-1 text-xl font-bold tracking-tight">Secure, usable, and deployment-ready</p>
               </div>
             </div>
 
             <div className="mt-7 grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold text-sky-200">RBAC</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">Role-aware access</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-2xl font-bold text-sky-700">RBAC</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Role-aware access</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold text-emerald-200">Audit</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">Traceable actions</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-2xl font-bold text-emerald-700">Audit</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Traceable actions</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold text-amber-200">Forms</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">Database backed</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-2xl font-bold text-amber-600">Forms</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Database backed</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold text-rose-200">Live</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">Operational UI</p>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-2xl font-bold text-rose-600">Live</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Operational UI</p>
               </div>
             </div>
           </div>
