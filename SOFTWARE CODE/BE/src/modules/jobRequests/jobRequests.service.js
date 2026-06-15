@@ -161,6 +161,7 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       lab_phone:            body.lab_phone || null,
       room_phone:           body.room_phone || null,
       division_id:          body.division_id,
+      approving_authority_employee_id: body.approving_authority_employee_id || null,
       subsystem:            body.subsystem || null,
       project_name:         body.project_name || null,
       complaint_description:body.complaint_description,

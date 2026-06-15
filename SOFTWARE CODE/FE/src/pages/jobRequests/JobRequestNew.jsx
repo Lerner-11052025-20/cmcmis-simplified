@@ -36,10 +36,10 @@ import { FormField } from '../../components/ui/FormField.jsx';
 import { useAuth } from '../../lib/auth-context.jsx';
 import { createJobRequest } from '../../lib/api/jobRequests.js';
 import {
-  fetchDivisions,
   fetchProjects,
   fetchEquipmentAccessories,
   searchEquipment,
+  fetchSubmitterContext,
 } from '../../lib/api/lookups.js';
 import { invalidateJobRequestCache } from '../../lib/hooks/useJobRequestList.js';
 import {
@@ -52,7 +52,7 @@ import { Spinner } from '../../components/ui/Spinner.jsx';
 
 // ── Static select options (locked to BE enums) ──────────────────────
 const JOB_CATEGORIES = [
-  { value: 'TME', label: 'T&ME (Test & Measurement)' },
+  { value: 'TME', label: 'T&ME (Test & Measuring Equipment)' },
   { value: 'FPE', label: 'F&PE (Fabrication & Production)' },
 ];
 const JOB_TYPES = [
@@ -73,7 +73,17 @@ function accessoryTypeFromDb(value) {
 }
 
 function equipmentIdDisplay(opt) {
-  return opt?.eqm_id ? String(opt.eqm_id) : '';
+  if (!opt?.eqm_id) return '';
+  const prefix = normalizeEquipmentType(opt.eqm_type) === 'Equipment' ? 'EQU' : 'INS';
+  return `EQ-${prefix}-${String(opt.eqm_id).padStart(4, '0')}`;
+}
+
+function categoryEquipmentType(category) {
+  return category === 'FPE' ? 'Equipment' : 'Instrument';
+}
+
+function categoryLabel(category) {
+  return category === 'FPE' ? 'F&PE equipment only' : 'T&ME instruments only';
 }
 
 export function JobRequestNew() {
@@ -120,7 +130,7 @@ export function JobRequestNew() {
 
   // ── Section-1 + 2 + 3 + 4 form state (single flat object) ─────────
   const [form, setForm] = useState({
-    job_category: JOB_CATEGORIES[0].value,
+    job_category: '',
     job_type: JOB_TYPES[0].value,
     equipment_id: null,
     equipment_name: '',
@@ -133,6 +143,8 @@ export function JobRequestNew() {
     lab_phone: '',
     room_phone: '',
     division_id: '',
+    division_text: '',
+    approving_authority_employee_id: '',
     subsystem: '',
     project_name: '',
     complaint_description: '',
@@ -169,21 +181,28 @@ export function JobRequestNew() {
   const [formError, setFormError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [divisionMismatch, setDivisionMismatch] = useState(null);
+  const [submitterContext, setSubmitterContext] = useState(null);
+  const [approvingAuthorities, setApprovingAuthorities] = useState([]);
 
   // ── Division + Project dropdowns — fetched once on mount ──────────
-  const [divisions, setDivisions] = useState([]);
   const [projects, setProjects] = useState([]);
   useEffect(() => {
     const ctrl = new AbortController();
     Promise.all([
-      fetchDivisions(ctrl.signal),
+      fetchSubmitterContext(ctrl.signal),
       fetchProjects(ctrl.signal),
     ])
-      .then(([divisionItems, projectItems]) => {
-        setDivisions(divisionItems);
+      .then(([context, projectItems]) => {
+        setSubmitterContext(context);
+        setApprovingAuthorities(context?.approving_authorities || []);
         setProjects(projectItems);
+        setForm((f) => ({
+          ...f,
+          division_id: f.division_id || (context?.division?.id ? String(context.division.id) : ''),
+          division_text: f.division_text || context?.division?.code || context?.division?.name || '',
+        }));
       })
-      .catch(() => { /* dropdown stays empty; field shows placeholder */ });
+      .catch(() => { /* fields stay editable/empty where lookup is unavailable */ });
     return () => ctrl.abort();
   }, []);
 
@@ -197,6 +216,7 @@ export function JobRequestNew() {
       lab_phone:   f.lab_phone   || user.lab_phone || '',
       room_phone:  f.room_phone  || user.room_phone || '',
       division_id: f.division_id || (user.division_id ? String(user.division_id) : ''),
+      division_text: f.division_text || user.division_code || user.division_name || '',
     }));
   }, [user]);
 
@@ -214,6 +234,7 @@ export function JobRequestNew() {
       setEquipmentDbAccessories([]);
       return;
     }
+    if (!form.job_category) return;
     
     let parsedId = null;
     const displayMatch = text.match(/^EQ-([A-Z]{3})-(\d+)$/i);
@@ -235,7 +256,7 @@ export function JobRequestNew() {
 
     const timer = setTimeout(async () => {
       try {
-        const items = await searchEquipment(text, 1);
+        const items = await searchEquipment(text, 1, undefined, form.job_category);
         if (items && items.length > 0) {
           const matched = items[0];
           if (matched.eqm_id === parsedId || matched.id.toLowerCase() === text.toLowerCase()) {
@@ -276,17 +297,17 @@ export function JobRequestNew() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [equipmentSearchText]);
+  }, [equipmentSearchText, form.job_category]);
 
   function onEquipmentQueryChange(value) {
     setEquipmentSearchText(value);
     update('equipment_id', null);
     update('equipment_master_type', '');
     if (eqDebRef.current) clearTimeout(eqDebRef.current);
-    if (!value || value.length < 2) { setEqOpts([]); return; }
+    if (!form.job_category || !value || value.length < 2) { setEqOpts([]); return; }
     eqDebRef.current = setTimeout(async () => {
       try {
-        const items = await searchEquipment(value, 10);
+        const items = await searchEquipment(value, 10, undefined, form.job_category);
         setEqOpts(items || []);
         setEqOpen(true);
       } catch {
@@ -337,6 +358,28 @@ export function JobRequestNew() {
     }
   }
 
+  function onJobCategoryChange(value) {
+    setEquipmentSearchText('');
+    setEqOpts([]);
+    setEqOpen(false);
+    setEquipmentDbAccessories([]);
+    setForm((f) => ({
+      ...f,
+      job_category: value,
+      equipment_id: null,
+      equipment_name: '',
+      make: '',
+      model_no: '',
+      serial_no: '',
+      equipment_type: value ? categoryEquipmentType(value) : '',
+      equipment_master_type: '',
+      accessories: [],
+    }));
+    if (fieldErrors.job_category) {
+      setFieldErrors((e) => ({ ...e, job_category: undefined }));
+    }
+  }
+
   // ── Accessories repeatable rows ──────────────────────────────────
   const [accDraft, setAccDraft] = useState({ type: '', name: '', serial_no: '' });
   const accDraftValid = accDraft.type && accDraft.name;
@@ -379,6 +422,7 @@ export function JobRequestNew() {
     lab_phone: form.lab_phone.trim(),
     room_phone: form.room_phone.trim(),
     division_id: form.division_id ? Number(form.division_id) : undefined,
+    approving_authority_employee_id: form.approving_authority_employee_id || '',
     subsystem: form.subsystem.trim(),
     project_name: form.project_name.trim(),
     complaint_description: form.complaint_description.trim(),
@@ -408,6 +452,7 @@ export function JobRequestNew() {
     job_type:               'Job Type',
     equipment_name:         'Equipment Name',
     division_id:            'Division',
+    approving_authority_employee_id: 'Approving Authority',
     complaint_description:  'Complaint Description',
     tnc_accepted:           'Terms & Conditions',
     accessories:            'Accessories',
@@ -425,7 +470,7 @@ export function JobRequestNew() {
 
   function buildErrorSummary(fieldMap) {
     const ORDER = [
-      'job_category', 'job_type', 'equipment_name', 'division_id',
+      'job_category', 'job_type', 'equipment_name', 'division_id', 'approving_authority_employee_id',
       'complaint_description', 'tnc_accepted', 'accessories',
     ];
     const seen = new Set();
@@ -445,6 +490,10 @@ export function JobRequestNew() {
   }
 
   // ── Submit handlers ──────────────────────────────────────────────
+  const selectedAuthority = approvingAuthorities.find(
+    (item) => item.employee_id === form.approving_authority_employee_id,
+  );
+
   async function handleSave(submitNow) {
     setFormError(null);
     setDivisionMismatch(null);
@@ -657,9 +706,10 @@ export function JobRequestNew() {
               <FormField label="Job Category" required error={fieldErrors.job_category}>
                 <Select
                   value={form.job_category}
-                  onChange={(e) => update('job_category', e.target.value)}
+                  onChange={(e) => onJobCategoryChange(e.target.value)}
                   aria-required="true"
                 >
+                  <option value="">Select category</option>
                   {JOB_CATEGORIES.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -695,14 +745,31 @@ export function JobRequestNew() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <FormField label="Equipment ID Search (Typeahead)" error={fieldErrors.equipment_name}>
+              <FormField
+                label={
+                  <span>
+                    Equipment ID <span className="text-danger">*</span>
+                    {form.job_category ? (
+                      <span className="ml-2 text-xs font-semibold text-indigo-600">
+                        — showing {categoryLabel(form.job_category)}
+                      </span>
+                    ) : null}
+                  </span>
+                }
+                error={fieldErrors.equipment_name}
+              >
                 <div className="relative">
                   <Input
-                    placeholder="Search by ID e.g. EQ-INS-0020"
+                    placeholder={
+                      form.job_category
+                        ? `Search ${form.job_category === 'TME' ? 'T&ME instrument' : 'F&PE equipment'} by ID, name, model, make, or serial...`
+                        : 'Select a Job Category first to search equipment'
+                    }
                     value={equipmentSearchText}
                     onChange={(e) => onEquipmentQueryChange(e.target.value)}
                     onFocus={() => eqOpts.length && setEqOpen(true)}
                     onBlur={() => setTimeout(() => setEqOpen(false), 150)}
+                    disabled={!form.job_category}
                   />
                   {eqOpen && eqOpts.length > 0 ? (
                     <ul className="absolute z-20 mt-1.5 w-full bg-white border border-slate-200/60 rounded-xl shadow-lg max-h-64 overflow-auto divide-y divide-slate-50">
@@ -712,10 +779,10 @@ export function JobRequestNew() {
                           className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm transition-colors duration-150"
                           onMouseDown={(e) => { e.preventDefault(); pickEquipment(o); }}
                         >
-                          <div className="font-semibold text-slate-800">{o.name}</div>
+                          <div className="font-semibold text-slate-800">{equipmentIdDisplay(o)} — {o.name}</div>
                           <div className="text-xs font-bold text-indigo-600 mt-1 flex items-center gap-1.5">
                             <span className="bg-indigo-50 border border-indigo-100/50 px-1.5 py-0.5 rounded text-[10px]">
-                              {o.eqm_type}-{o.eqm_id}
+                              {normalizeEquipmentType(o.eqm_type)}
                             </span>
                             <span className="text-slate-400">·</span>
                             <span className="text-slate-500 font-semibold">{o.make || 'No Make'}</span>
@@ -760,7 +827,9 @@ export function JobRequestNew() {
                 <Select
                   value={form.equipment_type}
                   onChange={(e) => update('equipment_type', e.target.value)}
+                  disabled
                 >
+                  <option value="">Select category first</option>
                   {EQUIPMENT_TYPE_OPTIONS.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
@@ -965,18 +1034,57 @@ export function JobRequestNew() {
                 />
               </FormField>
               <FormField label="Division" required error={fieldErrors.division_id}>
+                <Input
+                  value={form.division_text}
+                  onChange={(e) => update('division_text', e.target.value)}
+                  readOnly={Boolean(submitterContext?.division?.id)}
+                  placeholder="Division will be fetched from SSO"
+                  className={submitterContext?.division?.id ? 'bg-slate-50 text-slate-600 font-bold' : ''}
+                />
+              </FormField>
+              <FormField label="Approving Authority" required error={fieldErrors.approving_authority_employee_id}>
                 <Select
-                  value={form.division_id}
-                  onChange={(e) => update('division_id', e.target.value)}
+                  value={form.approving_authority_employee_id}
+                  onChange={(e) => update('approving_authority_employee_id', e.target.value)}
                 >
-                  <option value="">Select division</option>
-                  {divisions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.code} --- {d.name}
+                  <option value="">— Select approving authority —</option>
+                  {approvingAuthorities.map((person) => (
+                    <option key={`${person.title}-${person.employee_id}`} value={person.employee_id}>
+                      {person.level}. {person.title} — {person.full_name} ({person.employee_id})
                     </option>
                   ))}
                 </Select>
               </FormField>
+
+              {selectedAuthority ? (
+                <div className="md:col-span-2 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-indigo-800 text-base font-black">
+                      {(selectedAuthority.full_name || selectedAuthority.employee_id || '?').slice(0, 1)}
+                    </div>
+                    <div>
+                      <p className="text-base font-extrabold text-indigo-900">
+                        {selectedAuthority.full_name}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-indigo-700">
+                        {selectedAuthority.title} · {selectedAuthority.designation || 'Designation unavailable'}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-indigo-600">
+                        ID: {selectedAuthority.employee_id}
+                        {selectedAuthority.division ? ` · ${selectedAuthority.division}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-slate-500">
+                    Hierarchy: Group Head → Division Head → Entity Head → Centre Head
+                  </p>
+                </div>
+              ) : (
+                <p className="md:col-span-2 text-sm font-semibold text-slate-400">
+                  Hierarchy: Group Head → Division Head → Entity Head → Centre Head
+                </p>
+              )}
+
               <FormField label="Subsystem">
                 <Input
                   value={form.subsystem}

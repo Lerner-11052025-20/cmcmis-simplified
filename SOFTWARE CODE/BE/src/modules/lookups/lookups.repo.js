@@ -61,12 +61,21 @@ async function listProjects() {
  * The "id" field returned is the canonical composite string used as URL
  * slug + React key everywhere downstream.
  */
-async function searchEquipment(q, limit = 20) {
+function normalizeEquipmentCategory(category) {
+  const value = String(category || '').trim().toUpperCase();
+  if (value === 'TME' || value === 'T&ME') return 'Instrument';
+  if (value === 'FPE' || value === 'F&PE') return 'Equipment';
+  return null;
+}
+
+async function searchEquipment(q, limit = 20, category = null) {
   // Empty q? Return an empty list — the FE should not call this without a
   // query, but defending against the empty-string case avoids a full scan.
   if (!q || !String(q).trim()) return [];
   const cleanQ = String(q).trim();
   const cap = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+  const eqmTypeFilter = normalizeEquipmentCategory(category);
+  const typeSql = eqmTypeFilter ? ' AND e.EQM_TYPE = ?' : '';
 
   const ftPattern = cleanQ.length >= FT_MIN_CHARS ? buildBooleanFtPattern(cleanQ) : null;
   
@@ -84,10 +93,16 @@ async function searchEquipment(q, limit = 20) {
        FROM cmms_eqip_mst e
        LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
        LEFT JOIN cmms_product_mst p ON p.PROD_ID     = e.EQM_INST_TYPE
-       WHERE MATCH (e.EQM_NAME, e.EQM_MODELNO, e.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
+       WHERE (
+            MATCH (e.EQM_NAME, e.EQM_MODELNO, e.EQM_SRNO) AGAINST (? IN BOOLEAN MODE)
           OR CAST(e.EQM_ID AS CHAR) LIKE ?
           OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
           OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+          OR e.EQM_MODELNO LIKE ?
+          OR e.EQM_SRNO LIKE ?
+          OR m.CMM_CONT_NAME LIKE ?
+       )
+       ${typeSql}
        ORDER BY
          CASE
            WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
@@ -103,6 +118,10 @@ async function searchEquipment(q, limit = 20) {
         buildLikePrefix(cleanQ),
         buildLikePrefix(cleanQ),
         buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        ...(eqmTypeFilter ? [eqmTypeFilter] : []),
         cleanQ,
         cleanQ,
         cleanQ,
@@ -122,10 +141,16 @@ async function searchEquipment(q, limit = 20) {
        FROM cmms_eqip_mst e
        LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
        LEFT JOIN cmms_product_mst p ON p.PROD_ID     = e.EQM_INST_TYPE
-       WHERE e.EQM_NAME LIKE ?
+       WHERE (
+            e.EQM_NAME LIKE ?
           OR CAST(e.EQM_ID AS CHAR) LIKE ?
           OR CONCAT(e.EQM_TYPE, '-', e.EQM_ID) LIKE ?
           OR CONCAT('EQ-', UPPER(LEFT(e.EQM_TYPE, 3)), '-', LPAD(e.EQM_ID, 4, '0')) LIKE ?
+          OR e.EQM_MODELNO LIKE ?
+          OR e.EQM_SRNO LIKE ?
+          OR m.CMM_CONT_NAME LIKE ?
+       )
+       ${typeSql}
        ORDER BY
          CASE
            WHEN CAST(e.EQM_ID AS CHAR) = ? THEN 0
@@ -141,6 +166,10 @@ async function searchEquipment(q, limit = 20) {
         buildLikePrefix(cleanQ),
         buildLikePrefix(cleanQ),
         buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        buildLikePrefix(cleanQ),
+        ...(eqmTypeFilter ? [eqmTypeFilter] : []),
         cleanQ,
         cleanQ,
         cleanQ,
@@ -159,6 +188,130 @@ async function searchEquipment(q, limit = 20) {
     serial_no:        r.serial_no || null,
     type:             r.type_name || null,
   }));
+}
+
+async function resolveDivisionBySsoName(egdName) {
+  const clean = String(egdName || '').trim();
+  if (!clean) return null;
+  const parts = clean.split('-').map((part) => part.trim()).filter(Boolean);
+  const reversed = parts.length > 1 ? parts.slice().reverse().join('-') : clean;
+  const candidates = [...new Set([
+    clean,
+    reversed,
+    parts[parts.length - 1],
+    parts[0],
+  ].filter(Boolean))];
+  const placeholders = candidates.map(() => '?').join(', ');
+  const [rows] = await pool.query(
+    `SELECT SM_ID AS id, SM_SHORTNAME AS code, SM_NAME AS name
+       FROM cmms_section_mst
+      WHERE SM_SHORTNAME IN (${placeholders})
+         OR SM_NAME IN (${placeholders})
+      ORDER BY
+        CASE
+          WHEN SM_SHORTNAME = ? THEN 0
+          WHEN SM_SHORTNAME = ? THEN 1
+          ELSE 2
+        END
+      LIMIT 1`,
+    [...candidates, ...candidates, clean, reversed],
+  );
+  return rows[0] || null;
+}
+
+function headOption(level, title, row, employeeIdKey, nameKey, designationKey, divisionKey) {
+  const employeeId = row?.[employeeIdKey];
+  if (!employeeId) return null;
+  return {
+    level,
+    title,
+    employee_id: employeeId,
+    full_name: row[nameKey] || employeeId,
+    designation: row[designationKey] || '',
+    division: row[divisionKey] || '',
+  };
+}
+
+async function getSubmitterContext(employeeId) {
+  const [profileRows] = await pool.query(
+    `SELECT
+       employee_id,
+       full_name,
+       designation,
+       email,
+       telephone,
+       lab_telephone,
+       egd_name
+     FROM employee_sso_directory
+     WHERE employee_id = ?
+     LIMIT 1`,
+    [employeeId],
+  );
+  const profile = profileRows[0] || null;
+  const division = await resolveDivisionBySsoName(profile?.egd_name);
+
+  const [headRows] = await pool.query(
+    `SELECT
+       h.id,
+       h.employee_id,
+       h.sec_head_employee_id,
+       sec.full_name AS sec_head_name,
+       sec.designation AS sec_head_designation,
+       sec.egd_name AS sec_head_division,
+       h.div_head_employee_id,
+       divh.full_name AS div_head_name,
+       divh.designation AS div_head_designation,
+       divh.egd_name AS div_head_division,
+       h.group_head_employee_id,
+       grph.full_name AS group_head_name,
+       grph.designation AS group_head_designation,
+       grph.egd_name AS group_head_division,
+       h.entity_head_employee_id,
+       enth.full_name AS entity_head_name,
+       enth.designation AS entity_head_designation,
+       enth.egd_name AS entity_head_division,
+       h.centre_head_employee_id,
+       cenh.full_name AS centre_head_name,
+       cenh.designation AS centre_head_designation,
+       cenh.egd_name AS centre_head_division,
+       h.update_date
+     FROM employee_sso_heads h
+     LEFT JOIN employee_sso_directory sec  ON sec.employee_id = h.sec_head_employee_id
+     LEFT JOIN employee_sso_directory divh ON divh.employee_id = h.div_head_employee_id
+     LEFT JOIN employee_sso_directory grph ON grph.employee_id = h.group_head_employee_id
+     LEFT JOIN employee_sso_directory enth ON enth.employee_id = h.entity_head_employee_id
+     LEFT JOIN employee_sso_directory cenh ON cenh.employee_id = h.centre_head_employee_id
+     WHERE h.employee_id = ?
+     ORDER BY h.update_date DESC, h.id DESC
+     LIMIT 1`,
+    [employeeId],
+  );
+  const heads = headRows[0] || null;
+  const authorityOptions = [
+    headOption(1, 'Section Head', heads, 'sec_head_employee_id', 'sec_head_name', 'sec_head_designation', 'sec_head_division'),
+    headOption(2, 'Division Head', heads, 'div_head_employee_id', 'div_head_name', 'div_head_designation', 'div_head_division'),
+    headOption(3, 'Group Head', heads, 'group_head_employee_id', 'group_head_name', 'group_head_designation', 'group_head_division'),
+    headOption(4, 'Entity Head', heads, 'entity_head_employee_id', 'entity_head_name', 'entity_head_designation', 'entity_head_division'),
+    headOption(5, 'Centre Head', heads, 'centre_head_employee_id', 'centre_head_name', 'centre_head_designation', 'centre_head_division'),
+  ].filter(Boolean);
+
+  return {
+    submitter: profile,
+    division: division ? {
+      id: division.id,
+      code: division.code,
+      name: division.name,
+      source: 'employee_sso_directory.egd_name',
+      sso_egd_name: profile?.egd_name || '',
+    } : {
+      id: null,
+      code: profile?.egd_name || '',
+      name: profile?.egd_name || '',
+      source: 'manual',
+      sso_egd_name: profile?.egd_name || '',
+    },
+    approving_authorities: authorityOptions,
+  };
 }
 
 /**
@@ -399,6 +552,7 @@ module.exports = {
   listDivisions,
   listProjects,
   searchEquipment,
+  getSubmitterContext,
   listEquipmentAccessories,
   // Phase 7 Slice 2 additions:
   listEngineersWithWorkload,

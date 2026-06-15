@@ -36,6 +36,12 @@ router.get('/projects',
   ctrl.getProjects,
 );
 
+router.get('/submitter-context',
+  authenticate,
+  authorize('job_request:create'),
+  ctrl.getSubmitterContext,
+);
+
 router.get('/equipment/search',
   authenticate,
   authorizeAny('job_request:create', 'equipment:read-list'),

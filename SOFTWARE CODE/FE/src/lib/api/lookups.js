@@ -25,12 +25,17 @@ export async function fetchProjects(signal) {
  * @param {string} q      Query string (>= 1 char)
  * @param {number} [limit] 1-100
  */
-export async function searchEquipment(q, limit = 20, signal) {
+export async function searchEquipment(q, limit = 20, signal, category = null) {
   const r = await api.get('/lookups/equipment/search', {
-    params: { q, limit },
+    params: { q, limit, ...(category ? { category } : {}) },
     signal,
   });
   return r.data.data.items;
+}
+
+export async function fetchSubmitterContext(signal) {
+  const r = await api.get('/lookups/submitter-context', { signal });
+  return r.data.data;
 }
 
 /** Accessories already mapped to a selected equipment master row. */

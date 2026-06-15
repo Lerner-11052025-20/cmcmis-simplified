@@ -101,6 +101,7 @@ const createSchema = z.object({
   lab_phone:              z.string().max(40).optional().or(z.literal('')),
   room_phone:             z.string().max(40).optional().or(z.literal('')),
   division_id:            z.number().int().positive(),
+  approving_authority_employee_id: z.string().min(1).max(7),
   subsystem:              z.string().max(120).optional().or(z.literal('')),
   project_name:           z.string().max(160).optional().or(z.literal('')),
   // Complaint is optional for both drafts and direct submit.

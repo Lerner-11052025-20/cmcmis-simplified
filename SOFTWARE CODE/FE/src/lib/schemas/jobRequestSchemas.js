@@ -44,6 +44,7 @@ const baseObject = z.object({
   lab_phone:              z.string().max(40).optional().or(z.literal('')),
   room_phone:             z.string().max(40).optional().or(z.literal('')),
   division_id:            z.coerce.number().int().positive({ message: 'Division is required' }),
+  approving_authority_employee_id: z.string().min(1, 'Approving authority is required').max(7),
   subsystem:              z.string().max(120).optional().or(z.literal('')),
   project_name:           z.string().max(160).optional().or(z.literal('')),
   // LOOSE for drafts: complaint may be empty/short. STRICT enforced separately.

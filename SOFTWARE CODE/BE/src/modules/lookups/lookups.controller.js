@@ -28,8 +28,16 @@ async function getEquipmentSearch(req, res, next) {
   try {
     const q = String(req.query.q || '').slice(0, 120);
     const limit = req.query.limit;
-    const items = await repo.searchEquipment(q, limit);
+    const category = req.query.category ? String(req.query.category).slice(0, 20) : null;
+    const items = await repo.searchEquipment(q, limit, category);
     return res.json({ data: { items } });
+  } catch (e) { return next(e); }
+}
+
+async function getSubmitterContext(req, res, next) {
+  try {
+    const items = await repo.getSubmitterContext(req.user.employeeId);
+    return res.json({ data: items });
   } catch (e) { return next(e); }
 }
 
@@ -95,6 +103,7 @@ module.exports = {
   getDivisions,
   getProjects,
   getEquipmentSearch,
+  getSubmitterContext,
   getEquipmentAccessories,
   getEngineers,
   getTaskLibrary,
