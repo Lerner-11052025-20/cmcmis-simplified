@@ -225,7 +225,7 @@ async function createEquipment({ body, actor, ipAddress, userAgent }) {
       EQM_PODATE: body.po_date,
       EQM_EQIPCOST: body.cost,
       EQM_COSTCURRENCY: body.cost_currency,
-      EQM_PM_FREQ: String(body.maintenance_frequency_months),
+      EQM_CAL_FREQ: String(body.maintenance_frequency_months),
       EQM_WRNTY_EXPIRY_DATE: warrantyExpiry,
       EQM_REMARKS: null,
       EQM_DIV_ABBR: divAbbr,

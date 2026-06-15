@@ -5,6 +5,11 @@ ALTER TABLE `cmms_eqip_mst`
     COMMENT 'Equipment registration category selected in UI: T&ME or F&PE'
     AFTER `EQM_ID`;
 
+ALTER TABLE `cmms_eqip_mst`
+  ADD COLUMN IF NOT EXISTS `EQM_CAL_FREQ` VARCHAR(2) NULL
+    COMMENT 'Calibration or maintenance frequency in months'
+    AFTER `EQM_PM_FREQ`;
+
 SET @i := (
   SELECT COUNT(*)
     FROM information_schema.statistics
@@ -21,4 +26,4 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
-SELECT 'Migration 807 complete - equipment category column added' AS status;
+SELECT 'Migration 807 complete - equipment category and calibration frequency columns ready' AS status;
