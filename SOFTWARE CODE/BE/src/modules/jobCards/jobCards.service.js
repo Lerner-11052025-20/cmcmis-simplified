@@ -609,12 +609,6 @@ async function markCompleteJobCard({ sectionJobNo, body, actor, ipAddress, userA
           : 'Record at least one observation row OR write >=20 chars in the observations textarea',
       });
     }
-    // Gate 3: at least one active supporting document. Dedicated repair
-    // workflow has no Documents tab, so repair cards skip this gate.
-    if (!isRepair && g.active_doc_count === 0) {
-      failed.push({ gate: 'required_doc', message: 'At least one document must be uploaded before job closing' });
-    }
-
     if (failed.length > 0) {
       const e = errors.badRequest('Cannot mark complete — pre-completion gates failed', { gates: failed });
       e.code = 'PRECOMPLETION_GATES_FAILED';

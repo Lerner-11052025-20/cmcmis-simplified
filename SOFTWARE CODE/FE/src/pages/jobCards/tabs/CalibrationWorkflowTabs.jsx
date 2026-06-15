@@ -1168,15 +1168,13 @@ function todayIso() { return todayIstIsoDate(); }
 export function CalibrationJobClosingTab(props) {
   const { jc, canWrite, invalidateAll, refetch } = props;
   const { items: tasks } = useJobCardTasks(jc.section_job_no);
-  const { items: docs } = useJobCardDocuments(jc.section_job_no);
   const { items: adjustmentRows } = useCalibrationAdjustmentRows(jc.section_job_no);
 
   const totalTasks = (tasks || []).length;
   const completedTasks = (tasks || []).filter((t) => t.is_completed).length;
   const tasksOk = totalTasks === 0 || completedTasks === totalTasks;
-  const docsOk = (docs || []).length > 0;
   const calWorkOk = !!jc.cal_calibration_status || !!jc.cal_remarks || (adjustmentRows || []).length > 0;
-  const allGatesOk = tasksOk && docsOk && calWorkOk;
+  const allGatesOk = tasksOk && calWorkOk;
 
   const {
     register,
@@ -1228,7 +1226,6 @@ export function CalibrationJobClosingTab(props) {
         <div className="text-sm font-semibold text-ink mb-2">Pre-Closing Verification</div>
         <GateRow label="All checklist tasks completed" ok={tasksOk} hint={totalTasks === 0 ? 'no tasks added' : `${completedTasks}/${totalTasks} complete`} />
         <GateRow label="Calibration status or remarks filled" ok={calWorkOk} hint={calWorkOk ? 'present' : 'fill Calibration Status or Remarks'} />
-        <GateRow label="At least one document uploaded" ok={docsOk} hint={docsOk ? `${docs.length} document(s)` : 'mandatory before job closing'} />
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
@@ -1272,7 +1269,7 @@ export function CalibrationJobClosingTab(props) {
         {serverError ? <RowError error={serverError} /> : null}
 
         <div className="sticky bottom-2 bg-base-elev border border-border rounded-lg p-3 flex items-center justify-between gap-3">
-          <div className="text-xs text-ink-soft">Job closing requires calibration data and at least one uploaded document.</div>
+          <div className="text-xs text-ink-soft">Job closing requires calibration data and completed checklist tasks.</div>
           <Button
             variant="primary"
             size="md"

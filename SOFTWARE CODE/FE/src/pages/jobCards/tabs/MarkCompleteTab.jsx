@@ -32,7 +32,6 @@ import { Input } from '../../../components/ui/Input.jsx';
 import { jobCardMarkCompleteSchema } from '../../../lib/schemas/jobCardSchemas.js';
 import { markCompleteJobCard } from '../../../lib/api/jobCards.js';
 import { useJobCardTasks } from '../../../lib/hooks/useJobCardTasks.js';
-import { useJobCardDocuments } from '../../../lib/hooks/useJobCardDocuments.js';
 import { todayIstIsoDate } from '../../../lib/time.js';
 
 /**
@@ -83,7 +82,6 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
   // alongside the parent JC detail, so all three reflect the same
   // snapshot when the user lands on this tab.
   const { items: tasks } = useJobCardTasks(jc.section_job_no);
-  const { items: docs }  = useJobCardDocuments(jc.section_job_no);
 
   // Navigation helper — gate rows let the user jump to the offending tab
   // (saves the LIC/engineer from having to find the right tab manually).
@@ -114,6 +112,7 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
         : `${obsLen}/20 chars — need ${20 - obsLen} more`);
 
   // ── Gate 3: calibration certificate (only for calibration workflows) ──
+  const docs = [];
   const isCalibration = (jc.workflow_type === 'CALIBRATION_STANDARD'
                       || jc.workflow_type === 'CALIBRATION_PRECISION');
   const hasCalCert = (docs || []).some((d) => d.doc_type === 'CALIBRATION_CERT');
@@ -130,7 +129,7 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
     ? `${requiredDocs.length} required doc${requiredDocs.length === 1 ? '' : 's'} uploaded`
     : 'upload a doc with type = REQUIRED, INSPECTION_REPORT, or CALIBRATION_CERT';
 
-  const allGatesOk = isRepair || (tasksOk && obsOk && calCertOk && requiredDocOk);
+  const allGatesOk = isRepair || (tasksOk && obsOk);
 
   const {
     register, handleSubmit, formState: { errors, isSubmitting },
@@ -194,22 +193,6 @@ export function MarkCompleteTab({ jc, canWrite, invalidateAll, refetch }) {
           hint={obsHint}
           actionLabel="Open Observations"
           onAction={() => goToTab('observations')}
-        />
-        {isCalibration ? (
-          <GateRow
-            label="Calibration certificate generated"
-            ok={calCertOk}
-            hint={calCertHint}
-            actionLabel="Open Documents"
-            onAction={() => goToTab('documents')}
-          />
-        ) : null}
-        <GateRow
-          label="At least one required document uploaded"
-          ok={requiredDocOk}
-          hint={requiredDocHint}
-          actionLabel="Open Documents"
-          onAction={() => goToTab('documents')}
         />
       </div>
       ) : null}

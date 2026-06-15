@@ -107,12 +107,28 @@ function cell(doc, x, y, w, h, text = '', opts = {}) {
   });
 }
 
+function fittedLabelWidth(doc, label, labelW, valueW, opts = {}) {
+  const text = clean(label);
+  if (!text) return labelW;
+  const pad = opts.pad ?? 3;
+  const size = opts.size || 7.4;
+  const totalW = labelW + valueW;
+  const minValueW = opts.minValueW ?? 24;
+  doc.font('Helvetica-Bold').fontSize(size);
+  const naturalW = Math.ceil(doc.widthOfString(text) + pad * 2 + 4);
+  return Math.min(totalW - minValueW, Math.max(12, naturalW));
+}
+
 function labelValueRow(doc, x, y, specs, h = 18) {
   let cx = x;
   specs.forEach((s) => {
-    cell(doc, cx, y, s.lw, h, s.label, { bold: true, size: s.labelSize || 7.4 });
-    cell(doc, cx + s.lw, y, s.vw, h, s.value, { size: s.valueSize || 7.8 });
-    cx += s.lw + s.vw;
+    const totalW = s.lw + s.vw;
+    const labelSize = s.labelSize || 7.4;
+    const labelW = fittedLabelWidth(doc, s.label, s.lw, s.vw, { size: labelSize });
+    const valueW = totalW - labelW;
+    cell(doc, cx, y, labelW, h, s.label, { bold: true, size: labelSize });
+    cell(doc, cx + labelW, y, valueW, h, s.value, { size: s.valueSize || 7.8 });
+    cx += totalW;
   });
 }
 
