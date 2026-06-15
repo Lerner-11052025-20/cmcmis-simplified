@@ -19,6 +19,10 @@ import { formatIstDate } from '../../../lib/time.js';
 
 const TASK_TYPES = ['NABL', 'NON-NABL', 'BOTH'];
 
+function taskMasterLabel(task) {
+  return `${task.id} ${task.name}`;
+}
+
 function emptyForm() {
   return {
     id: null,
@@ -443,7 +447,7 @@ function ChecklistModal({ initial, taskMaster, onClose, onSaved }) {
                   >
                     <option value="">Select a task from master library...</option>
                     {taskMaster.map((task) => (
-                      <option key={task.id} value={task.id}>[{task.type || 'Calibration'}] {task.name}</option>
+                      <option key={task.id} value={task.id}>{taskMasterLabel(task)}</option>
                     ))}
                   </select>
                   <Button type="button" variant="primary" onClick={addMasterTask} disabled={!selectedTaskId} className="h-12 rounded-xl">
