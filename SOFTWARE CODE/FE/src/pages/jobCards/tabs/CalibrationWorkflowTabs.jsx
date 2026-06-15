@@ -21,7 +21,6 @@ import {
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
-import { useAutoSave } from '../../../lib/hooks/useAutoSave.js';
 import { useCalibrationPeople } from '../../../lib/hooks/useCalibrationPeople.js';
 import {
   useCalibrationAdjustmentRows,
@@ -73,7 +72,7 @@ function textAreaClass(extra = '') {
   ].join(' ');
 }
 
-function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSavePref, setAutoSavePref }) {
+function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) {
   const defaults = useMemo(() => {
     const out = {};
     for (const f of fieldNames) out[f] = jc[f] == null ? '' : jc[f];
@@ -84,6 +83,7 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { isDirty, dirtyFields, isSubmitting },
     reset,
   } = useForm({ defaultValues: defaults });
@@ -102,16 +102,6 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
     return out;
   }, [dirtyFields, fieldNames, watch]);
 
-  const auto = useAutoSave({
-    enabled: canWrite && autoSavePref,
-    getDirtyValues,
-    onSave: async (values) => {
-      await patchJobCardTab(jc.section_job_no, values);
-      invalidateAll();
-      if (refetch) refetch();
-    },
-  });
-
   async function manualSave() {
     const values = getDirtyValues();
     if (Object.keys(values).length === 0) return;
@@ -120,30 +110,15 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
     if (refetch) refetch();
   }
 
-  function registerField(name, opts) {
-    const r = register(name, opts);
-    const origOnChange = r.onChange;
-    return {
-      ...r,
-      onChange: (e) => {
-        origOnChange(e);
-        auto.tick();
-      },
-    };
-  }
-
   return {
-    registerField,
+    registerField: register,
+    watch,
+    setValue,
     saveBar: (
       <TabSaveBar
         saving={isSubmitting}
         dirty={isDirty}
         onSave={handleSubmit(manualSave)}
-        autoSaveStatus={auto.status}
-        lastSavedAt={auto.lastSavedAt}
-        consecutiveFails={auto.consecutiveFails}
-        autoSavePref={autoSavePref}
-        onTogglePref={() => setAutoSavePref(!autoSavePref)}
         disabled={!canWrite}
         disabledReason={!canWrite ? `Cannot save: status is ${jc.status}` : null}
       />
@@ -162,6 +137,273 @@ function PeopleSelect({ id, disabled, registerField, name, placeholder = 'Select
         </option>
       ))}
     </Select>
+  );
+}
+
+function CalibratedByCheckboxes({ disabled, registerField, selectedIds }) {
+  const { items, loading } = useCalibrationPeople(true);
+  const selected = new Set(Array.isArray(selectedIds) ? selectedIds : selectedIds ? [selectedIds] : []);
+  const selectedPeople = (items || []).filter((p) => selected.has(p.employee_id));
+
+  return (
+    <div className="space-y-3">
+      <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-white p-3">
+        {loading ? (
+          <div className="text-sm text-slate-500">Loading employees...</div>
+        ) : (items || []).length === 0 ? (
+          <div className="text-sm text-slate-500">No employees found.</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {(items || []).map((p) => (
+              <label key={`${p.employee_id}-${p.role}`} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  value={p.employee_id}
+                  disabled={disabled}
+                  className="h-4 w-4 accent-indigo-600 disabled:opacity-50"
+                  {...registerField('calibrated_by_employee_ids')}
+                />
+                <span>{p.full_name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      {selectedPeople.length > 0 ? (
+        <div className="rounded-md border border-indigo-100 bg-indigo-50 px-3 py-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Selected</div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {selectedPeople.map((p) => (
+              <span key={p.employee_id} className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                {p.full_name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const EQUIPMENT_STATUS_OPTIONS_REF = ['O.K.', 'Defective', 'Out Of Specs.', 'Jobcard - Cal Closed'];
+const CAL_STATUS_OPTIONS_REF = ['Valid Cal', 'Partial / Limited Cal', 'No Cal'];
+const NO_CAL_REASONS = [
+  'Cal Not Required',
+  'Cal Withdrawn',
+  'Needs Repair',
+  'No Facility',
+  'No Manual',
+  'Not Responsible',
+  'Not Sent For Cal',
+];
+const PARTIAL_LIMITED_REASONS = ['Needs Repair', 'No Facility'];
+
+function defaultCalRefNo(jc) {
+  const raw = jc?.jc_no || jc?.section_job_no || '';
+  const digits = String(raw).replace(/\D/g, '').slice(-4).padStart(4, '0');
+  return `TIMCD/UL/17/${digits}`;
+}
+
+function Field({ children }) {
+  return <div className="min-w-0">{children}</div>;
+}
+
+function CheckItem({ id, label, suffix, disabled, registerField, name }) {
+  return (
+    <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+      <input
+        id={id}
+        type="checkbox"
+        disabled={disabled}
+        className="h-4 w-4 accent-indigo-600 disabled:opacity-50"
+        {...registerField(name)}
+      />
+      <span>{label}</span>
+      <span className="text-xs font-semibold text-slate-400">({suffix})</span>
+    </label>
+  );
+}
+
+export function CalibrationDetailsTab(props) {
+  const jcForForm = {
+    ...props.jc,
+    cal_ref_no: props.jc.cal_ref_no || defaultCalRefNo(props.jc),
+    cal_due_date: props.jc.cal_due_date || props.jc.cal_due_date_from_equipment || '',
+    cal_rh_min: props.jc.cal_rh_min || '40',
+    cal_rh_max: props.jc.cal_rh_max || '70',
+    cal_temperature_value: props.jc.cal_temperature_value || '25',
+    cal_temperature_range: props.jc.cal_temperature_range || '+/-4.0',
+    calibrated_by_employee_ids: props.jc.calibrated_by_employee_ids?.length
+      ? props.jc.calibrated_by_employee_ids
+      : props.jc.calibrated_by_employee_id
+        ? [props.jc.calibrated_by_employee_id]
+        : [],
+  };
+  const FIELDS = [
+    'cal_job_started_date',
+    'cal_job_completed_date',
+    'cal_equipment_received_status',
+    'cal_repair_carried_out_by',
+    'cal_sent_to_lab_date',
+    'cal_received_from_lab_date',
+    'cal_calibration_status',
+    'cal_limited_reason',
+    'cal_ref_no',
+    'cal_due_date',
+    'cal_rh_min',
+    'cal_rh_max',
+    'cal_temperature_value',
+    'cal_temperature_range',
+    'calibrated_by_employee_ids',
+    'cal_procedure_ref',
+    'cal_adjustment_mechanical',
+    'cal_adjustment_nil',
+    'cal_adjustment_electrical',
+    'cal_adjustment_software',
+    'cal_timeshare',
+    'cal_remarks',
+  ];
+  const t = useCalibrationTabForm({ ...props, jc: jcForForm, fieldNames: FIELDS });
+  const equipmentStatus = t.watch('cal_equipment_received_status');
+  const calStatus = t.watch('cal_calibration_status');
+  const calibratedByIds = t.watch('calibrated_by_employee_ids');
+  const repairEnabled = equipmentStatus === 'Out Of Specs.';
+  const reasonOptions = calStatus === 'No Cal'
+    ? NO_CAL_REASONS
+    : calStatus === 'Partial / Limited Cal'
+      ? PARTIAL_LIMITED_REASONS
+      : [];
+  const reasonLabel = calStatus === 'No Cal' ? 'Reason For No Cal' : 'Reason For Partial/Limited Cal';
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-slate-950">Calibration Details</h2>
+      <div className="grid grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-2">
+        <Field>
+          <Label htmlFor="cal_job_started_date" required>Job Start Date</Label>
+          <Input id="cal_job_started_date" type="date" disabled={!props.canWrite} {...t.registerField('cal_job_started_date')} />
+        </Field>
+        <Field>
+          <Label htmlFor="cal_job_completed_date" required>Job Complete Date</Label>
+          <Input id="cal_job_completed_date" type="date" disabled={!props.canWrite} className="border-red-400 bg-red-50/40" {...t.registerField('cal_job_completed_date')} />
+        </Field>
+
+        <Field>
+          <Label htmlFor="cal_equipment_received_status" required>Status Of Equipment Received</Label>
+          <Select id="cal_equipment_received_status" disabled={!props.canWrite} {...t.registerField('cal_equipment_received_status')}>
+            <option value="">Select status...</option>
+            {EQUIPMENT_STATUS_OPTIONS_REF.map((v) => <option key={v} value={v}>{v}</option>)}
+          </Select>
+        </Field>
+        <Field>
+          <Label htmlFor="cal_repair_carried_out_by" required={repairEnabled}>Repair/Adjustment Carried Out By</Label>
+          <Input
+            id="cal_repair_carried_out_by"
+            disabled={!props.canWrite || !repairEnabled}
+            placeholder={repairEnabled ? 'Enter name...' : '-'}
+            className={!repairEnabled ? 'bg-slate-100 text-slate-400' : ''}
+            {...t.registerField('cal_repair_carried_out_by')}
+          />
+        </Field>
+
+        <Field>
+          <Label htmlFor="cal_sent_to_lab_date">Send To Lab Date</Label>
+          <Input id="cal_sent_to_lab_date" type="date" disabled={!props.canWrite} {...t.registerField('cal_sent_to_lab_date')} />
+        </Field>
+        <Field>
+          <Label htmlFor="cal_received_from_lab_date">Received From Lab Date</Label>
+          <Input id="cal_received_from_lab_date" type="date" disabled={!props.canWrite} {...t.registerField('cal_received_from_lab_date')} />
+        </Field>
+
+        <Field>
+          <Label htmlFor="cal_calibration_status" required>Calibration Status</Label>
+          <Select id="cal_calibration_status" disabled={!props.canWrite} {...t.registerField('cal_calibration_status')}>
+            <option value="">Select status...</option>
+            {CAL_STATUS_OPTIONS_REF.map((v) => <option key={v} value={v}>{v}</option>)}
+          </Select>
+        </Field>
+        <Field>
+          {reasonOptions.length > 0 ? (
+            <>
+              <Label htmlFor="cal_limited_reason" required>{reasonLabel}</Label>
+              <Select id="cal_limited_reason" disabled={!props.canWrite} {...t.registerField('cal_limited_reason')}>
+                <option value="">Select reason...</option>
+                {reasonOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+              </Select>
+            </>
+          ) : (
+            <p className="pt-9 text-sm italic text-slate-400">No reason required for Valid Cal</p>
+          )}
+        </Field>
+
+        <Field>
+          <Label htmlFor="cal_ref_no" required>Calibration Ref. No.</Label>
+          <Input id="cal_ref_no" disabled={!props.canWrite} {...t.registerField('cal_ref_no')} />
+        </Field>
+        <Field>
+          <Label htmlFor="cal_due_date" required>Calibration Due Date</Label>
+          <Input id="cal_due_date" type="date" disabled={!props.canWrite} {...t.registerField('cal_due_date')} />
+        </Field>
+
+        <Field>
+          <Label htmlFor="cal_rh_min" required>RH %</Label>
+          <div className="flex max-w-lg items-center gap-3">
+            <Input id="cal_rh_min" type="number" disabled={!props.canWrite} className="w-24" {...t.registerField('cal_rh_min')} />
+            <span className="text-sm font-medium text-slate-500">% To RH</span>
+            <Input id="cal_rh_max" type="number" disabled={!props.canWrite} className="w-24" {...t.registerField('cal_rh_max')} />
+            <span className="text-sm font-medium text-slate-500">%</span>
+          </div>
+        </Field>
+        <Field>
+          <Label htmlFor="cal_temperature_value" required>Temperature (&deg;C)</Label>
+          <div className="flex max-w-md items-center gap-3">
+            <Input id="cal_temperature_value" type="number" disabled={!props.canWrite} className="w-24" {...t.registerField('cal_temperature_value')} />
+            <span className="text-sm font-medium text-slate-500">&deg;C</span>
+            <Input id="cal_temperature_range" disabled={!props.canWrite} className="w-28" {...t.registerField('cal_temperature_range')} />
+          </div>
+        </Field>
+
+        <Field>
+          <Label required>Calibrated By</Label>
+          <CalibratedByCheckboxes
+            disabled={!props.canWrite}
+            registerField={t.registerField}
+            selectedIds={calibratedByIds}
+          />
+        </Field>
+        <Field>
+          <Label htmlFor="cal_procedure_ref" required>Cal Procedure Ref</Label>
+          <Input id="cal_procedure_ref" disabled={!props.canWrite} placeholder="Enter calibration procedure reference" {...t.registerField('cal_procedure_ref')} />
+        </Field>
+
+        <Field>
+          <Label required>Adjustment(s)</Label>
+          <div className="flex flex-wrap gap-x-7 gap-y-3">
+            <CheckItem id="cal_adjustment_mechanical" name="cal_adjustment_mechanical" label="Mechanical" suffix="M" disabled={!props.canWrite} registerField={t.registerField} />
+            <CheckItem id="cal_adjustment_nil" name="cal_adjustment_nil" label="Nil" suffix="N" disabled={!props.canWrite} registerField={t.registerField} />
+            <CheckItem id="cal_adjustment_electrical" name="cal_adjustment_electrical" label="Electrical" suffix="E" disabled={!props.canWrite} registerField={t.registerField} />
+            <CheckItem id="cal_adjustment_software" name="cal_adjustment_software" label="Software" suffix="S" disabled={!props.canWrite} registerField={t.registerField} />
+          </div>
+        </Field>
+        <Field>
+          <Label>Timeshare</Label>
+          <CheckItem id="cal_timeshare" name="cal_timeshare" label="Timeshare" suffix="T" disabled={!props.canWrite} registerField={t.registerField} />
+        </Field>
+
+        <div className="lg:col-span-2">
+          <Label htmlFor="cal_remarks">Remarks</Label>
+          <textarea
+            id="cal_remarks"
+            rows={5}
+            disabled={!props.canWrite}
+            className={textAreaClass()}
+            placeholder="Performance of the Equipment is within the specifications except..."
+            {...t.registerField('cal_remarks')}
+          />
+        </div>
+      </div>
+      {t.saveBar}
+    </div>
   );
 }
 

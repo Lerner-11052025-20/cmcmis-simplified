@@ -52,12 +52,10 @@ import { MarkCompleteTab }  from './tabs/MarkCompleteTab.jsx';
 import { ClosureTab }       from './tabs/ClosureTab.jsx';
 import {
   CalibrationAdjustmentsTab,
+  CalibrationDetailsTab,
   CalibrationDocumentsTab,
   CalibrationEquipmentUsedTab,
-  CalibrationJobCardDetailsTab,
   CalibrationJobClosingTab,
-  CalibrationRemarksTab,
-  CalibrationStatusTab,
 } from './tabs/CalibrationWorkflowTabs.jsx';
 import {
   RepairContractWarrantyTab,
@@ -128,11 +126,9 @@ export function JobCardDetail() {
         'equipment-details',
         'conversion-planning',
         'tasks',
-        'cal-job-details',
-        'cal-status',
+        'cal-details',
         'cal-equipment-used',
         'cal-adjustments',
-        'cal-remarks',
         'documents',
         'job-closing',
       ]);
@@ -275,11 +271,9 @@ export function JobCardDetail() {
     case 'documents':       body = <DocumentsTab {...tabProps} />; break;
     case 'mark-complete':   body = <MarkCompleteTab {...tabProps} />; break;
     case 'closure':         body = <ClosureTab {...tabProps} />; break;
-    case 'cal-job-details': body = <CalibrationJobCardDetailsTab {...tabProps} />; break;
-    case 'cal-status':      body = <CalibrationStatusTab {...tabProps} />; break;
+    case 'cal-details':     body = <CalibrationDetailsTab {...tabProps} />; break;
     case 'cal-equipment-used': body = <CalibrationEquipmentUsedTab {...tabProps} />; break;
     case 'cal-adjustments': body = <CalibrationAdjustmentsTab {...tabProps} />; break;
-    case 'cal-remarks':     body = <CalibrationRemarksTab {...tabProps} />; break;
     case 'job-closing':     body = <CalibrationJobClosingTab {...tabProps} />; break;
     case 'repair-plug-in': body = <RepairPlugInAccessoriesTab {...tabProps} />; break;
     case 'repair-submitted-recv': body = <RepairSubmittedReceivedTab {...tabProps} />; break;

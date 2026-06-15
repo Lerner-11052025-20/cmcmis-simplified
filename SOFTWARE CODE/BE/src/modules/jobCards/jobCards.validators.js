@@ -66,6 +66,28 @@ const jobStatusDisplayEnum = z.enum([
 ]);
 
 const shortTextOrEmpty = (max = 255) => z.string().max(max).optional().or(z.literal(''));
+const looseTextOrEmpty = (max = 8000) => z.preprocess(
+  (v) => (v == null ? undefined : String(v)),
+  z.string().max(max).optional().or(z.literal('')),
+);
+const looseBoolean = z.preprocess(
+  (v) => (v == null ? undefined : v),
+  z.union([
+    z.boolean(),
+    z.literal('true').transform(() => true),
+    z.literal('false').transform(() => false),
+    z.literal('on').transform(() => true),
+    z.literal('1').transform(() => true),
+    z.literal('0').transform(() => false),
+    z.literal(1).transform(() => true),
+    z.literal(0).transform(() => false),
+  ]).optional(),
+);
+const looseEmployeeIdList = z.union([
+  z.array(z.string().max(20)),
+  z.string().max(20).transform((v) => (v ? [v] : [])),
+  z.literal('').transform(() => []),
+]).optional();
 
 const moneyOrEmpty = z.union([
   z.number().nonnegative(),
@@ -128,6 +150,7 @@ const patchTabSchema = z.object({
   cal_ref_no:                     shortTextOrEmpty(120),
   cal_due_date:                   isoDateOrEmpty,
   calibrated_by_employee_id:      shortTextOrEmpty(7),
+  calibrated_by_employee_ids:     looseEmployeeIdList,
   cal_equipment_received_status:  shortTextOrEmpty(120),
   cal_repair_carried_out_by:      shortTextOrEmpty(255),
   cal_sent_to_lab_date:           isoDateOrEmpty,
@@ -137,6 +160,16 @@ const patchTabSchema = z.object({
   cal_remarks:                    z.string().max(8000).optional().or(z.literal('')),
   cal_incharge_employee_id:       shortTextOrEmpty(7),
   cal_incharge_date:              isoDateOrEmpty,
+  cal_rh_min:                     looseTextOrEmpty(20),
+  cal_rh_max:                     looseTextOrEmpty(20),
+  cal_temperature_value:          looseTextOrEmpty(20),
+  cal_temperature_range:          looseTextOrEmpty(20),
+  cal_procedure_ref:              looseTextOrEmpty(255),
+  cal_timeshare:                  looseBoolean,
+  cal_adjustment_mechanical:      looseBoolean,
+  cal_adjustment_nil:             looseBoolean,
+  cal_adjustment_electrical:      looseBoolean,
+  cal_adjustment_software:        looseBoolean,
   // Dedicated repair workflow (TME/FPE repair only)
   repair_accessory_selected:       shortTextOrEmpty(120),
   repair_job_received_date:        isoDateOrEmpty,

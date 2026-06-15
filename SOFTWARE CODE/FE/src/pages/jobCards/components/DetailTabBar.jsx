@@ -31,11 +31,9 @@ export const CALIBRATION_TABS = [
   { key: 'equipment-details', label: 'Equipment Details' },
   { key: 'conversion-planning', label: 'Conversion & Planning Details' },
   { key: 'tasks', label: 'Task Checklist' },
-  { key: 'cal-job-details', label: 'Job Card Details' },
-  { key: 'cal-status', label: 'Calibration Status' },
+  { key: 'cal-details', label: 'Calibration Details' },
   { key: 'cal-equipment-used', label: 'Equipment Used Details' },
   { key: 'cal-adjustments', label: 'Adjustments Details' },
-  { key: 'cal-remarks', label: 'Remarks' },
   { key: 'documents', label: 'Documents' },
   { key: 'job-closing', label: 'Job Closing' },
 ];

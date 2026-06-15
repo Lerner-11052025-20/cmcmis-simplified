@@ -11,7 +11,6 @@ import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
-import { useAutoSave } from '../../../lib/hooks/useAutoSave.js';
 import { useCalibrationPeople } from '../../../lib/hooks/useCalibrationPeople.js';
 import { useRepairEquipmentRows, invalidateRepairEquipmentRows } from '../../../lib/hooks/useRepairRows.js';
 import {
@@ -67,7 +66,7 @@ function textAreaClass(extra = '') {
   ].join(' ');
 }
 
-function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSavePref, setAutoSavePref }) {
+function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) {
   const defaults = useMemo(() => {
     const out = {};
     for (const f of fieldNames) out[f] = coerceFieldForInput(f, jc[f]);
@@ -95,16 +94,6 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, au
     return out;
   }, [dirtyFields, fieldNames, watch]);
 
-  const auto = useAutoSave({
-    enabled: canWrite && autoSavePref,
-    getDirtyValues,
-    onSave: async (values) => {
-      await patchJobCardTab(jc.section_job_no, values);
-      invalidateAll();
-      if (refetch) refetch();
-    },
-  });
-
   async function manualSave() {
     const values = getDirtyValues();
     if (Object.keys(values).length === 0) return;
@@ -113,33 +102,15 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, au
     if (refetch) refetch();
   }
 
-  function registerField(name, opts) {
-    const r = register(name, opts);
-    const origOnChange = r.onChange;
-    return {
-      ...r,
-      onChange: (e) => {
-        origOnChange(e);
-        auto.tick();
-      },
-    };
-  }
-
   return {
-    registerField,
+    registerField: register,
     watch,
     setValue,
-    auto,
     saveBar: (
       <TabSaveBar
         saving={isSubmitting}
         dirty={isDirty}
         onSave={handleSubmit(manualSave)}
-        autoSaveStatus={auto.status}
-        lastSavedAt={auto.lastSavedAt}
-        consecutiveFails={auto.consecutiveFails}
-        autoSavePref={autoSavePref}
-        onTogglePref={() => setAutoSavePref(!autoSavePref)}
         disabled={!canWrite}
         disabledReason={!canWrite ? `Cannot save: status is ${jc.status}` : null}
       />
@@ -722,7 +693,6 @@ export function RepairFaultAnalysisTab(props) {
     if (next.has(value)) next.delete(value);
     else next.add(value);
     t.setValue('repair_fault_analysis_sections', Array.from(next).join('|'), { shouldDirty: true });
-    t.auto.tick();
   }
 
   return (

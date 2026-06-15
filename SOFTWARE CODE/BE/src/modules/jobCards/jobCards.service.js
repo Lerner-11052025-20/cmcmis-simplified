@@ -104,6 +104,17 @@ function shapeDetail(row) {
   // Helper to format ISO dates cleanly. Empty → null.
   const iso = (d) => (d ? dayjs(d).toISOString() : null);
   const ymd = (d) => (d ? dayjs(d).format('YYYY-MM-DD') : null);
+  const computedCalDueDate = (() => {
+    const months = Number(row.equipment_cal_frequency);
+    if (!row.equipment_last_calibration_date || !Number.isFinite(months) || months <= 0) return null;
+    return dayjs(row.equipment_last_calibration_date).add(months, 'month');
+  })();
+  const calibratedByIds = row.calibrated_by_employee_ids
+    ? String(row.calibrated_by_employee_ids).split(',').filter(Boolean)
+    : (row.calibrated_by_employee_id ? [row.calibrated_by_employee_id] : []);
+  const calibratedByNames = row.calibrated_by_names
+    ? String(row.calibrated_by_names).split('||').filter(Boolean)
+    : (row.calibrated_by_name ? [row.calibrated_by_name] : []);
   return {
     id:              row.section_job_no,
     section_job_no:  row.section_job_no,
@@ -198,15 +209,21 @@ function shapeDetail(row) {
     observations_text:             row.observations_text,
     job_status_display:            row.job_status_display,
     /* Dedicated calibration workflow */
-    cal_job_started_date:           ymd(row.cal_job_started_date),
-    cal_job_completed_date:         ymd(row.cal_job_completed_date),
+    cal_job_started_date:           ymd(row.cal_job_started_date || row.job_start_date || row.planned_start_date || row.jc_recd_date || row.jr_date),
+    cal_job_completed_date:         ymd(row.cal_job_completed_date || row.job_end_date || row.actual_completion_date || row.planned_completed_date || row.job_complete_planned_date),
     cal_calibration_status:         row.cal_calibration_status,
     cal_temperature_c:              row.cal_temperature_c,
     cal_relative_humidity:          row.cal_relative_humidity,
     cal_ref_no:                     row.cal_ref_no,
-    cal_due_date:                   ymd(row.cal_due_date),
+    cal_due_date:                   ymd(row.cal_due_date || row.jobcard_cal_pm_due_date || row.equipment_cal_due_date || computedCalDueDate),
+    cal_due_date_from_equipment:    ymd(row.equipment_cal_due_date),
     calibrated_by_employee_id:      row.calibrated_by_employee_id,
     calibrated_by_name:             row.calibrated_by_name,
+    calibrated_by_employee_ids:     calibratedByIds,
+    calibrated_by_names:            calibratedByIds.map((employeeId, index) => ({
+      employee_id: employeeId,
+      name: calibratedByNames[index] || employeeId,
+    })),
     cal_equipment_received_status:  row.cal_equipment_received_status,
     cal_repair_carried_out_by:      row.cal_repair_carried_out_by,
     cal_sent_to_lab_date:           ymd(row.cal_sent_to_lab_date),
@@ -217,6 +234,16 @@ function shapeDetail(row) {
     cal_incharge_employee_id:       row.cal_incharge_employee_id,
     cal_incharge_name:              row.cal_incharge_name,
     cal_incharge_date:              ymd(row.cal_incharge_date),
+    cal_rh_min:                     row.cal_rh_min,
+    cal_rh_max:                     row.cal_rh_max,
+    cal_temperature_value:          row.cal_temperature_value,
+    cal_temperature_range:          row.cal_temperature_range,
+    cal_procedure_ref:              row.cal_procedure_ref,
+    cal_timeshare:                  !!row.cal_timeshare,
+    cal_adjustment_mechanical:      !!row.cal_adjustment_mechanical,
+    cal_adjustment_nil:             !!row.cal_adjustment_nil,
+    cal_adjustment_electrical:      !!row.cal_adjustment_electrical,
+    cal_adjustment_software:        !!row.cal_adjustment_software,
     /* Dedicated repair workflow */
     repair_accessory_selected:       row.repair_accessory_selected,
     repair_job_received_date:        ymd(row.repair_job_received_date),
@@ -417,10 +444,46 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
       isOwnEngineer: isOwnEngineer(jc, actor),
     });
 
+    const bodyForPatch = { ...body };
+    const calibratedByEmployeeIds = Array.isArray(body.calibrated_by_employee_ids)
+      ? body.calibrated_by_employee_ids.filter(Boolean)
+      : null;
+    if (calibratedByEmployeeIds) {
+      bodyForPatch.calibrated_by_employee_id = calibratedByEmployeeIds[0] || '';
+      delete bodyForPatch.calibrated_by_employee_ids;
+    }
+
     const updated = await repo.patchTab(conn, sectionJobNo, {
-      ...body,
+      ...bodyForPatch,
       _updated_by_employee_id: actor.employeeId,
     });
+
+    if (calibratedByEmployeeIds) {
+      await conn.query(
+        `DELETE FROM cmms_jobcard_attendedby_dtl
+          WHERE JMA_SECTIONJOBNO = ? AND JMA_ISAWAITING = 0`,
+        [sectionJobNo],
+      );
+      for (let i = 0; i < calibratedByEmployeeIds.length; i += 1) {
+        await conn.query(
+          `INSERT INTO cmms_jobcard_attendedby_dtl
+             (JMA_SECTIONJOBNO, JMA_USERID, JMA_ISAWAITING, JMA_SRNO)
+           VALUES (?, ?, 0, ?)`,
+          [sectionJobNo, calibratedByEmployeeIds[i], i + 1],
+        );
+      }
+    } else {
+      const attendedByEmployeeId = body.calibrated_by_employee_id || body.repair_attended_by_employee_id;
+      if (attendedByEmployeeId) {
+      await conn.query(
+        `INSERT INTO cmms_jobcard_attendedby_dtl
+           (JMA_SECTIONJOBNO, JMA_USERID, JMA_ISAWAITING, JMA_SRNO)
+         VALUES (?, ?, 0, 1)
+         ON DUPLICATE KEY UPDATE JMA_SRNO = VALUES(JMA_SRNO)`,
+        [sectionJobNo, attendedByEmployeeId],
+      );
+      }
+    }
 
     await conn.commit();
     return { id: sectionJobNo, updated_columns: updated };

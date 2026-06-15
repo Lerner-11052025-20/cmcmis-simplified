@@ -397,6 +397,9 @@ const PHASE9_TAB_COLUMNS = [
   'cal_sent_to_lab_date', 'cal_received_from_lab_date',
   'cal_adjustment_status', 'cal_limited_reason',
   'cal_remarks', 'cal_incharge_employee_id', 'cal_incharge_date',
+  'cal_rh_min', 'cal_rh_max', 'cal_temperature_value', 'cal_temperature_range',
+  'cal_procedure_ref', 'cal_timeshare', 'cal_adjustment_mechanical',
+  'cal_adjustment_nil', 'cal_adjustment_electrical', 'cal_adjustment_software',
   // Dedicated repair workflow (TME/FPE repair)
   'repair_accessory_selected',
   'repair_job_received_date', 'repair_job_start_planned_date',
@@ -443,6 +446,7 @@ async function findByIdWithDetails(sectionJobNo) {
        jc.JM_PlannedComletedDate        AS planned_completed_date,
        jc.JM_JobStartDate               AS job_start_date,
        jc.JM_JobEndDate                 AS job_end_date,
+       jc.JM_CalPMDueDate               AS jobcard_cal_pm_due_date,
        jc.JM_COMPLAINTANDSYMPTOMS       AS complaint_description,
        jc.JM_MVP_STATUS                 AS status,
        jc.JM_CREATED_BY                 AS created_by_employee_id,
@@ -478,6 +482,9 @@ async function findByIdWithDetails(sectionJobNo) {
        jc.cal_sent_to_lab_date, jc.cal_received_from_lab_date,
        jc.cal_adjustment_status, jc.cal_limited_reason,
        jc.cal_remarks, jc.cal_incharge_employee_id, jc.cal_incharge_date,
+       jc.cal_rh_min, jc.cal_rh_max, jc.cal_temperature_value, jc.cal_temperature_range,
+       jc.cal_procedure_ref, jc.cal_timeshare, jc.cal_adjustment_mechanical,
+       jc.cal_adjustment_nil, jc.cal_adjustment_electrical, jc.cal_adjustment_software,
        jc.repair_accessory_selected,
        jc.repair_job_received_date, jc.repair_job_start_planned_date,
        jc.repair_maintenance_type, jc.repair_faulty_section, jc.repair_fault_category,
@@ -505,6 +512,7 @@ async function findByIdWithDetails(sectionJobNo) {
        e.EQM_MODELNO                    AS equipment_model_no,
        e.EQM_SRNO                       AS equipment_serial_no,
        e.EQM_CAL_FREQ                   AS equipment_cal_frequency,
+       e.EQM_CAL_DUE_DATE               AS equipment_cal_due_date,
        COALESCE(eq_sec.section_name, eq_sm.SM_NAME, eq_sm.SM_SHORTNAME, e.EQM_DIV_ABBR) AS equipment_division,
        (
          SELECT MAX(COALESCE(jc2.cal_job_completed_date, DATE(jc2.actual_completion_date), DATE(jc2.JM_JobEndDate)))
@@ -529,7 +537,9 @@ async function findByIdWithDetails(sectionJobNo) {
        emp_ro.EMM_NAME                  AS last_reopened_by_name,
        emp_cal.EMM_NAME                 AS calibrated_by_name,
        emp_ci.EMM_NAME                  AS cal_incharge_name,
-       emp_rep_att.EMM_NAME             AS repair_attended_by_name
+       emp_rep_att.EMM_NAME             AS repair_attended_by_name,
+       cal_att.calibrated_by_employee_ids AS calibrated_by_employee_ids,
+       cal_att.calibrated_by_names        AS calibrated_by_names
      FROM cmms_jobcard_mst jc
      LEFT JOIN cmms_eqip_mst       e        ON e.EQM_TYPE = jc.JM_EQM_TYPE AND e.EQM_ID = jc.JM_EQM_ID
      LEFT JOIN cmms_cont_mst       eq_make  ON eq_make.CMM_CONT_ID = e.EQM_MFRID
@@ -545,6 +555,16 @@ async function findByIdWithDetails(sectionJobNo) {
     LEFT JOIN cmms_emp_mst        emp_cal  ON emp_cal.EMM_ID = jc.calibrated_by_employee_id
     LEFT JOIN cmms_emp_mst        emp_ci   ON emp_ci.EMM_ID = jc.cal_incharge_employee_id
     LEFT JOIN cmms_emp_mst        emp_rep_att ON emp_rep_att.EMM_ID = jc.repair_attended_by_employee_id
+    LEFT JOIN (
+      SELECT
+        a.JMA_SECTIONJOBNO,
+        GROUP_CONCAT(a.JMA_USERID ORDER BY a.JMA_SRNO, a.JMA_USERID SEPARATOR ',') AS calibrated_by_employee_ids,
+        GROUP_CONCAT(COALESCE(emp.EMM_NAME, a.JMA_USERID) ORDER BY a.JMA_SRNO, a.JMA_USERID SEPARATOR '||') AS calibrated_by_names
+      FROM cmms_jobcard_attendedby_dtl a
+      LEFT JOIN cmms_emp_mst emp ON emp.EMM_ID = a.JMA_USERID
+      WHERE a.JMA_ISAWAITING = 0
+      GROUP BY a.JMA_SECTIONJOBNO
+    ) cal_att ON cal_att.JMA_SECTIONJOBNO = jc.JM_SectionJobNo
      WHERE jc.JM_SectionJobNo = ?
      LIMIT 1`,
     [sectionJobNo],
