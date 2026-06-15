@@ -1,285 +1,438 @@
-// ============================================================================
-// src/pages/dashboard/QuickRecap.jsx  —  Recent Activity feed panel
-// ----------------------------------------------------------------------------
-// Renders three side-by-side activity columns below the KPI grid:
-//   ① Recent Job Requests  ② Recent Job Card Updates  ③ Recent Equipment
-//
-// Each column shows up to 7 log entries. Data comes from
-// `data.recent_activity` inside the /dashboard/kpis payload.
-// ============================================================================
-
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FileText,
   ClipboardList,
   Box,
   Clock,
   ChevronRight,
+  Hash,
+  UserRound,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { formatIstDate } from '../../lib/time.js';
 
-// ── Relative timestamp helper ─────────────────────────────────────────
 function relTime(isoStr) {
-  return formatIstDate(isoStr, '—');
+  return formatIstDate(isoStr, '-');
 }
 
-// ── Stripe-style border status tags ──────────────────────────────────
 const STATUS_STYLE = {
-  DRAFT:                'bg-slate-50   text-slate-600   border-slate-200',
-  SUBMITTED:            'bg-amber-50   text-amber-700   border-amber-200/60',
-  ASSIGNED:             'bg-violet-50  text-violet-700  border-violet-200/60',
-  IN_PROGRESS:          'bg-blue-50    text-blue-700    border-blue-200/60',
-  COMPLETED:            'bg-green-50   text-green-700   border-green-200/60',
-  VERIFIED_CLOSED:      'bg-emerald-50 text-emerald-700 border-emerald-200/60',
-  CANCELLED:            'bg-red-50     text-red-600     border-red-200/60',
-  ACTIVE:               'bg-green-50   text-green-700   border-green-200/60',
-  PENDING_VERIFICATION: 'bg-orange-50  text-orange-700  border-orange-200/60',
-  REOPENED:             'bg-purple-50  text-purple-700  border-purple-200/60',
-  default:              'bg-gray-50    text-gray-600    border-gray-200',
+  DRAFT: 'bg-slate-50 text-slate-600 border-slate-200',
+  SUBMITTED: 'bg-amber-50 text-amber-700 border-amber-200/60',
+  ASSIGNED: 'bg-violet-50 text-violet-700 border-violet-200/60',
+  IN_PROGRESS: 'bg-blue-50 text-blue-700 border-blue-200/60',
+  COMPLETED: 'bg-green-50 text-green-700 border-green-200/60',
+  VERIFIED_CLOSED: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
+  CANCELLED: 'bg-red-50 text-red-600 border-red-200/60',
+  ACTIVE: 'bg-green-50 text-green-700 border-green-200/60',
+  PENDING_VERIFICATION: 'bg-orange-50 text-orange-700 border-orange-200/60',
+  REOPENED: 'bg-purple-50 text-purple-700 border-purple-200/60',
+  default: 'bg-gray-50 text-gray-600 border-gray-200',
 };
+
+const EMPTY_VALUE = '-';
+
+function cleanStatusLabel(status) {
+  return (status || EMPTY_VALUE)
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
+}
 
 function StatusBadge({ status }) {
   const cls = STATUS_STYLE[status] || STATUS_STYLE.default;
-  const label = (status || '').replace(/_/g, ' ').toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
+
   return (
-    <span className={clsx('inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none border font-sans', cls)}>
-      {label}
+    <span
+      className={clsx(
+        'inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase leading-none tracking-wider whitespace-nowrap font-sans',
+        cls,
+      )}
+    >
+      {cleanStatusLabel(status)}
     </span>
   );
 }
 
-// ── Skeleton row for loading state ────────────────────────────────────
-function SkeletonRow() {
+function SkeletonRows({ columns }) {
+  return Array.from({ length: 5 }).map((_, rowIndex) => (
+    <tr
+      key={rowIndex}
+      className={clsx(
+        'border-b border-slate-100 last:border-b-0',
+        rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50',
+      )}
+    >
+      {columns.map((column, columnIndex) => (
+        <td key={column.key || columnIndex} className="px-4 py-3.5 align-middle">
+          <div
+            className={clsx(
+              'h-3.5 animate-pulse rounded bg-slate-100',
+              columnIndex === 0 ? 'w-52' : 'w-24',
+            )}
+          />
+        </td>
+      ))}
+    </tr>
+  ));
+}
+
+function DetailValue({ icon: Icon, children, strong = false, accentClass }) {
   return (
-    <div className="flex items-start gap-3 py-3 animate-pulse">
-      <div className="mt-1 w-2.5 h-2.5 rounded-full bg-slate-100 shrink-0" />
-      <div className="flex-1 space-y-1.5">
-        <div className="h-3.5 w-3/4 bg-slate-100 rounded" />
-        <div className="h-2.5 w-1/2 bg-slate-100 rounded" />
+    <span className={clsx('inline-flex min-w-0 items-center gap-1.5', strong && 'font-bold text-ink')}>
+      {Icon ? <Icon size={12} className="shrink-0 text-slate-400" /> : null}
+      <span className={clsx('truncate', accentClass)}>{children || EMPTY_VALUE}</span>
+    </span>
+  );
+}
+
+function PrimaryCell({ dotClass, title, subtitle, subtitleClass }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className={clsx('h-2 w-2 rounded-full ring-4 shrink-0', dotClass)} />
+      <div className="min-w-0">
+        <p className="truncate text-[13px] font-bold leading-5 text-ink transition-colors group-hover:text-accent">
+          {title || EMPTY_VALUE}
+        </p>
+        {subtitle ? (
+          <p className={clsx('mt-0.5 truncate text-[11px] font-semibold', subtitleClass)}>
+            {subtitle}
+          </p>
+        ) : null}
       </div>
-      <div className="h-4 w-12 bg-slate-100 rounded-full" />
     </div>
   );
 }
 
-// ── Column for Job Requests ───────────────────────────────────────────
-function JobRequestsColumn({ rows, loading }) {
+function ActivityTablePanel({
+  title,
+  icon: Icon,
+  iconClass,
+  iconBg,
+  topBorder,
+  viewAllHref,
+  rows,
+  columns,
+  loading,
+  empty,
+}) {
+  const navigate = useNavigate();
+
   return (
-    <ActivityColumn
+    <div
+      className={clsx(
+        'overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.018)] border-t-[4px]',
+        topBorder,
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={clsx('flex h-8 w-8 items-center justify-center rounded-lg border shadow-[0_1px_2px_rgba(0,0,0,0.01)]', iconBg)}>
+            <Icon size={15} strokeWidth={2} className={iconClass} />
+          </div>
+          <h3 className="truncate text-sm font-bold tracking-tight text-ink font-sans">{title}</h3>
+        </div>
+        <Link
+          to={viewAllHref}
+          className="group/link flex items-center gap-0.5 text-[11px] font-bold text-accent transition-all hover:text-accent-hover font-sans"
+        >
+          View All
+          <ChevronRight size={12} className="transition-transform duration-200 group-hover/link:translate-x-0.5" />
+        </Link>
+      </div>
+
+      <div className="overflow-x-auto border-t border-slate-100">
+        <table className="min-w-[860px] w-full table-fixed text-left font-sans">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/80">
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className={clsx(
+                    'px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400',
+                    column.headerClassName,
+                  )}
+                >
+                  {column.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <SkeletonRows columns={columns} />
+            ) : empty ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-ink-soft/40">
+                    <Icon size={28} className="opacity-20" />
+                    <p className="text-xs font-semibold">No recent activity</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, rowIndex) => (
+                <tr
+                  key={row.key}
+                  tabIndex={0}
+                  role="button"
+                  onClick={() => navigate(row.href)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      navigate(row.href);
+                    }
+                  }}
+                  className={clsx(
+                    'group cursor-pointer border-b border-slate-100 transition-all duration-200 last:border-b-0 focus:outline-none focus-visible:bg-indigo-50/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-200',
+                    rowIndex % 2 === 0 ? 'bg-white hover:bg-slate-50/80' : 'bg-slate-50/40 hover:bg-slate-100/70',
+                  )}
+                >
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className={clsx(
+                        'px-4 py-3 align-middle text-[12px] font-semibold text-slate-600',
+                        column.className,
+                      )}
+                    >
+                      {column.render(row)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function JobRequestsTable({ rows = [], loading }) {
+  const tableRows = rows.map((jr, index) => ({
+    key: `${jr.jr_no || 'jr'}-${index}`,
+    href: `/job-requests/${encodeURIComponent(jr.jr_no)}`,
+    item: jr.equipment_name || `JR #${jr.jr_no}`,
+    reference: jr.jr_no,
+    lane: jr.lane_code,
+    actor: jr.actor_name,
+    time: relTime(jr.time_at),
+    status: jr.status,
+  }));
+
+  const columns = [
+    {
+      key: 'item',
+      header: 'Request / Equipment',
+      className: 'w-[34%]',
+      render: (row) => (
+        <PrimaryCell
+          dotClass="bg-indigo-500 ring-indigo-100"
+          title={row.item}
+          subtitle={row.lane ? `Lane: ${row.lane}` : null}
+          subtitleClass="text-indigo-600/75"
+        />
+      ),
+    },
+    {
+      key: 'reference',
+      header: 'JR No.',
+      className: 'w-[16%]',
+      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      className: 'w-[15%] text-slate-500',
+      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
+    },
+    {
+      key: 'actor',
+      header: 'Submitted By',
+      className: 'w-[22%]',
+      render: (row) => <DetailValue icon={UserRound} accentClass="text-indigo-600/85 font-bold">{row.actor}</DetailValue>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      className: 'w-[13%]',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+  ];
+
+  return (
+    <ActivityTablePanel
       title="Recent Job Requests"
       icon={FileText}
       iconClass="text-indigo-600"
       iconBg="bg-indigo-50 border-indigo-100/50"
       topBorder="border-t-indigo-500/80"
-      hoverGlow="hover:shadow-indigo-500/5 hover:border-indigo-200/50"
       viewAllHref="/job-requests"
+      rows={tableRows}
+      columns={columns}
       loading={loading}
-      empty={!rows || rows.length === 0}
-    >
-      {(rows || []).map((jr, i) => {
-        const isEven = i % 2 === 0;
-        const rowBg = isEven ? 'bg-slate-50/80 hover:bg-slate-100/60' : 'bg-white hover:bg-slate-50/50';
-        return (
-          <Link
-            key={`${jr.jr_no}-${i}`}
-            to={`/job-requests/${encodeURIComponent(jr.jr_no)}`}
-            className={clsx(
-              'group flex items-start gap-3.5 py-3 px-3 rounded-lg transition-all duration-200 font-sans border border-transparent hover:border-slate-200/40 shadow-none hover:shadow-sm',
-              rowBg
-            )}
-          >
-            {/* active telemetry timeline dot */}
-            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 ring-4 ring-indigo-100" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-ink leading-snug truncate group-hover:text-indigo-600 transition-colors font-sans">
-                {jr.equipment_name || `JR #${jr.jr_no}`}
-              </p>
-              <p className="text-[10px] font-semibold text-ink-soft/50 mt-1 flex items-center gap-1 font-sans">
-                <Clock size={10} className="shrink-0 opacity-70" />
-                {relTime(jr.time_at)}
-                {jr.actor_name ? (
-                  <span className="truncate text-indigo-600/80 font-bold"> · {jr.actor_name}</span>
-                ) : null}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <StatusBadge status={jr.status} />
-            </div>
-          </Link>
-        );
-      })}
-    </ActivityColumn>
+      empty={tableRows.length === 0}
+    />
   );
 }
 
-// ── Column for Job Cards ──────────────────────────────────────────────
-function JobCardsColumn({ rows, loading }) {
+function JobCardsTable({ rows = [], loading }) {
+  const tableRows = rows.map((jc, index) => ({
+    key: `${jc.jc_id || jc.jc_no || 'jc'}-${index}`,
+    href: `/job-cards/${encodeURIComponent(jc.jc_id || jc.jc_no)}`,
+    item: jc.equipment_name || `JC #${jc.jc_no}`,
+    reference: jc.jc_no || jc.jc_id,
+    lane: jc.lane_code,
+    engineer: jc.engineer_name,
+    time: relTime(jc.time_at),
+    status: jc.status,
+  }));
+
+  const columns = [
+    {
+      key: 'item',
+      header: 'Job Card / Equipment',
+      className: 'w-[34%]',
+      render: (row) => (
+        <PrimaryCell
+          dotClass="bg-blue-500 ring-blue-100"
+          title={row.item}
+          subtitle={row.lane ? `Lane: ${row.lane}` : null}
+          subtitleClass="text-blue-600/75"
+        />
+      ),
+    },
+    {
+      key: 'reference',
+      header: 'JC No.',
+      className: 'w-[16%]',
+      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
+    },
+    {
+      key: 'date',
+      header: 'Updated',
+      className: 'w-[15%] text-slate-500',
+      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
+    },
+    {
+      key: 'engineer',
+      header: 'Engineer',
+      className: 'w-[22%]',
+      render: (row) => <DetailValue icon={UserRound} accentClass="text-blue-600/85 font-bold">{row.engineer}</DetailValue>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      className: 'w-[13%]',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+  ];
+
   return (
-    <ActivityColumn
+    <ActivityTablePanel
       title="Recent Job Card Updates"
       icon={ClipboardList}
       iconClass="text-blue-600"
       iconBg="bg-blue-50 border-blue-100/50"
       topBorder="border-t-blue-500/80"
-      hoverGlow="hover:shadow-blue-500/5 hover:border-blue-200/50"
       viewAllHref="/job-cards"
+      rows={tableRows}
+      columns={columns}
       loading={loading}
-      empty={!rows || rows.length === 0}
-    >
-      {(rows || []).map((jc, i) => {
-        const isEven = i % 2 === 0;
-        const rowBg = isEven ? 'bg-slate-50/80 hover:bg-slate-100/60' : 'bg-white hover:bg-slate-50/50';
-        return (
-          <Link
-            key={`${jc.jc_id}-${i}`}
-            to={`/job-cards/${encodeURIComponent(jc.jc_id || jc.jc_no)}`}
-            className={clsx(
-              'group flex items-start gap-3.5 py-3 px-3 rounded-lg transition-all duration-200 font-sans border border-transparent hover:border-slate-200/40 shadow-none hover:shadow-sm',
-              rowBg
-            )}
-          >
-            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ring-4 ring-blue-100" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-ink leading-snug truncate group-hover:text-blue-600 transition-colors font-sans">
-                {jc.equipment_name || `JC #${jc.jc_no}`}
-              </p>
-              <p className="text-[10px] font-semibold text-ink-soft/50 mt-1 flex items-center gap-1 font-sans">
-                <Clock size={10} className="shrink-0 opacity-70" />
-                {relTime(jc.time_at)}
-                {jc.engineer_name ? (
-                  <span className="truncate text-blue-600/80 font-bold"> · {jc.engineer_name}</span>
-                ) : null}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <StatusBadge status={jc.status} />
-            </div>
-          </Link>
-        );
-      })}
-    </ActivityColumn>
+      empty={tableRows.length === 0}
+    />
   );
 }
 
-// ── Column for Equipment ──────────────────────────────────────────────
-function EquipmentColumn({ rows, loading }) {
+function EquipmentTable({ rows = [], loading }) {
+  const tableRows = rows.map((eq, index) => {
+    const equipmentId = eq.equipment_id || `${eq.eqm_type}-${eq.eqm_id}`;
+    return {
+      key: `${eq.eqm_type || 'eq'}-${eq.eqm_id || index}`,
+      href: `/equipment/${encodeURIComponent(equipmentId)}`,
+      item: eq.name,
+      reference: equipmentId,
+      type: eq.type_name,
+      createdBy: eq.created_by,
+      time: relTime(eq.time_at),
+      status: eq.status,
+    };
+  });
+
+  const columns = [
+    {
+      key: 'item',
+      header: 'Equipment',
+      className: 'w-[34%]',
+      render: (row) => (
+        <PrimaryCell
+          dotClass="bg-emerald-500 ring-emerald-100"
+          title={row.item}
+          subtitle={row.type}
+          subtitleClass="text-emerald-600/75"
+        />
+      ),
+    },
+    {
+      key: 'reference',
+      header: 'Equipment ID',
+      className: 'w-[16%]',
+      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
+    },
+    {
+      key: 'date',
+      header: 'Added On',
+      className: 'w-[15%] text-slate-500',
+      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      className: 'w-[22%]',
+      render: (row) => <DetailValue accentClass="text-emerald-600/85 font-bold">{row.type}</DetailValue>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      className: 'w-[13%]',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+  ];
+
   return (
-    <ActivityColumn
+    <ActivityTablePanel
       title="Recent Equipment"
       icon={Box}
       iconClass="text-emerald-600"
       iconBg="bg-emerald-50 border-emerald-100/50"
       topBorder="border-t-emerald-500/80"
-      hoverGlow="hover:shadow-emerald-500/5 hover:border-emerald-200/50"
       viewAllHref="/equipment"
+      rows={tableRows}
+      columns={columns}
       loading={loading}
-      empty={!rows || rows.length === 0}
-    >
-      {(rows || []).map((eq, i) => {
-        const isEven = i % 2 === 0;
-        const rowBg = isEven ? 'bg-slate-50/80 hover:bg-slate-100/60' : 'bg-white hover:bg-slate-50/50';
-        const equipmentId = eq.equipment_id || `${eq.eqm_type}-${eq.eqm_id}`;
-        return (
-          <Link
-            key={`${eq.eqm_type}-${eq.eqm_id}-${i}`}
-            to={`/equipment/${encodeURIComponent(equipmentId)}`}
-            className={clsx(
-              'group flex items-start gap-3.5 py-3 px-3 rounded-lg transition-all duration-200 font-sans border border-transparent hover:border-slate-200/40 shadow-none hover:shadow-sm',
-              rowBg
-            )}
-          >
-            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 ring-4 ring-emerald-100" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-ink leading-snug truncate group-hover:text-emerald-600 transition-colors font-sans">
-                {eq.name}
-              </p>
-              <p className="text-[10px] font-semibold text-ink-soft/50 mt-1 flex items-center gap-1 font-sans">
-                <Clock size={10} className="shrink-0 opacity-70" />
-                {relTime(eq.time_at)}
-                {eq.type_name ? (
-                  <span className="truncate text-emerald-600/80 font-bold"> · {eq.type_name}</span>
-                ) : null}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <StatusBadge status={eq.status} />
-            </div>
-          </Link>
-        );
-      })}
-    </ActivityColumn>
+      empty={tableRows.length === 0}
+    />
   );
 }
 
-// ── Generic column wrapper ────────────────────────────────────────────
-function ActivityColumn({ title, icon: Icon, iconClass, iconBg, topBorder, hoverGlow, viewAllHref, loading, empty, children }) {
-  return (
-    <div className={clsx(
-      'bg-white rounded-2xl border border-slate-200/50 p-5 flex flex-col min-h-[320px] border-t-[4px] shadow-[0_2px_8px_rgba(15,23,42,0.015)] hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5',
-      topBorder,
-      hoverGlow
-    )}>
-      {/* column header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className={clsx('h-8 w-8 rounded-lg flex items-center justify-center border shadow-[0_1px_2px_rgba(0,0,0,0.01)]', iconBg)}>
-            <Icon size={15} strokeWidth={2} className={iconClass} />
-          </div>
-          <h3 className="text-sm font-bold text-ink tracking-tight font-sans">{title}</h3>
-        </div>
-        <Link
-          to={viewAllHref}
-          className="group/link flex items-center gap-0.5 text-[11px] text-accent hover:text-accent-hover font-bold font-sans transition-all"
-        >
-          View All <ChevronRight size={12} className="transition-transform duration-200 group-hover/link:translate-x-0.5" />
-        </Link>
-      </div>
-
-      {/* divider */}
-      <div className="border-t border-slate-100 mb-2" />
-
-      {/* rows */}
-      <div className="flex-1">
-        {loading ? (
-          <div className="space-y-1">
-            {[0, 1, 2, 3, 4, 5, 6].map((k) => <SkeletonRow key={k} />)}
-          </div>
-        ) : empty ? (
-          <div className="flex flex-col items-center justify-center h-full py-16 text-ink-soft/40 font-sans">
-            <Icon size={28} className="opacity-20 mb-2" />
-            <p className="text-xs font-semibold">No recent activity</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {children}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Public component ──────────────────────────────────────────────────
 export function QuickRecap({ data, loading = false }) {
   const isLoading = loading || data === null;
 
   return (
-    <section aria-label="Quick Recap — Recent Activity" className="font-sans">
-      {/* section heading */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold text-ink font-sans tracking-tight">
+    <section aria-label="Quick Recap - Recent Activity" className="font-sans">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-bold tracking-tight text-ink font-sans">
           Quick Recap
-          <span className="ml-2 text-xs font-semibold text-ink-soft/60 uppercase tracking-wider"> · Recent Activity</span>
+          <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-ink-soft/60">
+            - Recent Activity
+          </span>
         </h2>
       </div>
 
-      {/* 3-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <JobRequestsColumn rows={data?.job_requests} loading={isLoading} />
-        <JobCardsColumn   rows={data?.job_cards}    loading={isLoading} />
-        <EquipmentColumn  rows={data?.equipment}    loading={isLoading} />
+      <div className="space-y-4">
+        <JobRequestsTable rows={data?.job_requests} loading={isLoading} />
+        <JobCardsTable rows={data?.job_cards} loading={isLoading} />
+        <EquipmentTable rows={data?.equipment} loading={isLoading} />
       </div>
     </section>
   );
