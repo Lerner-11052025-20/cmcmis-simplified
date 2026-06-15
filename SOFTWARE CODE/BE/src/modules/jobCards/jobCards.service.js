@@ -127,6 +127,7 @@ function shapeDetail(row) {
       equipment_type: row.equipment_type_name,
       category: row.equipment_category || row.job_category,
       division: row.equipment_division,
+      calibration_frequency: row.equipment_cal_frequency,
       calibration_frequency_months: row.equipment_cal_frequency,
       last_calibration_date: ymd(row.equipment_last_calibration_date),
     },

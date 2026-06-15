@@ -30,6 +30,13 @@ function frequencyText(value) {
   return `${value} month${String(value) === '1' ? '' : 's'}`;
 }
 
+function calibrationFrequencyText(equipment) {
+  if (equipment?.calibration_frequency != null && equipment.calibration_frequency !== '') {
+    return equipment.calibration_frequency;
+  }
+  return frequencyText(equipment?.calibration_frequency_months);
+}
+
 function StatusBadge({ children, tone = 'accent' }) {
   const cls = tone === 'green'
     ? 'bg-emerald-100 text-emerald-700'
@@ -118,7 +125,7 @@ export function EquipmentDetailsTab({ jc }) {
         <InfoItem label="Equipment Type" value={e.equipment_type || e.type} />
         <InfoItem label="Category" value={categoryLabel(e.category)} />
         <InfoItem label="Division" value={e.division || jc.division?.name || jc.division?.code} />
-        <InfoItem label="Calibration Frequency" value={frequencyText(e.calibration_frequency_months)} />
+        <InfoItem label="Calibration Frequency" value={calibrationFrequencyText(e)} />
         <InfoItem label="Last Calibration Date" value={e.last_calibration_date} />
       </div>
     </DetailCard>
