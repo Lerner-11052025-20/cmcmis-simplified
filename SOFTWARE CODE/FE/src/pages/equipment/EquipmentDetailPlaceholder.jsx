@@ -8,6 +8,8 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
+  Clock,
   Clipboard,
   CreditCard,
   FileText,
@@ -50,6 +52,53 @@ function display(value, fallback = '-') {
 
 function formatDate(value, fallback = '-') {
   return formatIstDate(value, fallback);
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '-';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function formatTextStatus(value, fallback = 'Not recorded') {
+  if (!value) return fallback;
+  return String(value)
+    .replace(/[|_]+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatRepairText(value) {
+  if (value === null || value === undefined || value === '') return 'No data recorded.';
+  return String(value)
+    .replace(/\s*\|\s*/g, ', ')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function repairOutcome(row) {
+  const raw = String(row?.repair_status || row?.status || '').toUpperCase();
+  if (raw.includes('PARTIAL') || raw.includes('LIMITED') || raw.includes('NOT_REPAIRABLE')) {
+    return { label: 'Partial', className: 'bg-amber-50 text-amber-700 ring-amber-100' };
+  }
+  if (raw.includes('RESTORED') || raw.includes('REPAIRED') || raw.includes('COMPLETED') || raw.includes('VALID')) {
+    return { label: 'Fully Restored', className: 'bg-emerald-50 text-emerald-700 ring-emerald-100' };
+  }
+  return { label: formatTextStatus(row?.repair_status || row?.status, 'Pending'), className: 'bg-slate-100 text-slate-600 ring-slate-200' };
+}
+
+function daysBetween(start, end) {
+  if (!start || !end) return null;
+  const a = parseDateOnlyInIst(start);
+  const b = parseDateOnlyInIst(end);
+  if (!a || !b) return null;
+  return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86_400_000));
 }
 
 function daysUntil(value) {
@@ -132,6 +181,158 @@ function Panel({ title, subtitle, icon: Icon, children }) {
   );
 }
 
+function TextBlock({ title, text, tone = 'slate' }) {
+  const tones = {
+    rose: 'border-rose-100 bg-rose-50/70',
+    emerald: 'border-emerald-100 bg-emerald-50/70',
+    amber: 'border-amber-100 bg-amber-50/70',
+    orange: 'border-orange-100 bg-orange-50/70',
+    slate: 'border-slate-200 bg-slate-50',
+  };
+  return (
+    <div>
+      <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{title}</h4>
+      <div className={`mt-2 min-h-[88px] rounded-2xl border p-4 text-base leading-7 text-slate-700 [overflow-wrap:anywhere] ${tones[tone] || tones.slate}`}>
+        {formatRepairText(text)}
+      </div>
+    </div>
+  );
+}
+
+function RepairHistorySection({ rows, isFpeEquipment }) {
+  const items = Array.isArray(rows) ? rows : [];
+  const hasHistory = items.length > 0;
+  const [expandedId, setExpandedId] = useState(null);
+
+  useEffect(() => {
+    if (!items.length) {
+      setExpandedId(null);
+      return;
+    }
+    const firstId = items[0].section_job_no || items[0].jc_no || items[0].jr_no || 'repair-0';
+    setExpandedId((current) => (current && items.some((row, idx) => (row.section_job_no || row.jc_no || row.jr_no || `repair-${idx}`) === current) ? current : firstId));
+  }, [items]);
+
+  return (
+    <Panel title="Repair History" subtitle="F&PE repair job-card records linked to this equipment." icon={Wrench}>
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${hasHistory ? 'bg-orange-50 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
+          {items.length} record{items.length === 1 ? '' : 's'}
+        </span>
+        {!hasHistory ? (
+          <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700 ring-1 ring-amber-100">
+            No history
+          </span>
+        ) : null}
+        {!isFpeEquipment ? (
+          <span className="inline-flex rounded-full bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-500 ring-1 ring-slate-200">
+            Not F&PE equipment
+          </span>
+        ) : null}
+      </div>
+
+      {items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+          <Wrench className="mx-auto text-slate-300" size={34} strokeWidth={1.7} />
+          <p className="mt-3 text-base font-semibold text-slate-600">No F&PE repair history found</p>
+          <p className="mt-1 text-sm text-slate-500">Completed and in-progress F&PE repair job cards for this equipment will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {items.map((row, idx) => {
+            const downtime = daysBetween(row.received_date || row.reported_date, row.completed_date);
+            const itemId = row.section_job_no || row.jc_no || row.jr_no || `repair-${idx}`;
+            const isOpen = expandedId === itemId;
+            const outcome = repairOutcome(row);
+            return (
+              <article key={itemId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="flex flex-col gap-5 border-b border-slate-200 bg-slate-50/60 p-5 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="flex min-w-0 items-start gap-4">
+                    <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-base font-semibold text-orange-700">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {row.section_job_no ? (
+                          <Link to={`/job-cards/${encodeURIComponent(row.section_job_no)}`} className="text-lg font-semibold text-blue-600 hover:text-blue-700">
+                            {row.jr_no ? `JR-${String(row.jr_no).padStart(4, '0')}` : row.section_job_no}
+                          </Link>
+                        ) : (
+                          <span className="text-lg font-semibold text-slate-700">
+                            {row.jr_no ? `JR-${String(row.jr_no).padStart(4, '0')}` : display(row.jc_no, 'Repair job')}
+                          </span>
+                        )}
+                        <span className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${outcome.className}`}>
+                          {outcome.label}
+                        </span>
+                        {row.fault_category ? (
+                          <span className="max-w-full rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700 [overflow-wrap:anywhere]">
+                            {formatTextStatus(row.fault_category)}
+                          </span>
+                        ) : null}
+                        <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 ring-1 ring-slate-200">
+                          {display(row.warranty_status, 'Warranty not recorded')}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                        <span className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">Reported: {formatDate(row.reported_date)}</span>
+                        <span className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">Received: {formatDate(row.received_date)}</span>
+                        <span className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">Started: {formatDate(row.started_date)}</span>
+                        <span className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">Completed: {formatDate(row.completed_date)}</span>
+                        {downtime !== null ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-orange-700 ring-1 ring-orange-100 sm:col-span-2 lg:col-span-4">
+                            <Clock size={14} strokeWidth={2} />
+                            Downtime: <span className="font-semibold text-orange-600">{downtime} days</span>
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm xl:min-w-[180px] xl:text-right">
+                    <p className="text-sm font-medium text-slate-500">Repair Cost</p>
+                    <p className="text-lg font-semibold text-slate-950">{formatCurrency(row.repair_cost)}</p>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isOpen ? null : itemId)}
+                      aria-expanded={isOpen}
+                      className="mt-2 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:text-sky-700"
+                    >
+                      {isOpen ? 'Hide details' : 'Show details'}
+                      <ChevronDown className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} size={15} strokeWidth={2.2} />
+                    </button>
+                  </div>
+                </div>
+
+                {isOpen ? <div className="grid min-w-0 gap-6 p-5 lg:grid-cols-2">
+                  <div className="space-y-5">
+                    <TextBlock title="Fault Description" text={row.fault_description} tone="rose" />
+                    <TextBlock title="Fault Analysis" text={row.fault_analysis} tone="amber" />
+                    <TextBlock title="Root Cause" text={row.root_cause || row.remarks} tone="orange" />
+                  </div>
+                  <div className="space-y-5">
+                    <TextBlock title="Action Taken" text={row.action_taken} tone="emerald" />
+                    <TextBlock title="Spare Parts Used" text={row.spare_parts_used} tone="slate" />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Reported By</p>
+                        <p className="mt-1 text-base font-semibold text-slate-950">{display(row.reported_by)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Repaired By</p>
+                        <p className="mt-1 text-base font-semibold text-slate-950">{display(row.repaired_by)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div> : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export function EquipmentDetailPlaceholder() {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -171,6 +372,8 @@ export function EquipmentDetailPlaceholder() {
       model: data.model_no || data.mfg_model_name || '-',
       type: data.type_name || data.eqm_type || '-',
       accessories: Array.isArray(data.accessories) ? data.accessories : [],
+      fpeRepairHistory: Array.isArray(data.history?.fpe_repairs) ? data.history.fpe_repairs : [],
+      isFpeEquipment: String(data.category || '').replace(/&/g, '').toUpperCase() === 'FPE',
       locationParts: String(data.location_name || '').split('-').map((part) => part.trim()).filter(Boolean),
     };
   }, [data]);
@@ -330,6 +533,8 @@ export function EquipmentDetailPlaceholder() {
                   <FieldTile icon={History} label="Last Event Code" value={data.status} mono />
                 </div>
               </Panel>
+
+              <RepairHistorySection rows={summary.fpeRepairHistory} isFpeEquipment={summary.isFpeEquipment} />
 
               <Panel title="Operational Quick Actions" subtitle="Jump into connected equipment workflows." icon={Activity}>
                 <div className="grid gap-3 md:grid-cols-2">

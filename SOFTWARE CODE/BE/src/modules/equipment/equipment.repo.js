@@ -597,6 +597,72 @@ async function getEquipmentAccessories(eqmType, eqmId) {
   return rows;
 }
 
+async function getFpeRepairHistory(eqmType, eqmId) {
+  const [rows] = await pool.query(
+    `SELECT
+       jc.JM_SectionJobNo AS section_job_no,
+       jc.JM_JobCardNO AS jc_no,
+       jc.JM_PARENT_JR_NO AS jr_no,
+       jc.JM_JCRecdDate AS received_date,
+       jc.JM_JobEndDate AS completed_at,
+       jc.JM_CREATED_ON AS created_at,
+       jc.JM_MVP_STATUS AS status,
+       jc.repair_job_received_date,
+       jc.repair_job_start_planned_date,
+       jc.repair_job_complete_date,
+       jc.repair_type,
+       jc.repair_status,
+       jc.repair_fault_category,
+       jc.repair_faulty_section,
+       jc.repair_fault_description,
+       jc.repair_action_taken_description,
+       jc.repair_fault_analysis_description,
+       jc.repair_fault_analysis_action_taken,
+       jc.repair_fault_analysis_sections,
+       jc.repair_fault_analysis_category,
+       jc.repair_not_repairable_reason,
+       jc.repair_remarks,
+       jc.repair_attended_by_employee_id,
+       emp_att.EMM_NAME AS repair_attended_by_name,
+       jr.JR_JOBREQUESTNO AS job_request_no,
+       jr.JR_JOBREQUESTDATE AS reported_date,
+       jr.JR_SUBMITTEDBYID AS reported_by_employee_id,
+       emp_req.EMM_NAME AS reported_by_name,
+       COALESCE(sp.spare_parts_used, '') AS spare_parts_used,
+       sp.total_spare_cost
+     FROM cmms_jobcard_mst jc
+     LEFT JOIN cmms_jobrequest_mst jr
+            ON jr.JR_SECTIONJOB_NO = jc.JM_SectionJobNo
+            OR jr.JR_JOBREQUESTNO = jc.JM_PARENT_JR_NO
+     LEFT JOIN cmms_emp_mst emp_req ON emp_req.EMM_ID = jr.JR_SUBMITTEDBYID
+     LEFT JOIN cmms_emp_mst emp_att ON emp_att.EMM_ID = jc.repair_attended_by_employee_id
+     LEFT JOIN (
+       SELECT
+         jc_section_no,
+         GROUP_CONCAT(
+           NULLIF(
+             TRIM(CONCAT_WS(' ', part_description, part_no, CASE WHEN quantity IS NULL THEN NULL ELSE CONCAT('x', quantity) END)),
+             ''
+           )
+           ORDER BY sr_no ASC, id ASC
+           SEPARATOR ', '
+         ) AS spare_parts_used,
+         SUM(cost) AS total_spare_cost
+       FROM jc_spares_used
+       GROUP BY jc_section_no
+     ) sp ON sp.jc_section_no = jc.JM_SectionJobNo
+     WHERE jc.JM_EQM_TYPE = ?
+       AND jc.JM_EQM_ID = ?
+       AND jc.JM_JOB_CATEGORY = 'FPE'
+       AND jc.JM_JOB_TYPE = 'REPAIR'
+     ORDER BY COALESCE(jc.repair_job_complete_date, jc.JM_JobEndDate, jc.JM_CREATED_ON) DESC,
+              jc.JM_JobCardNO DESC
+     LIMIT 20`,
+    [eqmType, eqmId],
+  );
+  return rows;
+}
+
 async function getEquipmentForExport(startId, endId) {
   const [rows] = await pool.query(
     `SELECT
@@ -639,6 +705,7 @@ module.exports = {
   deleteEquipmentAccessories,
   deleteEquipment,
   getEquipmentAccessories,
+  getFpeRepairHistory,
   // Phase 15 addition:
   bulkMarkCalibrationDone,
   verifyEquipment,

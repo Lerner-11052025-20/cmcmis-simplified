@@ -108,7 +108,10 @@ async function getEquipmentDetail(id) {
   const row = await repo.getEquipmentByCompositeId(eqmType, eqmId);
   if (!row) throw errors.notFound('Equipment not found');
   
-  const accessories = await repo.getEquipmentAccessories(eqmType, eqmId);
+  const [accessories, fpeRepairHistory] = await Promise.all([
+    repo.getEquipmentAccessories(eqmType, eqmId),
+    repo.getFpeRepairHistory(eqmType, eqmId),
+  ]);
   
   return {
     equipment_id: `${row.eqm_type}-${row.eqm_id}`,
@@ -124,7 +127,43 @@ async function getEquipmentDetail(id) {
       calibration_required: a.calibration_required,
       remarks: a.remarks,
     })),
+    history: {
+      fpe_repairs: fpeRepairHistory.map((r) => {
+        const reportedDate = r.reported_date || r.created_at;
+        const receivedDate = r.repair_job_received_date || r.received_date;
+        const completedDate = r.repair_job_complete_date || r.completed_at;
+        return {
+          section_job_no: r.section_job_no,
+          jc_no: r.jc_no,
+          jr_no: r.job_request_no || r.jr_no,
+          status: r.status,
+          repair_status: r.repair_status,
+          warranty_status: String(r.repair_type || '').toUpperCase() === 'WARRANTY'
+            ? 'Under Warranty'
+            : 'Out of Warranty',
+          fault_category: r.repair_fault_category || r.repair_fault_analysis_category,
+          faulty_section: r.repair_faulty_section,
+          reported_date: ymd(reportedDate),
+          received_date: ymd(receivedDate),
+          started_date: ymd(r.repair_job_start_planned_date),
+          completed_date: ymd(completedDate),
+          fault_description: r.repair_fault_description,
+          action_taken: r.repair_action_taken_description || r.repair_fault_analysis_action_taken,
+          fault_analysis: r.repair_fault_analysis_description,
+          root_cause: r.repair_fault_analysis_sections || r.repair_fault_analysis_category || r.repair_not_repairable_reason,
+          spare_parts_used: r.spare_parts_used,
+          repair_cost: r.total_spare_cost == null ? null : Number(r.total_spare_cost),
+          reported_by: r.reported_by_name || r.reported_by_employee_id,
+          repaired_by: r.repair_attended_by_name || r.repair_attended_by_employee_id,
+          remarks: r.repair_remarks,
+        };
+      }),
+    },
   };
+}
+
+function ymd(value) {
+  return value ? dayjs(value).format('YYYY-MM-DD') : null;
 }
 
 // ────────────────────────────────────────────────────────────────────────
