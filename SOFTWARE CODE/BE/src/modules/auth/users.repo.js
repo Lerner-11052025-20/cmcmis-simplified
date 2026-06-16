@@ -168,10 +168,32 @@ async function recordSuccessfulLogin(userId, ipAddress) {
   );
 }
 
+/**
+ * Replace a user's password hash and invalidate existing access tokens.
+ *
+ * @param {number} userId
+ * @param {string} passwordHash
+ * @param {string} actorEmployeeId
+ */
+async function updatePasswordHash(userId, passwordHash, actorEmployeeId) {
+  await pool.query(
+    `UPDATE users
+        SET password_hash        = ?,
+            password_hash_set_at = NOW(6),
+            failed_login_count   = 0,
+            token_version        = token_version + 1,
+            updated_at           = NOW(6),
+            updated_by           = ?
+      WHERE user_id = ?`,
+    [passwordHash, actorEmployeeId, userId],
+  );
+}
+
 module.exports = {
   findByEmployeeId,
   findTokenVersionByUserId,
   loadRoleAndPermissions,
   incrementFailedLogin,
   recordSuccessfulLogin,
+  updatePasswordHash,
 };

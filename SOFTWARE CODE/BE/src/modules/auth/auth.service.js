@@ -262,6 +262,19 @@ async function loginSsoByEmployeeId({ employeeId, ipAddress, userAgent }) {
   return { accessToken, refreshToken, user: accessPayload };
 }
 
+async function resetPassword({ employeeId, newPassword }) {
+  const user = await usersRepo.findByEmployeeId(employeeId);
+  if (!user || !user.is_active || user.is_locked) {
+    throw errors.notFound('Active user account not found for this Employee ID');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await usersRepo.updatePasswordHash(user.user_id, passwordHash, employeeId);
+  await refreshRepo.revokeAllForUser(user.user_id, 'ADMIN_REVOKE');
+
+  return { employeeId: user.employee_id };
+}
+
 // ────────────────────────────────────────────────────────────────────────
 //  refresh  —  with rotation + theft detection
 // ────────────────────────────────────────────────────────────────────────
@@ -416,4 +429,4 @@ async function logout({ rawRefreshToken, employeeId, ipAddress, userAgent }) {
   }
 }
 
-module.exports = { login, loginSsoByEmployeeId, refresh, logout };
+module.exports = { login, loginSsoByEmployeeId, resetPassword, refresh, logout };

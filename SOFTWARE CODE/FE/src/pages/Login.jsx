@@ -32,7 +32,9 @@ import {
   Eye, 
   EyeOff, 
   ShieldAlert,
-  X
+  X,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 
 import { Button } from '../components/ui/Button.jsx';
@@ -41,12 +43,31 @@ import { FormField } from '../components/ui/FormField.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
 import { Spinner } from '../components/ui/Spinner.jsx';
 import { useAuth } from '../lib/auth-context.jsx';
+import { api } from '../lib/api-client.js';
 import { loginSchema } from '../lib/schemas/loginSchema.js';
 import isroLogo from '../assets/isro-logo.svg';
 
 // NOTE — authorship credit is rendered globally by the watchdog (loaded via
 // the side-effect import in src/main.jsx). It paints itself in the
 // bottom-right corner and is self-healing. No inline credit on this page.
+
+const PASSWORD_RULES = [
+  { key: 'upper', label: 'Capital letter', test: (value) => /[A-Z]/.test(value) },
+  { key: 'lower', label: 'Small letter', test: (value) => /[a-z]/.test(value) },
+  { key: 'number', label: 'Number', test: (value) => /[0-9]/.test(value) },
+  { key: 'special', label: 'Special character', test: (value) => /[^A-Za-z0-9]/.test(value) },
+];
+
+function getPasswordStrength(password) {
+  const ruleScore = PASSWORD_RULES.filter((rule) => rule.test(password)).length;
+  const lengthScore = password.length >= 12 ? 2 : password.length >= 8 ? 1 : 0;
+  const score = Math.min(5, ruleScore + lengthScore);
+
+  if (score <= 1) return { label: 'Weak', width: '20%', bar: 'bg-red-500', text: 'text-red-600' };
+  if (score <= 3) return { label: 'Fair', width: '45%', bar: 'bg-amber-500', text: 'text-amber-600' };
+  if (score === 4) return { label: 'Good', width: '70%', bar: 'bg-sky-500', text: 'text-sky-600' };
+  return { label: 'Strong', width: '100%', bar: 'bg-emerald-500', text: 'text-emerald-600' };
+}
 
 export function Login() {
   const { login, ssoEmployeeLogin, user, loading } = useAuth();
@@ -62,6 +83,15 @@ export function Login() {
   const [ssoEmployeeId, setSsoEmployeeId] = useState('');
   const [ssoError, setSsoError] = useState('');
   const [isSsoSubmitting, setIsSsoSubmitting] = useState(false);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [forgotEmployeeId, setForgotEmployeeId] = useState('');
+  const [forgotPassword, setForgotPassword] = useState('');
+  const [forgotConfirm, setForgotConfirm] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showForgotConfirm, setShowForgotConfirm] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
   
   // Track active form submission state to prevent the boot-time useEffect
   // from immediately redirecting when the context user hydrates.
@@ -70,10 +100,25 @@ export function Login() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(loginSchema),
   });
+
+  const forgotRuleStates = PASSWORD_RULES.map((rule) => ({
+    ...rule,
+    passed: rule.test(forgotPassword),
+  }));
+  const forgotStrength = getPasswordStrength(forgotPassword);
+  const forgotPasswordLongEnough = forgotPassword.length >= 8;
+  const forgotPasswordMatches = forgotConfirm.length > 0 && forgotPassword === forgotConfirm;
+  const canSubmitForgot =
+    forgotEmployeeId.trim().length > 0 &&
+    forgotPasswordLongEnough &&
+    forgotRuleStates.every((rule) => rule.passed) &&
+    forgotPasswordMatches &&
+    !isForgotSubmitting;
 
   // ── Already-signed-in redirect ─────────────────────────────────────
   // If a user re-visits /login after a silent refresh succeeded, send
@@ -141,6 +186,53 @@ export function Login() {
       setSsoError(apiMessage);
     } finally {
       setIsSsoSubmitting(false);
+    }
+  }
+
+  function openForgotPassword() {
+    setForgotEmployeeId((getValues('employee_id') || '').trim());
+    setForgotPassword('');
+    setForgotConfirm('');
+    setShowForgotPassword(false);
+    setShowForgotConfirm(false);
+    setForgotError('');
+    setForgotSuccess('');
+    setIsForgotOpen(true);
+  }
+
+  async function onForgotSubmit(event) {
+    event.preventDefault();
+    if (!canSubmitForgot) {
+      setForgotError('Please complete all password requirements before submitting.');
+      return;
+    }
+
+    setForgotError('');
+    setForgotSuccess('');
+    setIsForgotSubmitting(true);
+    try {
+      await api.post('/auth/forgot-password', {
+        employee_id: forgotEmployeeId.trim(),
+        new_password: forgotPassword,
+        confirm_password: forgotConfirm,
+      });
+      setForgotSuccess('Password updated successfully. You can sign in with the new password.');
+      setForgotPassword('');
+      setForgotConfirm('');
+    } catch (err) {
+      const validationDetails = err?.response?.data?.error?.details;
+      const firstValidationMessage = Array.isArray(validationDetails)
+        ? validationDetails[0]?.message
+        : null;
+      const apiMessage =
+        firstValidationMessage ||
+        err?.response?.data?.error?.message ||
+        (err?.response?.status === 429
+          ? 'Too many attempts. Please try again later.'
+          : 'Password reset failed. Please try again.');
+      setForgotError(apiMessage);
+    } finally {
+      setIsForgotSubmitting(false);
     }
   }
 
@@ -343,6 +435,16 @@ export function Login() {
                 </div>
               </FormField>
 
+              <div className="-mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={openForgotPassword}
+                  className="text-xs font-semibold text-accent hover:text-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-sm"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
               {/* Server error banner */}
               {serverError ? (
                 <div
@@ -402,6 +504,217 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {isForgotOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-white/70 bg-white p-5 shadow-2xl animate-fade-in">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 font-sans">Forgot password</h3>
+                <p className="mt-1 text-xs font-medium text-slate-500 font-sans">
+                  Set a new password for your Employee ID.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsForgotOpen(false)}
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title="Close"
+              >
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <form onSubmit={onForgotSubmit} className="mt-5 space-y-4">
+              <FormField label="Employee ID" htmlFor="forgot_employee_id">
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-accent transition-colors">
+                    <User size={18} strokeWidth={1.75} />
+                  </span>
+                  <Input
+                    id="forgot_employee_id"
+                    value={forgotEmployeeId}
+                    onChange={(event) => {
+                      setForgotEmployeeId(event.target.value);
+                      setForgotError('');
+                      setForgotSuccess('');
+                    }}
+                    autoComplete="username"
+                    spellCheck={false}
+                    className="pl-9 pr-3 focus:ring-accent/25 focus:ring-offset-0 focus:border-accent font-sans text-slate-800"
+                  />
+                </div>
+              </FormField>
+
+              <FormField label="New password" htmlFor="forgot_new_password">
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-accent transition-colors">
+                    <Lock size={18} strokeWidth={1.75} />
+                  </span>
+                  <Input
+                    id="forgot_new_password"
+                    type={showForgotPassword ? 'text' : 'password'}
+                    value={forgotPassword}
+                    onChange={(event) => {
+                      setForgotPassword(event.target.value);
+                      setForgotError('');
+                      setForgotSuccess('');
+                    }}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    className="pl-9 pr-9 focus:ring-accent/25 focus:ring-offset-0 focus:border-accent font-sans text-slate-800"
+                    invalid={Boolean(forgotPassword) && !forgotPasswordLongEnough}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(!showForgotPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-800 transition-colors focus:outline-none focus-visible:text-accent"
+                    title={showForgotPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showForgotPassword ? (
+                      <EyeOff size={18} strokeWidth={1.75} />
+                    ) : (
+                      <Eye size={18} strokeWidth={1.75} />
+                    )}
+                  </button>
+                </div>
+              </FormField>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 font-sans">Password strength</span>
+                  <span className={`text-xs font-bold font-sans ${forgotStrength.text}`}>
+                    {forgotStrength.label}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${forgotStrength.bar}`}
+                    style={{ width: forgotPassword ? forgotStrength.width : '0%' }}
+                  />
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {forgotRuleStates.map((rule) => (
+                    <div
+                      key={rule.key}
+                      className={`flex items-center gap-2 text-xs font-medium transition-colors ${
+                        rule.passed ? 'text-emerald-700' : 'text-slate-500'
+                      }`}
+                    >
+                      {rule.passed ? (
+                        <CheckCircle2 size={15} strokeWidth={2} />
+                      ) : (
+                        <Circle size={15} strokeWidth={1.75} />
+                      )}
+                      <span>{rule.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div
+                  className={`mt-2 flex items-center gap-2 text-xs font-medium transition-colors ${
+                    forgotPasswordLongEnough ? 'text-emerald-700' : 'text-slate-500'
+                  }`}
+                >
+                  {forgotPasswordLongEnough ? (
+                    <CheckCircle2 size={15} strokeWidth={2} />
+                  ) : (
+                    <Circle size={15} strokeWidth={1.75} />
+                  )}
+                  <span>At least 8 characters</span>
+                </div>
+              </div>
+
+              <FormField label="Confirm password" htmlFor="forgot_confirm_password">
+                <div className="relative group">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-accent transition-colors">
+                    <Lock size={18} strokeWidth={1.75} />
+                  </span>
+                  <Input
+                    id="forgot_confirm_password"
+                    type={showForgotConfirm ? 'text' : 'password'}
+                    value={forgotConfirm}
+                    onChange={(event) => {
+                      setForgotConfirm(event.target.value);
+                      setForgotError('');
+                      setForgotSuccess('');
+                    }}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    className="pl-9 pr-9 focus:ring-accent/25 focus:ring-offset-0 focus:border-accent font-sans text-slate-800"
+                    invalid={Boolean(forgotConfirm) && !forgotPasswordMatches}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotConfirm(!showForgotConfirm)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-800 transition-colors focus:outline-none focus-visible:text-accent"
+                    title={showForgotConfirm ? 'Hide password' : 'Show password'}
+                  >
+                    {showForgotConfirm ? (
+                      <EyeOff size={18} strokeWidth={1.75} />
+                    ) : (
+                      <Eye size={18} strokeWidth={1.75} />
+                    )}
+                  </button>
+                </div>
+              </FormField>
+
+              {forgotConfirm ? (
+                <div
+                  className={`flex items-center gap-2 text-xs font-semibold ${
+                    forgotPasswordMatches ? 'text-emerald-700' : 'text-danger'
+                  }`}
+                >
+                  {forgotPasswordMatches ? (
+                    <CheckCircle2 size={15} strokeWidth={2} />
+                  ) : (
+                    <ShieldAlert size={15} strokeWidth={1.75} />
+                  )}
+                  <span>{forgotPasswordMatches ? 'Passwords match' : 'Passwords do not match'}</span>
+                </div>
+              ) : null}
+
+              {forgotError ? (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 rounded-lg bg-danger/10 border border-danger/15 text-danger text-xs px-3.5 py-2.5 animate-fade-in"
+                >
+                  <ShieldAlert size={16} strokeWidth={1.75} className="shrink-0 mt-0.5" />
+                  <span className="leading-normal font-medium font-sans">{forgotError}</span>
+                </div>
+              ) : null}
+
+              {forgotSuccess ? (
+                <div
+                  role="status"
+                  className="flex items-start gap-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3.5 py-2.5 animate-fade-in"
+                >
+                  <CheckCircle2 size={16} strokeWidth={1.75} className="shrink-0 mt-0.5" />
+                  <span className="leading-normal font-medium font-sans">{forgotSuccess}</span>
+                </div>
+              ) : null}
+
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full flex items-center justify-center gap-2 font-sans"
+                disabled={!canSubmitForgot}
+              >
+                {isForgotSubmitting ? (
+                  <>
+                    <Spinner size={14} className="text-white" />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Submit new password</span>
+                    <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {isSsoOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">

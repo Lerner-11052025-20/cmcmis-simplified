@@ -678,36 +678,40 @@ function EquipmentMasterSearchInput({
           if (options.length) setOpen(true);
         }}
         onBlur={handleBlur}
+        className="h-10 font-semibold"
       />
       {open && !disabled ? (
-        <div className="absolute z-20 mt-2 h-56 w-full overflow-y-auto rounded-md border border-border bg-white shadow-lg">
+        <div className="absolute z-30 mt-2 max-h-72 w-[min(680px,calc(100vw-7rem))] overflow-y-auto rounded-md border border-slate-200 bg-white shadow-xl">
           {loading ? (
-            <div className="px-3 py-2 text-sm text-ink-soft">Searching...</div>
+            <div className="px-4 py-3 text-sm text-ink-soft">Searching...</div>
           ) : options.length ? options.map((option) => (
             <button
               key={option.id || `${option.eqm_type}-${option.eqm_id}`}
               type="button"
-              className="block w-full px-3 py-2 text-left hover:bg-accent/10 focus:bg-accent/10 focus:outline-none"
+              className="block w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none"
               onMouseDown={(e) => {
                 e.preventDefault();
                 ignoreBlurRef.current = true;
               }}
               onClick={() => chooseOption(option)}
             >
-              <span className="block text-sm font-semibold text-ink">
-                {equipmentOptionCode(option)} {option.name ? `- ${option.name}` : ''}
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="rounded bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white">
+                  {equipmentOptionCode(option)}
+                </span>
+                <span className="text-sm font-semibold text-slate-900">{option.name || 'Unnamed equipment'}</span>
+                {option.cal_due_date ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    Validity {formatDate(option.cal_due_date)}
+                  </span>
+                ) : null}
               </span>
-              <span className="block text-xs text-ink-soft">
+              <span className="mt-1 block text-xs text-slate-500">
                 {[option.model_no, option.make, option.serial_no].filter(Boolean).join(' | ') || 'Equipment master'}
               </span>
-              {option.cal_due_date ? (
-                <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                  Validity {formatDate(option.cal_due_date)}
-                </span>
-              ) : null}
             </button>
           )) : (
-            <div className="px-3 py-2 text-sm text-ink-soft">No equipment found.</div>
+            <div className="px-4 py-3 text-sm text-ink-soft">No equipment found.</div>
           )}
         </div>
       ) : null}
@@ -811,37 +815,55 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
     }
   }
 
+  const rowCount = rows?.length || 0;
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-ink">Equipments Used for Calibration</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-950">Equipments Used for Calibration</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Select standards from the equipment master. Validity is pulled from the calibration due date.
+          </p>
+        </div>
         <Button variant="primary" size="md" onClick={handleAddRow} disabled={!canWrite}>
           <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
           Add Equipment
         </Button>
       </div>
       <RowError error={error} />
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border border-border">
-          <thead className="bg-base">
-            <tr className="text-left text-ink">
-              <th className="px-3 py-3 font-semibold w-16">Sr. No</th>
-              <th className="px-3 py-3 font-semibold">Equipment ID</th>
-              <th className="px-3 py-3 font-semibold">Equipment Name</th>
-              <th className="px-3 py-3 font-semibold w-24 text-center">Action</th>
+      <div className="overflow-visible rounded-lg border border-slate-200 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="text-sm font-semibold text-slate-700">Calibration standards</div>
+          <div className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+            {rowCount} {rowCount === 1 ? 'item' : 'items'}
+          </div>
+        </div>
+        <div className="overflow-x-auto overflow-y-visible">
+        <table className="w-full min-w-[880px] text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
+              <th className="w-20 px-4 py-3 font-semibold">Sr. No</th>
+              <th className="w-[34%] px-4 py-3 font-semibold">Search Equipment ID</th>
+              <th className="px-4 py-3 font-semibold">Selected Equipment</th>
+              <th className="w-20 px-4 py-3 text-center font-semibold">Action</th>
             </tr>
           </thead>
           <tbody>
             {loading && !rows ? (
-              <tr><td colSpan={4} className="px-3 py-8 text-center text-ink-soft">Loading...</td></tr>
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-ink-soft">Loading...</td></tr>
             ) : !rows || rows.length === 0 ? (
-              <tr><td colSpan={4} className="px-3 py-8 text-center text-ink-soft">No equipment rows yet.</td></tr>
+              <tr><td colSpan={4} className="px-4 py-10 text-center text-ink-soft">No equipment rows yet.</td></tr>
             ) : rows.map((row, idx) => (
-              <tr key={row.id} className="border-t border-border">
-                <td className="px-3 py-3 text-center">{row.sr_no || idx + 1}</td>
-                <td className="px-3 py-2">
+              <tr key={row.id} className="border-b border-slate-100 align-top last:border-b-0">
+                <td className="px-4 py-4 text-center">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                    {row.sr_no || idx + 1}
+                  </span>
+                </td>
+                <td className="px-4 py-4">
                   <EquipmentMasterSearchInput
-                    placeholder="1481"
+                    placeholder="Search ID, name, model, serial..."
                     value={drafts[row.id]?.equipment_id || ''}
                     disabled={!canWrite || busyRow === row.id}
                     jobCategory={jc.job_category}
@@ -854,27 +876,32 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
                     onBlurCommit={(v) => commitField(row.id, 'equipment_id', v)}
                     onSelect={(option) => commitEquipmentSelection(row.id, option)}
                   />
-                  {drafts[row.id]?.cal_due_date ? (
-                    <div className="mt-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      Validity {formatDate(drafts[row.id].cal_due_date)}
+                </td>
+                <td className="px-4 py-4">
+                  <div className="min-h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {drafts[row.id]?.equipment_name || 'Select equipment from master'}
+                      </span>
+                      {drafts[row.id]?.cal_due_date ? (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                          Validity {formatDate(drafts[row.id].cal_due_date)}
+                        </span>
+                      ) : null}
                     </div>
-                  ) : null}
+                    {(drafts[row.id]?.model_no || drafts[row.id]?.make) ? (
+                      <div className="mt-1 text-xs font-medium text-slate-500">
+                        {[drafts[row.id]?.model_no, drafts[row.id]?.make].filter(Boolean).join(' | ')}
+                      </div>
+                    ) : null}
+                  </div>
                 </td>
-                <td className="px-3 py-2">
-                  <Input
-                    placeholder="e.g., Digital Multimeter DMM-5000"
-                    {...tableInputProps({
-                      drafts, setDrafts, rowId: row.id, field: 'equipment_name',
-                      disabled: !canWrite || busyRow === row.id, commitField,
-                    })}
-                  />
-                </td>
-                <td className="px-3 py-2 text-center">
+                <td className="px-4 py-4 text-center">
                   <button
                     type="button"
                     onClick={() => handleDelete(row.id)}
                     disabled={!canWrite || busyRow === row.id}
-                    className="p-2 text-danger hover:bg-danger/10 rounded disabled:opacity-30"
+                    className="rounded-md p-2 text-danger hover:bg-danger/10 disabled:opacity-30"
                     aria-label="Delete equipment row"
                     title="Delete row"
                   >
@@ -885,10 +912,8 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
-      <p className="text-sm text-ink-soft">
-        Add calibrated equipment and tools from the equipment database used during the calibration process
-      </p>
     </div>
   );
 }

@@ -93,6 +93,27 @@ async function postSsoEmployeeLogin(req, res, next) {
   }
 }
 
+// POST /api/v1/auth/forgot-password
+async function postForgotPassword(req, res, next) {
+  try {
+    const { employee_id, new_password } = req.body;
+
+    const result = await service.resetPassword({
+      employeeId: employee_id,
+      newPassword: new_password,
+    });
+
+    return res.json({
+      data: {
+        employeeId: result.employeeId,
+        message: 'Password updated successfully',
+      },
+    });
+  } catch (e) {
+    return next(e);
+  }
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // POST /api/v1/auth/refresh
@@ -163,4 +184,4 @@ async function postLogout(req, res, next) {
   }
 }
 
-module.exports = { postLogin, postSsoEmployeeLogin, postRefresh, postLogout };
+module.exports = { postLogin, postSsoEmployeeLogin, postForgotPassword, postRefresh, postLogout };

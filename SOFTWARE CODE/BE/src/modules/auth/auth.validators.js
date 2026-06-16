@@ -43,6 +43,8 @@ const { z } = require('zod');
 // that an oversized payload can't waste a bcrypt compare cycle.
 const EMP_ID_MAX = 50;
 const PASSWORD_MAX = 256;
+const PASSWORD_MIN = 8;
+const PASSWORD_SPECIAL_RE = /[^A-Za-z0-9]/;
 
 // POST /api/v1/auth/login  — body schema (shape-only, no format)
 const loginSchema = z
@@ -74,6 +76,30 @@ const ssoEmployeeLoginSchema = z
   })
   .strict();
 
+// POST /api/v1/auth/forgot-password
+const forgotPasswordSchema = z
+  .object({
+    employee_id: z
+      .string()
+      .trim()
+      .min(1, 'Employee ID is required')
+      .max(EMP_ID_MAX, `Employee ID must be ${EMP_ID_MAX} characters or fewer`),
+    new_password: z
+      .string()
+      .min(PASSWORD_MIN, `Password must be at least ${PASSWORD_MIN} characters`)
+      .max(PASSWORD_MAX, `Password must be ${PASSWORD_MAX} characters or fewer`)
+      .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must include at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must include at least one number')
+      .regex(PASSWORD_SPECIAL_RE, 'Password must include at least one special character'),
+    confirm_password: z.string().min(1, 'Confirm password is required'),
+  })
+  .strict()
+  .refine((body) => body.new_password === body.confirm_password, {
+    path: ['confirm_password'],
+    message: 'Passwords do not match',
+  });
+
 // POST /api/v1/auth/refresh — body schema (must be empty; refresh comes
 // from the httpOnly cookie + the CSRF header). .strict() means any body
 // payload at all causes a 422.
@@ -83,4 +109,5 @@ module.exports = {
   loginSchema,
   refreshSchema,
   ssoEmployeeLoginSchema,
+  forgotPasswordSchema,
 };
