@@ -60,6 +60,7 @@ const jobTypeEnum    = z.enum(['IN_HOUSE', 'VENDOR']);
 const repairTypeEnum = z.enum(['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED']);
 const awaitingStatusEnum = z.enum([
   'AWAITING_FOR_SPARES','AWAITING_FOR_VENDOR','AWAITING_FOR_CUSTOMER','AWAITING_FOR_INFO','NONE',
+  'AWAITING_SPARES','BER','FULLY_REPAIRED','PARTIALLY_REPAIRED',
 ]);
 const jobStatusDisplayEnum = z.enum([
   'AWAITING_FOR_VENDOR','AWAITING_FOR_SPARES','IN_PROGRESS_NORMAL','HOLD','RESUMED',
@@ -117,6 +118,7 @@ const patchTabSchema = z.object({
   awaiting_status:               awaitingStatusEnum.optional(),
   supplier_name:                 z.string().max(255).optional().or(z.literal('')),
   awaiting_from_date:            isoDateOrEmpty,
+  awaiting_restarting_date:      isoDateOrEmpty,
   awaiting_clear_date:           isoDateOrEmpty,
   attended_by:                   z.string().max(255).optional().or(z.literal('')),
   // Procurement
@@ -178,10 +180,12 @@ const patchTabSchema = z.object({
   repair_faulty_section:           shortTextOrEmpty(120),
   repair_fault_category:           shortTextOrEmpty(120),
   repair_attended_by_employee_id:  shortTextOrEmpty(7),
+  repair_attended_by_employee_ids: looseEmployeeIdList,
   repair_fault_description:        z.string().max(8000).optional().or(z.literal('')),
   repair_action_taken_description: z.string().max(8000).optional().or(z.literal('')),
   repair_sent_to_cal_lab_on:       isoDateOrEmpty,
   repair_equipment_received_from_cal_lab: isoDateOrEmpty,
+  repair_equipment_received_from_cal_lab_flag: shortTextOrEmpty(3),
   repair_job_complete_date:        isoDateOrEmpty,
   repair_status:                   shortTextOrEmpty(80),
   repair_not_repairable_reason:    shortTextOrEmpty(255),

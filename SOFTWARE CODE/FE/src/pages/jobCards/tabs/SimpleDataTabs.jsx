@@ -25,9 +25,10 @@ import { patchJobCardTab } from '../../../lib/api/jobCards.js';
 import { TabSaveBar } from '../components/TabSaveBar.jsx';
 import {
   JOB_TYPE_OPTIONS, REPAIR_TYPE_OPTIONS,
-  AWAITING_STATUS_OPTIONS, JOB_STATUS_DISPLAY_OPTIONS,
+  AWAITING_STATUS_OPTIONS, AWAITING_REPAIR_STATUS_OPTIONS, JOB_STATUS_DISPLAY_OPTIONS,
   JOB_TYPE_LABELS, REPAIR_TYPE_LABELS,
   AWAITING_STATUS_LABELS, JOB_STATUS_DISPLAY_LABELS,
+  REPAIR_STATUS_LABELS,
 } from '../../../lib/schemas/jobCardSchemas.js';
 
 // ── Date-bug fix: ISO-timestamp → YYYY-MM-DD truncation ──
@@ -238,7 +239,7 @@ export function SubmittedReceivedTab(props) {
   // "YYYY-MM-DD" and stores as DATETIME at midnight.
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
         <div>
           <Label htmlFor="esd">Equipment Submitted Date</Label>
           <Input id="esd" type="date" disabled={!props.canWrite}
@@ -339,11 +340,15 @@ export function EquipmentsUsedTab(props) {
 export function AwaitingInformationTab(props) {
   const FIELDS = [
     'awaiting_for', 'awaiting_status', 'supplier_name',
-    'awaiting_from_date', 'awaiting_clear_date', 'attended_by',
+    'awaiting_from_date', 'awaiting_restarting_date', 'awaiting_clear_date', 'attended_by',
     'indent_no', 'indent_date', 'mirv_no', 'mirv_date',
     'po_no', 'po_date', 'procurement_cost',
   ];
   const t = useTabForm({ ...props, fieldNames: FIELDS });
+  const isRepair = props.jc?.work_type === 'REPAIR'
+    || String(props.jc?.workflow_type || '').startsWith('REPAIR');
+  const awaitingOptions = isRepair ? AWAITING_REPAIR_STATUS_OPTIONS : AWAITING_STATUS_OPTIONS;
+  const awaitingLabels = isRepair ? REPAIR_STATUS_LABELS : AWAITING_STATUS_LABELS;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -355,7 +360,7 @@ export function AwaitingInformationTab(props) {
           <Label htmlFor="as">Awaiting Status</Label>
           <Select id="as" disabled={!props.canWrite} {...t.registerField('awaiting_status')}>
             <option value="">— Choose —</option>
-            {AWAITING_STATUS_OPTIONS.map((v) => <option key={v} value={v}>{AWAITING_STATUS_LABELS[v]}</option>)}
+            {awaitingOptions.map((v) => <option key={v} value={v}>{awaitingLabels[v]}</option>)}
           </Select>
         </div>
         <div>
@@ -367,6 +372,10 @@ export function AwaitingInformationTab(props) {
           <Input id="afd" type="date" disabled={!props.canWrite} {...t.registerField('awaiting_from_date')} />
         </div>
         <div>
+          <Label htmlFor="restart_date">Restarting Date</Label>
+          <Input id="restart_date" type="date" disabled={!props.canWrite} {...t.registerField('awaiting_restarting_date')} />
+        </div>
+        <div>
           <Label htmlFor="acd">Awaiting Clear Date</Label>
           <Input id="acd" type="date" disabled={!props.canWrite} {...t.registerField('awaiting_clear_date')} />
         </div>
@@ -376,7 +385,7 @@ export function AwaitingInformationTab(props) {
         </div>
       </div>
 
-      <div className="border-t border-border pt-4">
+      <div className="rounded-lg border border-border bg-slate-50 p-4">
         <h3 className="text-sm font-semibold text-ink mb-3">Procurement Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>

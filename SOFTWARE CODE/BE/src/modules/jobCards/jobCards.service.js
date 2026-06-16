@@ -164,7 +164,17 @@ function shapeDetail(row) {
     workflow_type:        row.workflow_type,
     required_resources:   row.required_resources,
     special_instructions: row.special_instructions,
-    complaint_description: row.complaint_description,
+    complaint_description: row.complaint_description || row.jr_complaint_description,
+    submitter: row.submitted_by_employee_id ? {
+      employee_id: row.submitted_by_employee_id,
+      name:        row.submitted_by_name,
+      designation: row.submitted_by_designation,
+      email:       row.submitted_by_email,
+      lab_phone:   row.submitted_by_lab_phone,
+      room_phone:  row.submitted_by_room_phone,
+    } : null,
+    project_name: row.project_name,
+    subsystem:    row.subsystem,
     /* dates */
     jc_recd_date:           ymd(row.jc_recd_date),
     job_request_received_date: ymd(row.job_request_received_date || row.jr_date),
@@ -182,8 +192,8 @@ function shapeDetail(row) {
     submitted_by:                  row.submitted_by,
     equipment_received_date_actual: iso(row.equipment_received_date_actual),
     received_by:                   row.received_by,
-    instrument_received_date:      ymd(row.instrument_received_date),
-    job_complete_planned_date:     ymd(row.job_complete_planned_date),
+    instrument_received_date:      ymd(row.instrument_received_date || row.inst_recd_date),
+    job_complete_planned_date:     ymd(row.job_complete_planned_date || row.planned_completed_date),
     job_type:                      row.phase9_job_type,          // disambiguated alias
     repair_type:                   row.repair_type,
     job_request_remarks:           row.job_request_remarks,
@@ -192,6 +202,7 @@ function shapeDetail(row) {
     awaiting_status:               row.awaiting_status,
     supplier_name:                 row.supplier_name,
     awaiting_from_date:            ymd(row.awaiting_from_date),
+    awaiting_restarting_date:      ymd(row.awaiting_restarting_date),
     awaiting_clear_date:           ymd(row.awaiting_clear_date),
     attended_by:                   row.attended_by,
     indent_no:                     row.indent_no,
@@ -251,17 +262,23 @@ function shapeDetail(row) {
     cal_adjustment_software:        !!row.cal_adjustment_software,
     /* Dedicated repair workflow */
     repair_accessory_selected:       row.repair_accessory_selected,
-    repair_job_received_date:        ymd(row.repair_job_received_date),
-    repair_job_start_planned_date:   ymd(row.repair_job_start_planned_date),
+    repair_job_received_date:        ymd(row.repair_job_received_date || row.job_request_received_date || row.jr_date || row.jc_recd_date),
+    repair_job_start_planned_date:   ymd(row.repair_job_start_planned_date || row.planned_start_date),
     repair_maintenance_type:         row.repair_maintenance_type,
     repair_faulty_section:           row.repair_faulty_section,
     repair_fault_category:           row.repair_fault_category,
     repair_attended_by_employee_id:  row.repair_attended_by_employee_id,
     repair_attended_by_name:         row.repair_attended_by_name,
+    repair_attended_by_employee_ids: calibratedByIds,
+    repair_attended_by_names:        calibratedByIds.map((employeeId, index) => ({
+      employee_id: employeeId,
+      name: calibratedByNames[index] || employeeId,
+    })),
     repair_fault_description:        row.repair_fault_description,
     repair_action_taken_description: row.repair_action_taken_description,
     repair_sent_to_cal_lab_on:       ymd(row.repair_sent_to_cal_lab_on),
     repair_equipment_received_from_cal_lab: ymd(row.repair_equipment_received_from_cal_lab),
+    repair_equipment_received_from_cal_lab_flag: row.repair_equipment_received_from_cal_lab_flag,
     repair_job_complete_date:        ymd(row.repair_job_complete_date),
     repair_status:                   row.repair_status,
     repair_not_repairable_reason:    row.repair_not_repairable_reason,
@@ -453,9 +470,16 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
     const calibratedByEmployeeIds = Array.isArray(body.calibrated_by_employee_ids)
       ? body.calibrated_by_employee_ids.filter(Boolean)
       : null;
+    const repairAttendedByEmployeeIds = Array.isArray(body.repair_attended_by_employee_ids)
+      ? body.repair_attended_by_employee_ids.filter(Boolean)
+      : null;
     if (calibratedByEmployeeIds) {
       bodyForPatch.calibrated_by_employee_id = calibratedByEmployeeIds[0] || '';
       delete bodyForPatch.calibrated_by_employee_ids;
+    }
+    if (repairAttendedByEmployeeIds) {
+      bodyForPatch.repair_attended_by_employee_id = repairAttendedByEmployeeIds[0] || '';
+      delete bodyForPatch.repair_attended_by_employee_ids;
     }
 
     const updated = await repo.patchTab(conn, sectionJobNo, {
@@ -463,30 +487,35 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
       _updated_by_employee_id: actor.employeeId,
     });
 
-    if (calibratedByEmployeeIds) {
+    const attendedByEmployeeIds = calibratedByEmployeeIds || repairAttendedByEmployeeIds;
+    if (attendedByEmployeeIds) {
       await conn.query(
         `DELETE FROM cmms_jobcard_attendedby_dtl
           WHERE JMA_SECTIONJOBNO = ? AND JMA_ISAWAITING = 0`,
         [sectionJobNo],
       );
-      for (let i = 0; i < calibratedByEmployeeIds.length; i += 1) {
+      for (let i = 0; i < attendedByEmployeeIds.length; i += 1) {
         await conn.query(
           `INSERT INTO cmms_jobcard_attendedby_dtl
              (JMA_SECTIONJOBNO, JMA_USERID, JMA_ISAWAITING, JMA_SRNO)
            VALUES (?, ?, 0, ?)`,
-          [sectionJobNo, calibratedByEmployeeIds[i], i + 1],
+          [sectionJobNo, attendedByEmployeeIds[i], i + 1],
         );
       }
     } else {
       const attendedByEmployeeId = body.calibrated_by_employee_id || body.repair_attended_by_employee_id;
       if (attendedByEmployeeId) {
-      await conn.query(
-        `INSERT INTO cmms_jobcard_attendedby_dtl
-           (JMA_SECTIONJOBNO, JMA_USERID, JMA_ISAWAITING, JMA_SRNO)
-         VALUES (?, ?, 0, 1)
-         ON DUPLICATE KEY UPDATE JMA_SRNO = VALUES(JMA_SRNO)`,
-        [sectionJobNo, attendedByEmployeeId],
-      );
+        await conn.query(
+          `DELETE FROM cmms_jobcard_attendedby_dtl
+            WHERE JMA_SECTIONJOBNO = ? AND JMA_ISAWAITING = 0`,
+          [sectionJobNo],
+        );
+        await conn.query(
+          `INSERT INTO cmms_jobcard_attendedby_dtl
+             (JMA_SECTIONJOBNO, JMA_USERID, JMA_ISAWAITING, JMA_SRNO)
+           VALUES (?, ?, 0, 1)`,
+          [sectionJobNo, attendedByEmployeeId],
+        );
       }
     }
 

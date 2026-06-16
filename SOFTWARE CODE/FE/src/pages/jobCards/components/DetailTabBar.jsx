@@ -48,7 +48,6 @@ export const REPAIR_TABS = [
   { key: 'awaiting', label: 'Awaiting Information' },
   { key: 'spares', label: 'Spares Used Details' },
   { key: 'repair-contract', label: 'Contract / Warranty' },
-  { key: 'repair-fault-analysis', label: 'Fault Analysis' },
   { key: 'mark-complete', label: 'Mark as Complete' },
   { key: 'closure', label: 'Closure' },
 ];

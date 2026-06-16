@@ -57,7 +57,6 @@ import {
 import {
   RepairContractWarrantyTab,
   RepairEquipmentUsedTab,
-  RepairFaultAnalysisTab,
   RepairJobCardDetailsTab,
   RepairMaintenanceDetailsTab,
   RepairPlugInAccessoriesTab,
@@ -142,7 +141,6 @@ export function JobCardDetail() {
         'awaiting',
         'spares',
         'repair-contract',
-        'repair-fault-analysis',
       ]);
       if (canMarkComplete) keys.add('mark-complete');
       if (canVerifyClose) keys.add('closure');
@@ -275,7 +273,6 @@ export function JobCardDetail() {
     case 'repair-maintenance': body = <RepairMaintenanceDetailsTab {...tabProps} />; break;
     case 'repair-equipment-used': body = <RepairEquipmentUsedTab {...tabProps} />; break;
     case 'repair-contract': body = <RepairContractWarrantyTab {...tabProps} />; break;
-    case 'repair-fault-analysis': body = <RepairFaultAnalysisTab {...tabProps} />; break;
     default:                body = <PlugInAccessoriesTab {...tabProps} />;
   }
 
