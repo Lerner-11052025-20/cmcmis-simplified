@@ -10,17 +10,36 @@
 
 const repo = require('./lookups.repo');
 
+// Simple in-memory cache for static lookup metadata (10-minute TTL)
+let cachedDivisions = null;
+let cachedDivisionsTime = 0;
+let cachedProjects = null;
+let cachedProjectsTime = 0;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 async function getDivisions(_req, res, next) {
   try {
+    const now = Date.now();
+    if (cachedDivisions && (now - cachedDivisionsTime < CACHE_TTL_MS)) {
+      return res.json({ data: { items: cachedDivisions, cacheHit: true } });
+    }
     const items = await repo.listDivisions();
-    return res.json({ data: { items } });
+    cachedDivisions = items;
+    cachedDivisionsTime = now;
+    return res.json({ data: { items, cacheHit: false } });
   } catch (e) { return next(e); }
 }
 
 async function getProjects(_req, res, next) {
   try {
+    const now = Date.now();
+    if (cachedProjects && (now - cachedProjectsTime < CACHE_TTL_MS)) {
+      return res.json({ data: { items: cachedProjects, cacheHit: true } });
+    }
     const items = await repo.listProjects();
-    return res.json({ data: { items } });
+    cachedProjects = items;
+    cachedProjectsTime = now;
+    return res.json({ data: { items, cacheHit: false } });
   } catch (e) { return next(e); }
 }
 

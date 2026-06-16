@@ -176,7 +176,19 @@ async function listRequests(params) {
   const offset = (params.page - 1) * params.page_size;
   const [[rows], [countRows]] = await Promise.all([
     pool.query(
-      `SELECT *
+      `SELECT request_id, status, eqm_type, eqm_id, equipment_name,
+              current_division_id, current_division_code, current_division_name,
+              proposed_division_id, proposed_division_code, proposed_division_name,
+              submitted_by_employee_id, submitted_by_name, submitted_by_designation,
+              submitted_by_email, submitted_by_lab_phone, submitted_by_room_phone,
+              submitted_by_egd_name, submitted_by_subsystem,
+              sec_head_employee_id, sec_head_name, sec_head_designation,
+              div_head_employee_id, div_head_name, div_head_designation,
+              group_head_employee_id, group_head_name, group_head_designation,
+              entity_head_employee_id, entity_head_name, entity_head_designation,
+              centre_head_employee_id, centre_head_name, centre_head_designation,
+              reason, review_notes, reviewed_by_employee_id, reviewed_by_role,
+              reviewed_at, created_at, updated_at, raw_payload
          FROM master_data_correction_requests
         ${whereSql}
         ORDER BY created_at DESC, request_id DESC
@@ -195,7 +207,19 @@ async function listRequests(params) {
 
 async function findRequestForUpdate(conn, requestId) {
   const [rows] = await conn.query(
-    `SELECT *
+    `SELECT request_id, status, eqm_type, eqm_id, equipment_name,
+            current_division_id, current_division_code, current_division_name,
+            proposed_division_id, proposed_division_code, proposed_division_name,
+            submitted_by_employee_id, submitted_by_name, submitted_by_designation,
+            submitted_by_email, submitted_by_lab_phone, submitted_by_room_phone,
+            submitted_by_egd_name, submitted_by_subsystem,
+            sec_head_employee_id, sec_head_name, sec_head_designation,
+            div_head_employee_id, div_head_name, div_head_designation,
+            group_head_employee_id, group_head_name, group_head_designation,
+            entity_head_employee_id, entity_head_name, entity_head_designation,
+            centre_head_employee_id, centre_head_name, centre_head_designation,
+            reason, review_notes, reviewed_by_employee_id, reviewed_by_role,
+            reviewed_at, created_at, updated_at, raw_payload
        FROM master_data_correction_requests
       WHERE request_id = ?
       FOR UPDATE`,

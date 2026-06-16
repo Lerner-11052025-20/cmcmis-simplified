@@ -123,7 +123,13 @@ async function listPurchaseOrders(params) {
 
 async function findPurchaseOrderById(id) {
   const [rows] = await pool.query(
-    `SELECT * FROM purchase_orders WHERE id = ? LIMIT 1`, [id],
+    `SELECT id, po_number, vendor_id, vendor_label, po_date, warranty_months,
+            total_cost, status, notes, created_by_employee_id, created_at,
+            updated_by_employee_id, updated_at
+       FROM purchase_orders
+      WHERE id = ?
+      LIMIT 1`,
+    [id],
   );
   return rows[0] || null;
 }
@@ -222,7 +228,10 @@ async function updatePurchaseOrder(conn, id, patch, actorEmployeeId) {
 // to append a line item instead of creating an N-th PO).
 async function findOpenPoForVendor(conn, vendorId, poDate) {
   const [rows] = await conn.query(
-    `SELECT * FROM purchase_orders
+    `SELECT id, po_number, vendor_id, vendor_label, po_date, warranty_months,
+            total_cost, status, notes, created_by_employee_id, created_at,
+            updated_by_employee_id, updated_at
+       FROM purchase_orders
       WHERE vendor_id = ? AND po_date = ? AND status = 'ACTIVE'
       ORDER BY id DESC
       LIMIT 1
@@ -268,14 +277,27 @@ async function listSpareParts(params) {
 
 async function findSparePartById(id) {
   const [rows] = await pool.query(
-    `SELECT * FROM spare_parts WHERE id = ? LIMIT 1`, [id],
+    `SELECT id, part_code, part_name, equipment_ref, vendor_id, vendor_label,
+            stock_qty, min_stock, unit_cost, last_ordered_date, notes,
+            created_at, updated_at
+       FROM spare_parts
+      WHERE id = ?
+      LIMIT 1`,
+    [id],
   );
   return rows[0] || null;
 }
 
 async function findSparePartByIdForUpdate(conn, id) {
   const [rows] = await conn.query(
-    `SELECT * FROM spare_parts WHERE id = ? LIMIT 1 FOR UPDATE`, [id],
+    `SELECT id, part_code, part_name, equipment_ref, vendor_id, vendor_label,
+            stock_qty, min_stock, unit_cost, last_ordered_date, notes,
+            created_at, updated_at
+       FROM spare_parts
+      WHERE id = ?
+      LIMIT 1
+      FOR UPDATE`,
+    [id],
   );
   return rows[0] || null;
 }
