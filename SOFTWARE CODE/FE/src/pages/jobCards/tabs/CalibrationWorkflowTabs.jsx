@@ -10,9 +10,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
+  Calendar,
   CheckCircle2,
   Download,
   FileText,
+  Info,
   Plus,
   Square,
   Trash2,
@@ -604,6 +606,8 @@ function EquipmentMasterSearchInput({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const ignoreBlurRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const justSelectedRef = useRef(false);
 
   useEffect(() => {
     setQuery(value || '');
@@ -615,6 +619,16 @@ function EquipmentMasterSearchInput({
       setLoading(false);
       return undefined;
     }
+
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return undefined;
+    }
+
+    if (!isFocusedRef.current) {
+      return undefined;
+    }
+
     const clean = String(query || '').trim();
     if (clean.length < 1) {
       setOptions([]);
@@ -628,7 +642,9 @@ function EquipmentMasterSearchInput({
       try {
         const items = await searchEquipment(clean, 12, ctrl.signal, jobCategory || null);
         setOptions(Array.isArray(items) ? items : []);
-        setOpen(true);
+        if (isFocusedRef.current) {
+          setOpen(true);
+        }
       } catch (e) {
         if (e?.name !== 'CanceledError' && e?.name !== 'AbortError') setOptions([]);
       } finally {
@@ -644,15 +660,18 @@ function EquipmentMasterSearchInput({
 
   function handleChange(e) {
     const next = e.target.value;
+    isFocusedRef.current = true;
     setQuery(next);
     setOpen(true);
     onTextChange(next);
   }
 
   function handleBlur() {
+    isFocusedRef.current = false;
     window.setTimeout(() => {
       if (ignoreBlurRef.current) {
         ignoreBlurRef.current = false;
+        isFocusedRef.current = true;
         return;
       }
       setOpen(false);
@@ -662,6 +681,7 @@ function EquipmentMasterSearchInput({
 
   async function chooseOption(option) {
     const code = equipmentOptionCode(option);
+    justSelectedRef.current = true;
     setQuery(code);
     setOpen(false);
     await onSelect(option);
@@ -675,6 +695,7 @@ function EquipmentMasterSearchInput({
         placeholder={placeholder}
         onChange={handleChange}
         onFocus={() => {
+          isFocusedRef.current = true;
           if (options.length) setOpen(true);
         }}
         onBlur={handleBlur}
@@ -818,102 +839,192 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
   const rowCount = rows?.length || 0;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Header section */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-5">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">Equipments Used for Calibration</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Select standards from the equipment master. Validity is pulled from the calibration due date.
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Equipments Used for Calibration</h2>
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-500/10">
+              {rowCount} {rowCount === 1 ? 'item' : 'items'}
+            </span>
+          </div>
+          <p className="mt-1.5 text-sm text-slate-500 max-w-2xl leading-relaxed">
+            Select standards from the equipment master. Validity is automatically pulled from the calibration due date.
           </p>
         </div>
-        <Button variant="primary" size="md" onClick={handleAddRow} disabled={!canWrite}>
-          <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+        <Button 
+          variant="primary" 
+          size="md" 
+          onClick={handleAddRow} 
+          disabled={!canWrite}
+          className="shadow-sm active:scale-[0.98] transition-all shrink-0 self-start sm:self-auto"
+        >
+          <Plus size={16} strokeWidth={2.25} aria-hidden="true" className="mr-1.5" />
           Add Equipment
         </Button>
       </div>
+
       <RowError error={error} />
-      <div className="overflow-visible rounded-lg border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="text-sm font-semibold text-slate-700">Calibration standards</div>
-          <div className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-            {rowCount} {rowCount === 1 ? 'item' : 'items'}
+
+      {/* Rows Container */}
+      {loading && !rows ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent mb-3" />
+          <p className="text-sm text-slate-500 font-medium">Loading equipment rows...</p>
+        </div>
+      ) : !rows || rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center">
+          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
+            <Info size={20} strokeWidth={2} />
           </div>
+          <h3 className="text-sm font-semibold text-slate-900">No equipment rows yet</h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm">
+            Add a calibration standard row, then search for reference equipment in the master database.
+          </p>
+          {canWrite && (
+            <Button variant="secondary" size="sm" className="mt-4 shadow-sm" onClick={handleAddRow}>
+              <Plus size={14} className="mr-1.5" />
+              Add Row
+            </Button>
+          )}
         </div>
-        <div className="overflow-x-auto overflow-y-visible">
-        <table className="w-full min-w-[880px] text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-              <th className="w-20 px-4 py-3 font-semibold">Sr. No</th>
-              <th className="w-[34%] px-4 py-3 font-semibold">Search Equipment ID</th>
-              <th className="px-4 py-3 font-semibold">Selected Equipment</th>
-              <th className="w-20 px-4 py-3 text-center font-semibold">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && !rows ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-ink-soft">Loading...</td></tr>
-            ) : !rows || rows.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-ink-soft">No equipment rows yet.</td></tr>
-            ) : rows.map((row, idx) => (
-              <tr key={row.id} className="border-b border-slate-100 align-top last:border-b-0">
-                <td className="px-4 py-4 text-center">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
-                    {row.sr_no || idx + 1}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  <EquipmentMasterSearchInput
-                    placeholder="Search ID, name, model, serial..."
-                    value={drafts[row.id]?.equipment_id || ''}
-                    disabled={!canWrite || busyRow === row.id}
-                    jobCategory={jc.job_category}
-                    onTextChange={(v) => {
-                      setDrafts((p) => ({
-                        ...p,
-                        [row.id]: { ...(p[row.id] || {}), equipment_id: v, _dirty: true },
-                      }));
-                    }}
-                    onBlurCommit={(v) => commitField(row.id, 'equipment_id', v)}
-                    onSelect={(option) => commitEquipmentSelection(row.id, option)}
-                  />
-                </td>
-                <td className="px-4 py-4">
-                  <div className="min-h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">
-                        {drafts[row.id]?.equipment_name || 'Select equipment from master'}
-                      </span>
-                      {drafts[row.id]?.cal_due_date ? (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                          Validity {formatDate(drafts[row.id].cal_due_date)}
-                        </span>
-                      ) : null}
-                    </div>
-                    {(drafts[row.id]?.model_no || drafts[row.id]?.make) ? (
-                      <div className="mt-1 text-xs font-medium text-slate-500">
-                        {[drafts[row.id]?.model_no, drafts[row.id]?.make].filter(Boolean).join(' | ')}
-                      </div>
-                    ) : null}
+      ) : (
+        <div className="space-y-6">
+          {rows.map((row, idx) => {
+            const draft = drafts[row.id] || {};
+            const isRowBusy = busyRow === row.id;
+            const hasSelection = !!draft.equipment_id;
+
+            return (
+              <div 
+                key={row.id} 
+                className={`relative overflow-visible rounded-xl border bg-white shadow-sm transition-all duration-200 ${
+                  isRowBusy ? 'border-indigo-200 ring-2 ring-indigo-50/50 opacity-95' : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {/* Card Header Bar */}
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-3 rounded-t-xl">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                      {row.sr_no || idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Reference Standard
+                    </span>
                   </div>
-                </td>
-                <td className="px-4 py-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(row.id)}
-                    disabled={!canWrite || busyRow === row.id}
-                    className="rounded-md p-2 text-danger hover:bg-danger/10 disabled:opacity-30"
-                    aria-label="Delete equipment row"
-                    title="Delete row"
-                  >
-                    <Trash2 size={18} strokeWidth={1.8} aria-hidden="true" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+                  <div className="flex items-center gap-3">
+                    {isRowBusy && (
+                      <span className="text-xs font-medium text-indigo-600 animate-pulse flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-ping" />
+                        Saving...
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(row.id)}
+                      disabled={!canWrite || isRowBusy}
+                      className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition-colors disabled:opacity-30"
+                      aria-label="Delete equipment row"
+                      title="Delete row"
+                    >
+                      <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card Body Grid */}
+                <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Hand Column: Search Control */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">
+                      Search Equipment ID
+                    </label>
+                    <div className="relative">
+                      <EquipmentMasterSearchInput
+                        placeholder="Search ID, name, model, serial..."
+                        value={draft.equipment_id || ''}
+                        disabled={!canWrite || isRowBusy}
+                        jobCategory={jc.job_category}
+                        onTextChange={(v) => {
+                          setDrafts((p) => ({
+                            ...p,
+                            [row.id]: { ...(p[row.id] || {}), equipment_id: v, _dirty: true },
+                          }));
+                        }}
+                        onBlurCommit={(v) => commitField(row.id, 'equipment_id', v)}
+                        onSelect={(option) => commitEquipmentSelection(row.id, option)}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Search and select an equipment from master to automatically fetch and bind its calibration info.
+                    </p>
+                  </div>
+
+                  {/* Right Hand Column: Selection Details Box */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide">
+                      Selected Equipment Details
+                    </label>
+
+                    {!hasSelection ? (
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/30 px-4 py-5 text-center h-[76px]">
+                        <p className="text-xs font-medium text-slate-400">
+                          No equipment linked. Type an ID or query on the left to select.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 transition-colors hover:bg-slate-50/80">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <span className="inline-block rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] font-bold text-white tracking-wide uppercase">
+                              ID: {draft.equipment_id}
+                            </span>
+                            <h4 className="text-sm font-bold text-slate-800 truncate leading-snug">
+                              {draft.equipment_name || 'Unnamed Equipment'}
+                            </h4>
+                          </div>
+
+                          {/* Validity Status Pill */}
+                          {draft.cal_due_date ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm shrink-0">
+                              <Calendar size={12} className="text-emerald-500" />
+                              Valid till {formatDate(draft.cal_due_date)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 shrink-0">
+                              No Validity Date
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Additional Metadata / Specs */}
+                        {(draft.model_no || draft.make) && (
+                          <div className="mt-3 pt-3 border-t border-slate-200/60 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                            {draft.make && (
+                              <div className="text-slate-600">
+                                <span className="font-medium text-slate-400 mr-1">Make:</span>
+                                <span className="font-semibold text-slate-700">{draft.make}</span>
+                              </div>
+                            )}
+                            {draft.model_no && (
+                              <div className="text-slate-600">
+                                <span className="font-medium text-slate-400 mr-1">Model:</span>
+                                <span className="font-semibold text-slate-700">{draft.model_no}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }
