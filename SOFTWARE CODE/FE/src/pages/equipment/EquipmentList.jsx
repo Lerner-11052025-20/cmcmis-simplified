@@ -260,11 +260,11 @@ export function EquipmentList() {
       { header: 'Manufacturer Name', accessor: 'make' },
       {
         header: 'Category Mapping',
-        accessor: 'category',
+        accessor: 'eqm_type',
         className: 'text-ink font-medium',
         format: (val) => {
-          if (val === 'T&ME') return 'Instrument';
-          if (val === 'F&PE') return 'Equipment';
+          if (val === 'Instrument') return 'T&ME';
+          if (val === 'Equipment') return 'F&PE';
           return val || '—';
         },
       },
