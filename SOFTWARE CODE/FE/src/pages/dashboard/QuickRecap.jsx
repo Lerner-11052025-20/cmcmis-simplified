@@ -97,7 +97,7 @@ function ActivityListPanel({
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-slate-50/20 p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-50/20 p-4 space-y-3">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, idx) => (
