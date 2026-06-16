@@ -66,76 +66,22 @@ function StatusBadge({ status }) {
   );
 }
 
-function SkeletonRows({ columns }) {
-  return Array.from({ length: 5 }).map((_, rowIndex) => (
-    <tr
-      key={rowIndex}
-      className={clsx(
-        'border-b border-slate-100 last:border-b-0',
-        rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50',
-      )}
-    >
-      {columns.map((column, columnIndex) => (
-        <td key={column.key || columnIndex} className="px-4 py-3.5 align-middle">
-          <div
-            className={clsx(
-              'h-3.5 animate-pulse rounded bg-slate-100',
-              columnIndex === 0 ? 'w-52' : 'w-24',
-            )}
-          />
-        </td>
-      ))}
-    </tr>
-  ));
-}
-
-function DetailValue({ icon: Icon, children, strong = false, accentClass }) {
-  return (
-    <span className={clsx('inline-flex min-w-0 items-center gap-1.5', strong && 'font-bold text-ink')}>
-      {Icon ? <Icon size={12} className="shrink-0 text-slate-400" /> : null}
-      <span className={clsx('truncate', accentClass)}>{children || EMPTY_VALUE}</span>
-    </span>
-  );
-}
-
-function PrimaryCell({ dotClass, title, subtitle, subtitleClass }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className={clsx('h-2 w-2 rounded-full ring-4 shrink-0', dotClass)} />
-      <div className="min-w-0">
-        <p className="truncate text-[13px] font-bold leading-5 text-ink transition-colors group-hover:text-accent">
-          {title || EMPTY_VALUE}
-        </p>
-        {subtitle ? (
-          <p className={clsx('mt-0.5 truncate text-[11px] font-semibold', subtitleClass)}>
-            {subtitle}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function ActivityTablePanel({
+function ActivityListPanel({
   title,
   icon: Icon,
   iconClass,
   iconBg,
   viewAllHref,
   rows,
-  columns,
   loading,
   empty,
+  renderRow,
 }) {
   const navigate = useNavigate();
 
   return (
-    <div
-      className={clsx(
-        'overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.018)]',
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.018)] flex flex-col h-[520px]">
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 shrink-0">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className={clsx('flex h-8 w-8 items-center justify-center rounded-lg border shadow-[0_1px_2px_rgba(0,0,0,0.01)]', iconBg)}>
             <Icon size={15} strokeWidth={2} className={iconClass} />
@@ -151,69 +97,49 @@ function ActivityTablePanel({
         </Link>
       </div>
 
-      <div className="overflow-x-auto border-t border-slate-100">
-        <table className="min-w-[860px] w-full table-fixed text-left font-sans">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/80">
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={clsx(
-                    'px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400',
-                    column.headerClassName,
-                  )}
-                >
-                  {column.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows columns={columns} />
-            ) : empty ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <div className="flex flex-col items-center gap-2 text-ink-soft/40">
-                    <Icon size={28} className="opacity-20" />
-                    <p className="text-xs font-semibold">No recent activity</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, rowIndex) => (
-                <tr
-                  key={row.key}
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => navigate(row.href)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      navigate(row.href);
-                    }
-                  }}
-                  className={clsx(
-                    'group cursor-pointer border-b border-slate-100 transition-all duration-200 last:border-b-0 focus:outline-none focus-visible:bg-indigo-50/80 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-200',
-                    rowIndex % 2 === 0 ? 'bg-white hover:bg-slate-50/80' : 'bg-slate-50/40 hover:bg-slate-100/70',
-                  )}
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={clsx(
-                        'px-4 py-3 align-middle text-[12px] font-semibold text-slate-600',
-                        column.className,
-                      )}
-                    >
-                      {column.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="flex-1 overflow-y-auto bg-slate-50/20 p-4 space-y-3">
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="rounded-xl border border-slate-150 bg-white p-4 animate-pulse space-y-3">
+                <div className="h-4 bg-slate-100 rounded w-3/4" />
+                <div className="flex items-center justify-between">
+                  <div className="h-3.5 bg-slate-100 rounded w-1/4" />
+                  <div className="h-5 bg-slate-100 rounded-full w-1/5" />
+                </div>
+                <div className="flex gap-4">
+                  <div className="h-3 bg-slate-100 rounded w-1/3" />
+                  <div className="h-3 bg-slate-100 rounded w-1/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : empty ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-ink-soft/40 py-12">
+            <Icon size={24} className="opacity-25 mb-1 text-slate-400" />
+            <p className="text-xs font-semibold">No recent activity</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((row) => (
+              <div
+                key={row.key}
+                onClick={() => navigate(row.href)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate(row.href);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                className="group text-left w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+              >
+                {renderRow(row)}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -231,57 +157,49 @@ function JobRequestsTable({ rows = [], loading }) {
     status: jr.status,
   }));
 
-  const columns = [
-    {
-      key: 'item',
-      header: 'Request / Equipment',
-      className: 'w-[34%]',
-      render: (row) => (
-        <PrimaryCell
-          dotClass="bg-indigo-500 ring-indigo-100"
-          title={row.item}
-          subtitle={row.lane ? `Lane: ${row.lane}` : null}
-          subtitleClass="text-indigo-600/75"
-        />
-      ),
-    },
-    {
-      key: 'reference',
-      header: 'JR No.',
-      className: 'w-[16%]',
-      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
-    },
-    {
-      key: 'date',
-      header: 'Date',
-      className: 'w-[15%] text-slate-500',
-      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
-    },
-    {
-      key: 'actor',
-      header: 'Submitted By',
-      className: 'w-[22%]',
-      render: (row) => <DetailValue icon={UserRound} accentClass="text-indigo-600/85 font-bold">{row.actor}</DetailValue>,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      className: 'w-[13%]',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-  ];
-
   return (
-    <ActivityTablePanel
+    <ActivityListPanel
       title="Recent Job Requests"
       icon={FileText}
       iconClass="text-indigo-600"
       iconBg="bg-indigo-50 border-indigo-100/50"
       viewAllHref="/job-requests"
       rows={tableRows}
-      columns={columns}
       loading={loading}
       empty={tableRows.length === 0}
+      renderRow={(row) => (
+        <div className="space-y-3">
+          <div className="min-w-0">
+            <h4 className="text-sm font-bold text-slate-800 leading-snug group-hover:text-accent transition-colors truncate">
+              {row.item}
+            </h4>
+            {row.lane && (
+              <span className="inline-flex mt-1.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">
+                Lane: {row.lane}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono font-bold">
+              <Hash size={11} className="text-slate-400" />
+              {row.reference}
+            </div>
+            <StatusBadge status={row.status} />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 pt-0.5">
+            <span className="inline-flex items-center gap-1 text-indigo-600/90 font-semibold truncate max-w-[150px]">
+              <UserRound size={11} className="text-indigo-400" />
+              {row.actor}
+            </span>
+            <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+              <Clock size={11} />
+              {row.time}
+            </span>
+          </div>
+        </div>
+      )}
     />
   );
 }
@@ -298,57 +216,49 @@ function JobCardsTable({ rows = [], loading }) {
     status: jc.status,
   }));
 
-  const columns = [
-    {
-      key: 'item',
-      header: 'Job Card / Equipment',
-      className: 'w-[34%]',
-      render: (row) => (
-        <PrimaryCell
-          dotClass="bg-blue-500 ring-blue-100"
-          title={row.item}
-          subtitle={row.lane ? `Lane: ${row.lane}` : null}
-          subtitleClass="text-blue-600/75"
-        />
-      ),
-    },
-    {
-      key: 'reference',
-      header: 'JC No.',
-      className: 'w-[16%]',
-      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
-    },
-    {
-      key: 'date',
-      header: 'Updated',
-      className: 'w-[15%] text-slate-500',
-      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
-    },
-    {
-      key: 'engineer',
-      header: 'Engineer',
-      className: 'w-[22%]',
-      render: (row) => <DetailValue icon={UserRound} accentClass="text-blue-600/85 font-bold">{row.engineer}</DetailValue>,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      className: 'w-[13%]',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-  ];
-
   return (
-    <ActivityTablePanel
+    <ActivityListPanel
       title="Recent Job Card Updates"
       icon={ClipboardList}
       iconClass="text-blue-600"
       iconBg="bg-blue-50 border-blue-100/50"
       viewAllHref="/job-cards"
       rows={tableRows}
-      columns={columns}
       loading={loading}
       empty={tableRows.length === 0}
+      renderRow={(row) => (
+        <div className="space-y-3">
+          <div className="min-w-0">
+            <h4 className="text-sm font-bold text-slate-800 leading-snug group-hover:text-accent transition-colors truncate">
+              {row.item}
+            </h4>
+            {row.lane && (
+              <span className="inline-flex mt-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                Lane: {row.lane}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono font-bold">
+              <Hash size={11} className="text-slate-400" />
+              {row.reference}
+            </div>
+            <StatusBadge status={row.status} />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 pt-0.5">
+            <span className="inline-flex items-center gap-1 text-blue-600/90 font-semibold truncate max-w-[150px]">
+              <UserRound size={11} className="text-blue-400" />
+              {row.engineer}
+            </span>
+            <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+              <Clock size={11} />
+              {row.time}
+            </span>
+          </div>
+        </div>
+      )}
     />
   );
 }
@@ -362,63 +272,50 @@ function EquipmentTable({ rows = [], loading }) {
       item: eq.name,
       reference: equipmentId,
       type: eq.type_name,
-      createdBy: eq.created_by,
       time: relTime(eq.time_at),
       status: eq.status,
     };
   });
 
-  const columns = [
-    {
-      key: 'item',
-      header: 'Equipment',
-      className: 'w-[34%]',
-      render: (row) => (
-        <PrimaryCell
-          dotClass="bg-emerald-500 ring-emerald-100"
-          title={row.item}
-          subtitle={row.type}
-          subtitleClass="text-emerald-600/75"
-        />
-      ),
-    },
-    {
-      key: 'reference',
-      header: 'Equipment ID',
-      className: 'w-[16%]',
-      render: (row) => <DetailValue icon={Hash} strong>{row.reference}</DetailValue>,
-    },
-    {
-      key: 'date',
-      header: 'Added On',
-      className: 'w-[15%] text-slate-500',
-      render: (row) => <DetailValue icon={Clock}>{row.time}</DetailValue>,
-    },
-    {
-      key: 'type',
-      header: 'Type',
-      className: 'w-[22%]',
-      render: (row) => <DetailValue accentClass="text-emerald-600/85 font-bold">{row.type}</DetailValue>,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      className: 'w-[13%]',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-  ];
-
   return (
-    <ActivityTablePanel
+    <ActivityListPanel
       title="Recent Equipment"
       icon={Box}
       iconClass="text-emerald-600"
       iconBg="bg-emerald-50 border-emerald-100/50"
       viewAllHref="/equipment"
       rows={tableRows}
-      columns={columns}
       loading={loading}
       empty={tableRows.length === 0}
+      renderRow={(row) => (
+        <div className="space-y-3">
+          <div className="min-w-0">
+            <h4 className="text-sm font-bold text-slate-800 leading-snug group-hover:text-accent transition-colors truncate">
+              {row.item}
+            </h4>
+            {row.type && (
+              <span className="inline-flex mt-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                Type: {row.type}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono font-bold">
+              <Hash size={11} className="text-slate-400" />
+              {row.reference}
+            </div>
+            <StatusBadge status={row.status} />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 pt-0.5">
+            <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+              <Clock size={11} />
+              {row.time}
+            </span>
+          </div>
+        </div>
+      )}
     />
   );
 }
@@ -437,7 +334,7 @@ export function QuickRecap({ data, loading = false }) {
         </h2>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <JobRequestsTable rows={data?.job_requests} loading={isLoading} />
         <JobCardsTable rows={data?.job_cards} loading={isLoading} />
         <EquipmentTable rows={data?.equipment} loading={isLoading} />
