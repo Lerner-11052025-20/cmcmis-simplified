@@ -99,6 +99,7 @@ export function EquipmentList() {
   const [modelNo, setModelNo] = useState('');
   const [makeInput, setMakeInput] = useState('');
   const [make, setMake] = useState('');
+  const [category, setCategory] = useState('');
   const [sort, setSort] = useState('equipment_code');
   const [order, setOrder] = useState('asc');
 
@@ -149,11 +150,12 @@ export function EquipmentList() {
       ...(q ? { q } : {}),
       ...(modelNo ? { model_no: modelNo } : {}),
       ...(make ? { make } : {}),
+      ...(category ? { category } : {}),
       sort,
       order,
       _refresh: refreshSeed,
     }),
-    [page, q, modelNo, make, sort, order, refreshSeed],
+    [page, q, modelNo, make, category, sort, order, refreshSeed],
   );
 
   const { data, error, loading, invalidateAll } = useEquipmentList(params, {
@@ -256,6 +258,16 @@ export function EquipmentList() {
       { header: 'Name', accessor: 'name', className: 'text-ink' },
       { header: 'Model No', accessor: 'model_no', className: 'text-ink font-medium' },
       { header: 'Manufacturer Name', accessor: 'make' },
+      {
+        header: 'Category Mapping',
+        accessor: 'category',
+        className: 'text-ink font-medium',
+        format: (val) => {
+          if (val === 'T&ME') return 'Instrument';
+          if (val === 'F&PE') return 'Equipment';
+          return val || '—';
+        },
+      },
       {
         // Serial number is more immediately useful than the cal-due date for
         // identification; status badge gives at-a-glance health signal.
@@ -413,11 +425,11 @@ export function EquipmentList() {
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
               <Filter size={14} strokeWidth={showAdvanced ? 2.25 : 1.5} aria-hidden="true" />
-              Advanced Filters {modelNo || make ? '•' : ''}
+              Advanced Filters {modelNo || make || category ? '•' : ''}
             </Button>
 
             {/* Clear filters button */}
-            {qInput || modelNoInput || makeInput || sort !== 'equipment_code' || order !== 'asc' ? (
+            {qInput || modelNoInput || makeInput || category || sort !== 'equipment_code' || order !== 'asc' ? (
               <Button
                 variant="secondary"
                 size="sm"
@@ -426,6 +438,7 @@ export function EquipmentList() {
                   setQInput('');
                   setModelNoInput('');
                   setMakeInput('');
+                  setCategory('');
                   setSort('equipment_code');
                   setOrder('asc');
                   setPage(1);
@@ -450,7 +463,7 @@ export function EquipmentList() {
 
         {/* Collapsible Advanced Filters Panel */}
         {showAdvanced ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-border/40 animate-[fadeSlideDown_150ms_ease-out]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-border/40 animate-[fadeSlideDown_150ms_ease-out]">
             <div className="space-y-1">
               <label htmlFor="filter-model-no" className="text-xs font-semibold text-ink-soft uppercase tracking-wider">
                 Model Number
@@ -474,6 +487,21 @@ export function EquipmentList() {
                 placeholder="Enter Manufacturer Name (e.g. KEYSIGHT, LAMBDA)…"
                 className="h-9 text-sm"
               />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="filter-category" className="text-xs font-semibold text-ink-soft uppercase tracking-wider">
+                Category Mapping
+              </label>
+              <Select
+                id="filter-category"
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                className="h-9 text-sm"
+              >
+                <option value="">All Categories</option>
+                <option value="T&ME">Instrument (T&ME)</option>
+                <option value="F&PE">Equipment (F&PE)</option>
+              </Select>
             </div>
           </div>
         ) : null}

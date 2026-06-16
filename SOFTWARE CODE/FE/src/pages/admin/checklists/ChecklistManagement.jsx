@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ClipboardList, Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, X, Check, Info, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
@@ -11,6 +11,7 @@ import {
   updateChecklist,
   deleteChecklist,
 } from '../../../lib/api/checklists.js';
+import { searchEquipment } from '../../../lib/api/lookups.js';
 import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Spinner } from '../../../components/ui/Spinner.jsx';
@@ -269,6 +270,10 @@ function ChecklistModal({ initial, taskMaster, onClose, onSaved }) {
   const [customType, setCustomType] = useState('NABL');
   const [saving, setSaving] = useState(false);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
+  
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     if (!initial) return;
@@ -284,9 +289,54 @@ function ChecklistModal({ initial, taskMaster, onClose, onSaved }) {
     setForm((current) => ({ ...current, tasks: initial.tasks || [] }));
   }, [initial]);
 
+  const handleEquipmentInputChange = (value) => {
+    setForm((current) => ({ ...current, equipment_code: value }));
+    setEquipment(null);
+    
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    
+    const term = value.trim();
+    if (term.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const items = await searchEquipment(term, 10);
+        setSearchResults(items);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error('Failed to search equipment', err);
+      }
+    }, 300);
+  };
+
+  const handleSelectEquipment = async (item) => {
+    const prefix = (item.eqm_type || '').toUpperCase().slice(0, 3);
+    const formattedCode = `EQ-${prefix}-${String(item.eqm_id).padStart(4, '0')}`;
+    
+    setForm((current) => ({ ...current, equipment_code: formattedCode }));
+    setSearchResults([]);
+    setShowDropdown(false);
+    
+    setLoadingEquipment(true);
+    try {
+      const fullItem = await resolveChecklistEquipment(formattedCode);
+      setEquipment(fullItem);
+    } catch (err) {
+      setEquipment(null);
+      toast.error(err?.response?.data?.error?.message || 'Equipment not found');
+    } finally {
+      setLoadingEquipment(false);
+    }
+  };
+
   async function resolveEquipment() {
     const code = form.equipment_code.trim();
     if (!code) return;
+    if (equipment && equipment.equipment_code === code) return;
     setLoadingEquipment(true);
     try {
       const item = await resolveChecklistEquipment(code);
@@ -395,20 +445,60 @@ function ChecklistModal({ initial, taskMaster, onClose, onSaved }) {
                 <h3 className="text-base font-semibold text-indigo-700">Equipment</h3>
               </div>
               <label className="text-sm font-semibold text-slate-700">Equipment ID <span className="text-red-500">*</span></label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 relative">
                 <Input
                   value={form.equipment_code}
-                  onChange={(event) => {
-                    setForm((current) => ({ ...current, equipment_code: event.target.value }));
-                    setEquipment(null);
+                  onChange={(event) => handleEquipmentInputChange(event.target.value)}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setShowDropdown(false);
+                      resolveEquipment();
+                    }, 200);
                   }}
-                  onBlur={resolveEquipment}
-                  placeholder="e.g. EQ-SA-9000"
-                  className="h-12 rounded-xl border-slate-300 bg-white text-sm"
+                  placeholder="Type ID, Name, Make or Model to search..."
+                  className="h-12 rounded-xl border-slate-300 bg-white text-sm w-full"
                 />
-                <Button type="button" variant="secondary" onClick={resolveEquipment} disabled={loadingEquipment || !form.equipment_code.trim()} className="h-12 rounded-xl">
-                  {loadingEquipment ? <Spinner size={16} /> : 'Fetch'}
-                </Button>
+                
+                {loadingEquipment && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
+                    <Spinner size={16} />
+                  </div>
+                )}
+                
+                {showDropdown && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg z-50">
+                    {searchResults.length > 0 ? (
+                      <ul className="py-1">
+                        {searchResults.map((item) => {
+                          const code = `EQ-${(item.eqm_type || '').toUpperCase().slice(0, 3)}-${String(item.eqm_id).padStart(4, '0')}`;
+                          return (
+                            <li key={item.id}>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleSelectEquipment(item);
+                                }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors flex flex-col gap-0.5 border-b border-slate-100 last:border-b-0"
+                              >
+                                <span className="font-semibold text-sm text-slate-900">
+                                  {code} - {item.name}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  Make: {item.make || '—'} | Model: {item.model_no || '—'} | Serial: {item.serial_no || '—'}
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-slate-500 text-center">
+                        No matching equipment found.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {equipment ? (

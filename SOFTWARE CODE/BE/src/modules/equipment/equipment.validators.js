@@ -45,6 +45,7 @@ const listQuerySchema = z
     status: z.enum(STATUS_VALUES).optional(),
     model_no: z.string().trim().max(100).optional(),
     make: z.string().trim().max(100).optional(),
+    category: z.enum(['T&ME', 'F&PE']).optional(),
     sort: z.enum(['equipment_code', 'name', 'next_cal_due_date', 'model_no', 'make']).default('equipment_code'),
     order: z.enum(['asc', 'desc']).default('asc'),
   })

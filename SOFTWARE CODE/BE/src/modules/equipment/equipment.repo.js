@@ -59,7 +59,7 @@ function buildBooleanFtPattern(q) {
  * }} params
  */
 async function listEquipment(params) {
-  const { page, page_size, q, type_id, eqm_type, status, model_no, make, sort, order } = params;
+  const { page, page_size, q, type_id, eqm_type, status, model_no, make, sort, order, category } = params;
 
   // WHERE builder with bound parameters
   const where = [];
@@ -110,6 +110,10 @@ async function listEquipment(params) {
   if (make) {
     where.push('m.CMM_CONT_NAME LIKE ?');
     args.push(`%${make}%`);
+  }
+  if (category) {
+    where.push('e.category = ?');
+    args.push(category);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
