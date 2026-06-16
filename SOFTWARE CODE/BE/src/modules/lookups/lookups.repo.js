@@ -89,6 +89,7 @@ async function searchEquipment(q, limit = 20, category = null) {
          m.CMM_CONT_NAME                       AS make,
          e.EQM_MODELNO                         AS model_no,
          e.EQM_SRNO                            AS serial_no,
+         e.EQM_CAL_DUE_DATE                    AS cal_due_date,
          p.PROD_NAME                           AS type_name
        FROM cmms_eqip_mst e
        LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
@@ -137,6 +138,7 @@ async function searchEquipment(q, limit = 20, category = null) {
          m.CMM_CONT_NAME                       AS make,
          e.EQM_MODELNO                         AS model_no,
          e.EQM_SRNO                            AS serial_no,
+         e.EQM_CAL_DUE_DATE                    AS cal_due_date,
          p.PROD_NAME                           AS type_name
        FROM cmms_eqip_mst e
        LEFT JOIN cmms_cont_mst    m ON m.CMM_CONT_ID = e.EQM_MFRID
@@ -186,6 +188,7 @@ async function searchEquipment(q, limit = 20, category = null) {
     make:             r.make || null,
     model_no:         r.model_no || null,
     serial_no:        r.serial_no || null,
+    cal_due_date:      r.cal_due_date || null,
     type:             r.type_name || null,
   }));
 }

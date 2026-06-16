@@ -123,10 +123,9 @@ export function DetailHeader({ jc }) {
             Job Card: <span className="text-accent">{jc.card_code}</span>
           </h1>
           <p className="text-sm text-ink-soft">
-            Section Job No: <span className="font-medium text-ink">{jc.section_job_no}</span>
             {jc.parent_jr_code ? (
               <>
-                {' · '}From: <Link to={`/job-requests/${encodeURIComponent(jc.parent_jr_no)}`} className="text-accent hover:underline">
+                From: <Link to={`/job-requests/${encodeURIComponent(jc.parent_jr_no)}`} className="text-accent hover:underline">
                   {jc.parent_jr_code}
                 </Link>
               </>

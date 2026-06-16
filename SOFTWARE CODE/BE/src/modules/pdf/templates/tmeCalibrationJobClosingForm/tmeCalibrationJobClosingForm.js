@@ -158,6 +158,20 @@ function standardsText(rows) {
     .join(', ');
 }
 
+function humidityText(payload) {
+  if (payload.cal_rh_min || payload.cal_rh_max) {
+    return `${clean(payload.cal_rh_min)}% To RH ${clean(payload.cal_rh_max)}%`;
+  }
+  return payload.cal_relative_humidity;
+}
+
+function temperatureText(payload) {
+  if (payload.cal_temperature_value || payload.cal_temperature_range) {
+    return `${clean(payload.cal_temperature_value)} deg C ${clean(payload.cal_temperature_range)}`;
+  }
+  return payload.cal_temperature_c;
+}
+
 function drawAdjustmentHeader(doc, y) {
   const widths = [34, 110, 78, 104, 95, CONTENT_W - 34 - 110 - 78 - 104 - 95];
   const headers = ['Sr.No.', 'Parameter', 'Test Value', 'Specification / Limits', 'Before Adjustment', 'After Adjustment'];
@@ -243,8 +257,8 @@ function renderTmeCalibrationJobClosingForm(payload, stream, options = {}) {
   ]);
   y += 18;
   labelValueRow(doc, M, y, [
-    { label: 'Temperature', value: payload.cal_temperature_c, lw: 86, vw: 172 },
-    { label: 'Relative Humidity', value: payload.cal_relative_humidity, lw: 112, vw: CONTENT_W - 86 - 172 - 112 },
+    { label: 'Temperature', value: temperatureText(payload), lw: 86, vw: 172 },
+    { label: 'Relative Humidity', value: humidityText(payload), lw: 112, vw: CONTENT_W - 86 - 172 - 112 },
   ]);
   y += 18;
   labelValueRow(doc, M, y, [

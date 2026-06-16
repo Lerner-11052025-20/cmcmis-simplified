@@ -181,6 +181,24 @@ function standardsText(row) {
   ].map(clean).filter(Boolean).join(' - ');
 }
 
+function makeModelText(row) {
+  return [row.make, row.model_no].map(clean).filter(Boolean).join(' / ');
+}
+
+function humidityText(payload) {
+  if (payload.cal_rh_min || payload.cal_rh_max) {
+    return `${clean(payload.cal_rh_min)}% To RH ${clean(payload.cal_rh_max)}%`;
+  }
+  return payload.cal_relative_humidity;
+}
+
+function temperatureText(payload) {
+  if (payload.cal_temperature_value || payload.cal_temperature_range) {
+    return `${clean(payload.cal_temperature_value)} deg C ${clean(payload.cal_temperature_range)}`;
+  }
+  return payload.cal_temperature_c;
+}
+
 function renderTmeCalibrationCertificate(payload, stream, options) {
   const doc = new PDFDocument({
     size: 'A4',
@@ -286,8 +304,8 @@ function renderTmeCalibrationCertificate(payload, stream, options) {
   y = ensure(y, 19 + 18);
   y = sectionTitle(doc, 'ENVIRONMENTAL CONDITIONS', y);
   labelValueRow(doc, y, [
-    { label: 'Temperature', value: payload.cal_temperature_c, lw: 86, vw: 168 },
-    { label: 'Relative Humidity', value: payload.cal_relative_humidity, lw: 116, vw: CONTENT_W - 86 - 168 - 116 },
+    { label: 'Temperature', value: temperatureText(payload), lw: 86, vw: 168 },
+    { label: 'Relative Humidity', value: humidityText(payload), lw: 116, vw: CONTENT_W - 86 - 168 - 116 },
   ]);
   y += 25;
 
@@ -300,7 +318,13 @@ function renderTmeCalibrationCertificate(payload, stream, options) {
   y += 20;
   (payload.children?.calibration_equipment || []).forEach((row, idx) => {
     if (y + 22 > CONTENT_BOTTOM_Y) y = newPage();
-    const values = [row.equipment_id || idx + 1, standardsText(row), '', 'SAC', ''];
+    const values = [
+      row.equipment_id || idx + 1,
+      standardsText(row),
+      makeModelText(row),
+      'SAC',
+      dateText(row.cal_due_date),
+    ];
     let cx = M;
     values.forEach((v, i) => {
       cell(doc, cx, y, widths[i], 22, v, { size: 6.8, align: i === 0 ? 'center' : 'left' });

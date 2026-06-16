@@ -5,6 +5,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dayjs from 'dayjs';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -230,8 +231,8 @@ export function CalibrationDetailsTab(props) {
     ...props.jc,
     cal_ref_no: props.jc.cal_ref_no || defaultCalRefNo(props.jc),
     cal_due_date: props.jc.cal_due_date || props.jc.cal_due_date_from_equipment || '',
-    cal_rh_min: props.jc.cal_rh_min || '40',
-    cal_rh_max: props.jc.cal_rh_max || '70',
+    cal_rh_min: props.jc.cal_rh_min || '35',
+    cal_rh_max: props.jc.cal_rh_max || '75',
     cal_temperature_value: props.jc.cal_temperature_value || '25',
     cal_temperature_range: props.jc.cal_temperature_range || '+/-4.0',
     calibrated_by_employee_ids: props.jc.calibrated_by_employee_ids?.length
@@ -266,15 +267,24 @@ export function CalibrationDetailsTab(props) {
   ];
   const t = useCalibrationTabForm({ ...props, jc: jcForForm, fieldNames: FIELDS });
   const equipmentStatus = t.watch('cal_equipment_received_status');
+  const completedDate = t.watch('cal_job_completed_date');
+  const currentDueDate = t.watch('cal_due_date');
   const calStatus = t.watch('cal_calibration_status');
   const calibratedByIds = t.watch('calibrated_by_employee_ids');
-  const repairEnabled = equipmentStatus === 'Out Of Specs.';
+  const repairEnabled = !!equipmentStatus && equipmentStatus !== 'O.K.';
   const reasonOptions = calStatus === 'No Cal'
     ? NO_CAL_REASONS
     : calStatus === 'Partial / Limited Cal'
       ? PARTIAL_LIMITED_REASONS
       : [];
   const reasonLabel = calStatus === 'No Cal' ? 'Reason For No Cal' : 'Reason For Partial/Limited Cal';
+
+  useEffect(() => {
+    const calculated = addMonthsIso(completedDate, props.jc?.equipment?.calibration_frequency_months || props.jc?.equipment?.calibration_frequency);
+    if (!calculated) return;
+    if (currentDueDate === calculated) return;
+    t.setValue('cal_due_date', calculated, { shouldDirty: true });
+  }, [completedDate, currentDueDate, props.jc?.equipment?.calibration_frequency_months, props.jc?.equipment?.calibration_frequency, t.setValue]);
 
   return (
     <div className="space-y-6">
@@ -569,6 +579,17 @@ function equipmentOptionCode(option) {
   return String(option.eqm_id);
 }
 
+function formatDate(value) {
+  return value ? dayjs(value).format('DD-MM-YYYY') : '';
+}
+
+function addMonthsIso(dateValue, monthsValue) {
+  const months = Number(monthsValue);
+  if (!dateValue || !Number.isFinite(months) || months <= 0) return '';
+  const next = dayjs(dateValue).add(months, 'month');
+  return next.isValid() ? next.format('YYYY-MM-DD') : '';
+}
+
 function EquipmentMasterSearchInput({
   value,
   disabled,
@@ -647,7 +668,7 @@ function EquipmentMasterSearchInput({
   }
 
   return (
-    <div>
+    <div className="relative">
       <Input
         value={query}
         disabled={disabled}
@@ -659,7 +680,7 @@ function EquipmentMasterSearchInput({
         onBlur={handleBlur}
       />
       {open && !disabled ? (
-        <div className="mt-2 h-56 w-full overflow-y-auto rounded-md border border-border bg-white shadow-lg">
+        <div className="absolute z-20 mt-2 h-56 w-full overflow-y-auto rounded-md border border-border bg-white shadow-lg">
           {loading ? (
             <div className="px-3 py-2 text-sm text-ink-soft">Searching...</div>
           ) : options.length ? options.map((option) => (
@@ -679,6 +700,11 @@ function EquipmentMasterSearchInput({
               <span className="block text-xs text-ink-soft">
                 {[option.model_no, option.make, option.serial_no].filter(Boolean).join(' | ') || 'Equipment master'}
               </span>
+              {option.cal_due_date ? (
+                <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                  Validity {formatDate(option.cal_due_date)}
+                </span>
+              ) : null}
             </button>
           )) : (
             <div className="px-3 py-2 text-sm text-ink-soft">No equipment found.</div>
@@ -704,6 +730,9 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
         next[r.id] = existing?._dirty ? existing : {
           equipment_id: r.equipment_id || '',
           equipment_name: r.equipment_name || '',
+          make: r.make || '',
+          model_no: r.model_no || '',
+          cal_due_date: r.cal_due_date || '',
           _dirty: false,
         };
       }
@@ -746,6 +775,9 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
     const next = {
       equipment_id: equipmentOptionCode(option),
       equipment_name: option?.name || '',
+      make: option?.make || '',
+      model_no: option?.model_no || '',
+      cal_due_date: option?.cal_due_date || '',
     };
     setDrafts((p) => ({
       ...p,
@@ -754,7 +786,10 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
     setBusyRow(rowId);
     setError(null);
     try {
-      await patchCalibrationEquipmentRow(jc.section_job_no, rowId, next);
+      await patchCalibrationEquipmentRow(jc.section_job_no, rowId, {
+        equipment_id: next.equipment_id,
+        equipment_name: next.equipment_name,
+      });
       invalidateCalibrationEquipmentRows(jc.section_job_no);
       refetch();
     } catch (e) {
@@ -819,6 +854,11 @@ export function CalibrationEquipmentUsedTab({ jc, canWrite }) {
                     onBlurCommit={(v) => commitField(row.id, 'equipment_id', v)}
                     onSelect={(option) => commitEquipmentSelection(row.id, option)}
                   />
+                  {drafts[row.id]?.cal_due_date ? (
+                    <div className="mt-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      Validity {formatDate(drafts[row.id].cal_due_date)}
+                    </div>
+                  ) : null}
                 </td>
                 <td className="px-3 py-2">
                   <Input

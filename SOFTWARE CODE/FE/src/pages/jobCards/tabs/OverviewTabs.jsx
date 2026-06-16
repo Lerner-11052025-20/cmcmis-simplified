@@ -84,7 +84,6 @@ export function InformationTab({ jc }) {
     <DetailCard title="Information">
       <div className="grid grid-cols-1 gap-x-10 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
         <InfoItem label="Job Card ID" value={jc.card_code} highlight />
-        <InfoItem label="Section Job No." value={jc.section_job_no} />
         <InfoItem label="Job Request ID" value={jc.parent_jr_code} highlight />
         <InfoItem label="Category" value={categoryLabel(jc.job_category)} />
         <InfoItem label="Work Type" value={workTypeLabel(jc.work_type)} />

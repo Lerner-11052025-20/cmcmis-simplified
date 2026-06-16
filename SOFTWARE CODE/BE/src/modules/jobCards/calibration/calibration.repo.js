@@ -10,11 +10,23 @@ const pool = require('../../../config/db');
 
 async function listEquipmentRows(sectionJobNo) {
   const [rows] = await pool.query(
-    `SELECT id, jc_section_no, sr_no, equipment_id, equipment_name,
-            created_by_employee_id, created_at, updated_at
-       FROM jc_calibration_equipment_used
-      WHERE jc_section_no = ?
-      ORDER BY sr_no ASC, id ASC`,
+    `SELECT ce.id, ce.jc_section_no, ce.sr_no, ce.equipment_id, ce.equipment_name,
+            ce.created_by_employee_id, ce.created_at, ce.updated_at,
+            e.EQM_MODELNO AS model_no,
+            m.CMM_CONT_NAME AS make,
+            e.EQM_CAL_DUE_DATE AS cal_due_date
+       FROM jc_calibration_equipment_used ce
+       LEFT JOIN cmms_jobcard_mst jc ON jc.JM_SectionJobNo = ce.jc_section_no
+       LEFT JOIN cmms_eqip_mst e
+              ON e.EQM_ID = CAST(ce.equipment_id AS UNSIGNED)
+             AND (
+               e.EQM_TYPE = jc.JM_EQM_TYPE
+               OR (jc.JM_JOB_CATEGORY = 'TME' AND e.EQM_TYPE = 'Instrument')
+               OR (jc.JM_JOB_CATEGORY = 'FPE' AND e.EQM_TYPE = 'Equipment')
+             )
+       LEFT JOIN cmms_cont_mst m ON m.CMM_CONT_ID = e.EQM_MFRID
+      WHERE ce.jc_section_no = ?
+      ORDER BY ce.sr_no ASC, ce.id ASC`,
     [sectionJobNo],
   );
   return rows;

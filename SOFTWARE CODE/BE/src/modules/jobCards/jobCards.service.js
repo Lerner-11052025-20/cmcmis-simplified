@@ -106,8 +106,13 @@ function shapeDetail(row) {
   const ymd = (d) => (d ? dayjs(d).format('YYYY-MM-DD') : null);
   const computedCalDueDate = (() => {
     const months = Number(row.equipment_cal_frequency);
-    if (!row.equipment_last_calibration_date || !Number.isFinite(months) || months <= 0) return null;
-    return dayjs(row.equipment_last_calibration_date).add(months, 'month');
+    const completedDate = row.cal_job_completed_date
+      || row.job_end_date
+      || row.actual_completion_date
+      || row.planned_completed_date
+      || row.job_complete_planned_date;
+    if (!completedDate || !Number.isFinite(months) || months <= 0) return null;
+    return dayjs(completedDate).add(months, 'month');
   })();
   const calibratedByIds = row.calibrated_by_employee_ids
     ? String(row.calibrated_by_employee_ids).split(',').filter(Boolean)
@@ -215,7 +220,7 @@ function shapeDetail(row) {
     cal_temperature_c:              row.cal_temperature_c,
     cal_relative_humidity:          row.cal_relative_humidity,
     cal_ref_no:                     row.cal_ref_no,
-    cal_due_date:                   ymd(row.cal_due_date || row.jobcard_cal_pm_due_date || row.equipment_cal_due_date || computedCalDueDate),
+    cal_due_date:                   ymd(row.cal_due_date || computedCalDueDate || row.jobcard_cal_pm_due_date || row.equipment_cal_due_date),
     cal_due_date_from_equipment:    ymd(row.equipment_cal_due_date),
     calibrated_by_employee_id:      row.calibrated_by_employee_id,
     calibrated_by_name:             row.calibrated_by_name,

@@ -122,6 +122,7 @@ async function loadJobCardFull(sectionJobNo) {
        jc.cal_job_started_date, jc.cal_job_completed_date,
        jc.cal_calibration_status, jc.cal_temperature_c,
        jc.cal_relative_humidity, jc.cal_ref_no, jc.cal_due_date,
+       jc.cal_rh_min, jc.cal_rh_max, jc.cal_temperature_value, jc.cal_temperature_range,
        jc.calibrated_by_employee_id, emp_cal.EMM_NAME AS calibrated_by_name,
        jc.cal_equipment_received_status, jc.cal_repair_carried_out_by,
        jc.cal_sent_to_lab_date, jc.cal_received_from_lab_date,
@@ -286,10 +287,22 @@ async function loadJobCardFull(sectionJobNo) {
         )
       : Promise.resolve([[]]),
     pool.query(
-      `SELECT id, sr_no, equipment_id, equipment_name
-         FROM jc_calibration_equipment_used
-        WHERE jc_section_no = ?
-        ORDER BY sr_no ASC, id ASC`,
+      `SELECT ce.id, ce.sr_no, ce.equipment_id, ce.equipment_name,
+              e.EQM_MODELNO AS model_no,
+              m.CMM_CONT_NAME AS make,
+              e.EQM_CAL_DUE_DATE AS cal_due_date
+         FROM jc_calibration_equipment_used ce
+         LEFT JOIN cmms_jobcard_mst jc ON jc.JM_SectionJobNo = ce.jc_section_no
+         LEFT JOIN cmms_eqip_mst e
+                ON e.EQM_ID = CAST(ce.equipment_id AS UNSIGNED)
+               AND (
+                 e.EQM_TYPE = jc.JM_EQM_TYPE
+                 OR (jc.JM_JOB_CATEGORY = 'TME' AND e.EQM_TYPE = 'Instrument')
+                 OR (jc.JM_JOB_CATEGORY = 'FPE' AND e.EQM_TYPE = 'Equipment')
+               )
+         LEFT JOIN cmms_cont_mst m ON m.CMM_CONT_ID = e.EQM_MFRID
+        WHERE ce.jc_section_no = ?
+        ORDER BY ce.sr_no ASC, ce.id ASC`,
       [sectionJobNo],
     ),
     pool.query(
