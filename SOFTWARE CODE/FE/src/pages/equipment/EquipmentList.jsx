@@ -150,7 +150,7 @@ export function EquipmentList() {
       ...(q ? { q } : {}),
       ...(modelNo ? { model_no: modelNo } : {}),
       ...(make ? { make } : {}),
-      ...(category ? { category } : {}),
+      ...(category ? { eqm_type: category } : {}),
       sort,
       order,
       _refresh: refreshSeed,
@@ -499,8 +499,8 @@ export function EquipmentList() {
                 className="h-9 text-sm"
               >
                 <option value="">All Categories</option>
-                <option value="T&ME">Instrument (T&ME)</option>
-                <option value="F&PE">Equipment (F&PE)</option>
+                <option value="Instrument">Instrument (T&ME)</option>
+                <option value="Equipment">Equipment (F&PE)</option>
               </Select>
             </div>
           </div>
