@@ -46,13 +46,11 @@ function divisionMismatchError({ ssoProfile, equipment }) {
 }
 
 async function assertSsoEquipmentDivisionAllowed({ actor, body }) {
+  if (actor.authSource !== 'SSO') return null;
   if (!body.equipment_id) return null;
 
   const ssoProfile = await repo.findSsoEmployee(actor.employeeId);
-  if (!ssoProfile) {
-    if (actor.authSource === 'SSO') throw errors.unauthorized('SSO employee is no longer active');
-    return null;
-  }
+  if (!ssoProfile) throw errors.unauthorized('SSO employee is no longer active');
 
   const equipment = await repo.findEquipment(body.equipment_master_type || body.equipment_type, body.equipment_id);
   if (!equipment) {
