@@ -294,7 +294,7 @@ function EquipmentMasterSearchInput({
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const items = await searchEquipment(clean, 12, ctrl.signal, jobCategory || null);
+        const items = await searchEquipment(clean, 12, ctrl.signal);
         setOptions(Array.isArray(items) ? items : []);
         if (isFocusedRef.current) setOpen(true);
       } catch (e) {
@@ -308,7 +308,7 @@ function EquipmentMasterSearchInput({
       window.clearTimeout(timer);
       ctrl.abort();
     };
-  }, [query, disabled, jobCategory]);
+  }, [query, disabled]);
 
   function handleChange(e) {
     const next = e.target.value;
