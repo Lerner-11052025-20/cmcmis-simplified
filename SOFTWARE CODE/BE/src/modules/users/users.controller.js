@@ -44,9 +44,8 @@ async function getMe(req, res, next) {
   // Enrich from cmms_emp_mst, users, and login_audit (best effort). If any query fails,
   // we still return 200 with the base payload.
   try {
-    const profile = req.user.authSource === 'SSO'
-      ? await repo.findSsoEmployeeProfile(req.user.employeeId)
-      : await repo.findEmployeeProfile(req.user.employeeId);
+    const profile = await repo.findSsoEmployeeProfile(req.user.employeeId)
+      || await repo.findEmployeeProfile(req.user.employeeId);
     if (profile) {
       payload.display_name = profile.display_name || '';
       payload.designation = profile.designation || '';

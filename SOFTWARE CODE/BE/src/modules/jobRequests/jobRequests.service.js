@@ -113,9 +113,8 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
   // denormalised snapshot columns. Pull from cmms_emp_mst keyed on
   // employee_id. If the row is missing, fall back to JWT claims and a
   // blank designation — the request still saves.
-  const profile = actor.authSource === 'SSO'
-    ? await usersRepo.findSsoEmployeeProfile(actor.employeeId).catch(() => null)
-    : await usersRepo.findEmployeeProfile(actor.employeeId).catch(() => null);
+  const profile = await usersRepo.findSsoEmployeeProfile(actor.employeeId).catch(() => null)
+    || await usersRepo.findEmployeeProfile(actor.employeeId).catch(() => null);
   const submittedBy = {
     submitted_by_employee_id: actor.employeeId,
     submitted_by_name:        profile?.display_name || profile?.full_name || actor.employeeId,

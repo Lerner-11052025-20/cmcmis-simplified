@@ -183,6 +183,7 @@ export function JobRequestNew() {
   const [divisionMismatch, setDivisionMismatch] = useState(null);
   const [submitterContext, setSubmitterContext] = useState(null);
   const [approvingAuthorities, setApprovingAuthorities] = useState([]);
+  const [submitterContextError, setSubmitterContextError] = useState('');
 
   // ── Division + Project dropdowns — fetched once on mount ──────────
   const [projects, setProjects] = useState([]);
@@ -194,15 +195,25 @@ export function JobRequestNew() {
     ])
       .then(([context, projectItems]) => {
         setSubmitterContext(context);
-        setApprovingAuthorities(context?.approving_authorities || []);
+        setSubmitterContextError('');
+        const authorityItems = context?.approving_authorities || [];
+        setApprovingAuthorities(authorityItems);
         setProjects(projectItems);
         setForm((f) => ({
           ...f,
-          division_id: f.division_id || (context?.division?.id ? String(context.division.id) : ''),
-          division_text: f.division_text || context?.division?.code || context?.division?.name || '',
+          lab_phone: f.lab_phone || context?.submitter?.lab_telephone || '',
+          room_phone: f.room_phone || context?.submitter?.telephone || '',
+          division_id: context?.division?.id ? String(context.division.id) : f.division_id,
+          division_text: context?.division?.code || context?.division?.name || f.division_text,
+          approving_authority_employee_id: f.approving_authority_employee_id || authorityItems[0]?.employee_id || '',
         }));
       })
-      .catch(() => { /* fields stay editable/empty where lookup is unavailable */ });
+      .catch((err) => {
+        setSubmitterContextError(
+          err?.response?.data?.error?.message
+            || 'Could not fetch SSO submitter context and approving authority.',
+        );
+      });
     return () => ctrl.abort();
   }, []);
 
@@ -493,6 +504,11 @@ export function JobRequestNew() {
   const selectedAuthority = approvingAuthorities.find(
     (item) => item.employee_id === form.approving_authority_employee_id,
   );
+  const submitterProfile = submitterContext?.submitter || {};
+  const displayName = submitterProfile.full_name || user?.display_name || '';
+  const employeeId = submitterProfile.employee_id || user?.employeeId || user?.sub || '';
+  const designation = submitterProfile.designation || user?.designation || '';
+  const email = submitterProfile.email || user?.email || '';
 
   async function handleSave(submitNow) {
     setFormError(null);
@@ -643,6 +659,21 @@ export function JobRequestNew() {
                 <h3 className="text-xs font-extrabold uppercase tracking-widest text-danger">Validation Flags</h3>
                 <p className="text-xs font-medium text-slate-600 whitespace-pre-line leading-relaxed mt-2">
                   {formError}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {submitterContextError ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 flex gap-3 shadow-[0_2px_10px_rgba(245,158,11,0.08)]"
+            >
+              <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <h3 className="text-xs font-extrabold uppercase tracking-widest text-amber-700">SSO Context Required</h3>
+                <p className="text-xs font-medium text-amber-800 leading-relaxed mt-2">
+                  {submitterContextError}
                 </p>
               </div>
             </div>
@@ -989,7 +1020,7 @@ export function JobRequestNew() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
               <FormField label="Full Name (Read-Only)">
                 <div className="relative">
-                  <Input value={user?.display_name || ''} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
+                  <Input value={displayName} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
                     <Lock size={12} />
                   </span>
@@ -997,7 +1028,7 @@ export function JobRequestNew() {
               </FormField>
               <FormField label="SAC Employee ID (Read-Only)">
                 <div className="relative">
-                  <Input value={user?.employeeId || user?.sub || ''} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
+                  <Input value={employeeId} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
                     <Lock size={12} />
                   </span>
@@ -1005,7 +1036,7 @@ export function JobRequestNew() {
               </FormField>
               <FormField label="Designation (Read-Only)">
                 <div className="relative">
-                  <Input value={user?.designation || ''} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
+                  <Input value={designation} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
                     <Lock size={12} />
                   </span>
@@ -1013,7 +1044,7 @@ export function JobRequestNew() {
               </FormField>
               <FormField label="Email Address (Read-Only)">
                 <div className="relative">
-                  <Input value={user?.email || ''} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
+                  <Input value={email} disabled readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200/80 pr-10 font-bold" />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
                     <Lock size={12} />
                   </span>
