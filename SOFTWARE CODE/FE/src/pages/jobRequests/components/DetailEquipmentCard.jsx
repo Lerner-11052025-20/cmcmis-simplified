@@ -9,13 +9,35 @@
 import { Wrench } from 'lucide-react';
 import { DetailRow, SectionCard } from './detailPrimitives.jsx';
 
+function formatEquipmentBadge(equipment) {
+  if (!equipment?.id) return null;
+  const rawType = String(equipment.type || '').trim();
+  const prefix = rawType ? rawType.slice(0, 4).toUpperCase() : 'EQM';
+  const id = /^\d+$/.test(String(equipment.id))
+    ? String(equipment.id).padStart(4, '0')
+    : String(equipment.id);
+  return `EQ-${prefix}-${id}`;
+}
+
 export function DetailEquipmentCard({ equipment }) {
+  const equipmentBadge = formatEquipmentBadge(equipment);
+
   return (
     <SectionCard
       icon={<Wrench size={16} strokeWidth={1.75} aria-hidden="true" />}
       title="Equipment"
       accent="indigo"
     >
+      {equipmentBadge ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            EQM ID
+          </span>
+          <span className="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 font-mono text-sm font-bold text-indigo-700 shadow-sm">
+            {equipmentBadge}
+          </span>
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <DetailRow label="Name"     value={equipment.name} />
         <DetailRow label="Make"     value={equipment.make} />
