@@ -53,7 +53,7 @@ VALUES
 
   -- CategoryID 104 → Equipment Category
   (104, 'Equipment Category', 'TME', 'Test & Measurement (T&ME)',        1, 10, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP'),
-  (104, 'Equipment Category', 'FPE', 'Fabrication & Production (F&PE)',  1, 20, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP'),
+  (104, 'Equipment Category', 'FPE', 'Fabrication & Process Equipment (F&PE)',  1, 20, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP'),
 
   -- CategoryID 105 → JobRequest Type
   (105, 'JobRequest Type', 'CALIBRATION',  'Calibration',  1, 10, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP'),

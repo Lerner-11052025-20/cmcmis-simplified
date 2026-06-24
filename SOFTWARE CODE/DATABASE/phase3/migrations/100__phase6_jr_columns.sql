@@ -40,7 +40,7 @@ SET @sql := IF(@c>0,
   'SELECT 1',
   "ALTER TABLE `cmms_jobrequest_mst`
      ADD COLUMN `JR_JOB_CATEGORY` ENUM('TME','FPE') NULL DEFAULT NULL
-     COMMENT 'Phase 6: TME (Test&Measurement) vs FPE (Fabrication&Production)'");
+     COMMENT 'Phase 6: TME (Test&Measurement) vs FPE (Fabrication&ProcessEquipment)'");
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 

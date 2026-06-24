@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS `sections` (
   `section_name`        VARCHAR(150)      NOT NULL,
   `section_description` VARCHAR(500)      NULL DEFAULT NULL,
   `equipment_category`  ENUM('TME', 'FPE') NOT NULL
-                        COMMENT 'TME = Test & Measurement; FPE = Fabrication & Production',
+                        COMMENT 'TME = Test & Measurement; FPE = Fabrication & Process Equipment',
   `head_employee_id`    VARCHAR(7)        NULL DEFAULT NULL
                         COMMENT 'FK → cmms_emp_mst.EMM_ID (legacy)',
   `is_active`           TINYINT(1)        NOT NULL DEFAULT 1,

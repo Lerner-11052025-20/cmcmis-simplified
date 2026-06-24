@@ -382,7 +382,7 @@ VALUES ('TIMCD', 'Test/Inspection/Maintenance/Calibration Division', …);
 INSERT IGNORE INTO sections (department_id, section_code, equipment_category, …)
 VALUES
   (… TIMCD id …, 'TME', 'Test & Measurement Equipment', 'TME', NULL /* head per M9 */, …),
-  (… TIMCD id …, 'FPE', 'Fabrication & Production Equipment', 'FPE', NULL, …);
+  (… TIMCD id …, 'FPE', 'Fabrication & Process Equipment', 'FPE', NULL, …);
 ```
 
 `head_employee_id = NULL` for both T&ME and F&PE per **M9** (set later by Super Admin).

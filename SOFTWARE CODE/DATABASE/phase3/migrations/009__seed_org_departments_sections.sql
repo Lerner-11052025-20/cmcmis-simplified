@@ -33,7 +33,7 @@ VALUES
    1, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP'),
 
   (@dept_id, 'FPE',
-   'Fabrication & Production Equipment',
+   'Fabrication & Process Equipment',
    'Section under TIMCD responsible for F&PE machines (presses, mills, etc.)',
    'FPE', NULL,
    1, NOW(6), 'BOOTSTRAP', NOW(6), 'BOOTSTRAP');
@@ -94,7 +94,7 @@ SET @sql := IF(@fpe_audit_exists > 0, 'SELECT 1',
              `entity_type`, `entity_id`, `occurred_at`, `notes`)
           VALUES (''BOOTSTRAP'', ''BOOTSTRAP'', ''SECTION_CREATE'',
                   ''sections'', ''', CAST(@fpe_id AS CHAR), ''', NOW(6),
-                  ''Bootstrap seed: FPE / Fabrication & Production Equipment'')'));
+                  ''Bootstrap seed: FPE / Fabrication & Process Equipment'')'));
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 

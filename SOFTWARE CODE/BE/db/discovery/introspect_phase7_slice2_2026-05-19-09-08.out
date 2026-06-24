@@ -54,7 +54,7 @@ CREATE TABLE `cmms_jobrequest_mst` (
   `JR_REJECTION_REASON` varchar(500) DEFAULT NULL,
   `JR_PRIORITY` enum('LOW','NORMAL','HIGH','URGENT') NOT NULL DEFAULT 'NORMAL',
   `JR_ASSIGNED_ENGINEER` varchar(7) DEFAULT NULL,
-  `JR_JOB_CATEGORY` enum('TME','FPE') DEFAULT NULL COMMENT 'Phase 6: TME (Test&Measurement) vs FPE (Fabrication&Production)',
+  `JR_JOB_CATEGORY` enum('TME','FPE') DEFAULT NULL COMMENT 'Phase 6: TME (Test&Measurement) vs FPE (Fabrication&ProcessEquipment)',
   `JR_JOB_TYPE` enum('CALIBRATION','REPAIR','REGISTRATION') DEFAULT NULL COMMENT 'Phase 6: kind of work requested',
   `JR_TNC_ACCEPTED_AT` datetime(6) DEFAULT NULL COMMENT 'Phase 6: when the requester accepted all 6 T&C checkboxes',
   `JR_TNC_VERSION` varchar(10) DEFAULT 'v1' COMMENT 'Phase 6: version string of the T&C set that was accepted',

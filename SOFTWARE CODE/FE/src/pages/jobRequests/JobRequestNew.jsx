@@ -53,7 +53,7 @@ import { Spinner } from '../../components/ui/Spinner.jsx';
 // ── Static select options (locked to BE enums) ──────────────────────
 const JOB_CATEGORIES = [
   { value: 'TME', label: 'T&ME (Test & Measuring Equipment)' },
-  { value: 'FPE', label: 'F&PE (Fabrication & Production)' },
+  { value: 'FPE', label: 'F&PE (Fabrication & Process Equipment)' },
 ];
 const JOB_TYPES = [
   { value: 'CALIBRATION',  label: 'Calibration' },
