@@ -115,8 +115,8 @@ export const WORKFLOW_BUCKET = Object.freeze({
 export const WORKFLOW_LABELS = Object.freeze({
   CALIBRATION_STANDARD:       'Calibration · Standard',
   CALIBRATION_PRECISION:      'Calibration · Precision',
-  INSPECTION_ROUTINE:         'Inspection · Routine',
-  INSPECTION_DETAILED:        'Inspection · Detailed',
+  INSPECTION_ROUTINE:         'Repair',
+  INSPECTION_DETAILED:        'Preventive Maintenance',
   MASTER_DATA_FIELD_UPDATE:   'Master Data · Field Update',
   MASTER_DATA_REVISION:       'Master Data · Revision',
 });
