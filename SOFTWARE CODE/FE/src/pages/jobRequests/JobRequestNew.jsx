@@ -14,14 +14,12 @@ import {
   ArrowLeft, 
   Save, 
   Send, 
-  AlertCircle, 
   Plus, 
   X, 
   Lock, 
   ClipboardList, 
   Wrench, 
   User, 
-  FileText, 
   AlertTriangle,
   ChevronRight,
   ExternalLink
@@ -46,9 +44,6 @@ import {
   jobRequestDraftSchema,
   jobRequestSubmitSchema,
 } from '../../lib/schemas/jobRequestSchemas.js';
-import { TERMS, TNC_VERSION } from './form/tncContent.js';
-import { fetchActiveTerms } from '../../lib/api/terms.js';
-import { Spinner } from '../../components/ui/Spinner.jsx';
 
 // ── Static select options (locked to BE enums) ──────────────────────
 const JOB_CATEGORIES = [
@@ -95,8 +90,7 @@ export function JobRequestNew() {
     { id: 'sec-1', label: 'Job Type' },
     { id: 'sec-2', label: 'Equipment' },
     { id: 'sec-3', label: 'Accessories' },
-    { id: 'sec-4', label: 'Submitter' },
-    { id: 'sec-5', label: 'Terms & Conditions' }
+    { id: 'sec-4', label: 'Submitter' }
   ];
   const [activeSection, setActiveSection] = useState('sec-1');
   const activeSectionIndex = SECTIONS.findIndex(s => s.id === activeSection);
@@ -154,28 +148,6 @@ export function JobRequestNew() {
   });
 
   // ── Section-5 T&C state — dynamic checklist from DB ────────────────
-  const [dynamicTerms, setDynamicTerms] = useState([]);
-  const [termsLoading, setTermsLoading] = useState(true);
-  const [tnc, setTnc] = useState([]);
-  const tncAcceptedCount = tnc.filter(Boolean).length;
-  const allTncAccepted = dynamicTerms.length > 0 && tncAcceptedCount === dynamicTerms.length;
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    fetchActiveTerms(ctrl.signal)
-      .then((items) => {
-        setDynamicTerms(items || []);
-        setTnc((items || []).map(() => false));
-      })
-      .catch(() => {
-        // Fallback to static T&C in case of error
-        setDynamicTerms(TERMS);
-        setTnc(TERMS.map(() => false));
-      })
-      .finally(() => setTermsLoading(false));
-    return () => ctrl.abort();
-  }, []);
-
   // ── Submission state ─────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -439,7 +411,6 @@ export function JobRequestNew() {
     complaint_description: form.complaint_description.trim(),
     remarks: form.remarks.trim(),
     equipment_sent_after_repair: !!form.equipment_sent_after_repair,
-    tnc_version: TNC_VERSION,
   }), [form]);
 
   // ── Validity checks (two-tier) ──────────────────────────
@@ -451,9 +422,8 @@ export function JobRequestNew() {
     () => jobRequestSubmitSchema.safeParse({
       ...payload,
       submit_now: true,
-      tnc_accepted: allTncAccepted,
     }),
-    [payload, allTncAccepted],
+    [payload],
   );
   const canSaveDraft = draftParse.success && !submitting;
   const canSubmit    = submitParse.success && !submitting;
@@ -465,7 +435,6 @@ export function JobRequestNew() {
     division_id:            'Division',
     approving_authority_employee_id: 'Approving Authority',
     complaint_description:  'Complaint Description',
-    tnc_accepted:           'Terms & Conditions',
     accessories:            'Accessories',
   };
 
@@ -482,7 +451,7 @@ export function JobRequestNew() {
   function buildErrorSummary(fieldMap) {
     const ORDER = [
       'job_category', 'job_type', 'equipment_name', 'division_id', 'approving_authority_employee_id',
-      'complaint_description', 'tnc_accepted', 'accessories',
+      'complaint_description', 'accessories',
     ];
     const seen = new Set();
     const out = [];
@@ -541,7 +510,6 @@ export function JobRequestNew() {
       const result = await createJobRequest({
         ...payload,
         submit_now: submitNow,
-        tnc_accepted: submitNow ? allTncAccepted : false,
       });
       invalidateJobRequestCache();
       window.alert(
@@ -1155,93 +1123,6 @@ export function JobRequestNew() {
                 </FormField>
               </div>
             </div>
-          </section>
-
-          {/* ─────────────────────── SECTION 5: TERMS & CONDITIONS ─────────────────────── */}
-          <section 
-            id="sec-5" 
-            className="bg-white rounded-2xl border border-slate-200/50 shadow-[0_2px_8px_rgba(15,23,42,0.015)] p-6 md:p-8 hover:shadow-md transition-all duration-300 animate-scaleUp"
-          >
-            <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-5 flex-wrap gap-3">
-              <div className="flex items-center gap-3.5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600 border border-purple-100/50">
-                  <FileText size={20} strokeWidth={2} aria-hidden="true" />
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-slate-800 tracking-tight font-sans leading-none">5. Terms and Conditions</h2>
-                  <p className="text-xs font-semibold text-slate-400 font-sans mt-2">Please review and check each operational guideline statement</p>
-                </div>
-              </div>
-              <div className={clsx(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300 border shadow-sm select-none",
-                allTncAccepted ? "bg-emerald-50 text-emerald-700 border-emerald-150" : "bg-amber-50 text-amber-700 border-amber-150"
-              )}>
-                <span>Accepted:</span>
-                <span className="text-sm font-black">{tncAcceptedCount}</span>
-                <span>/</span>
-                <span>{dynamicTerms.length}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 mb-5 pb-3.5 border-b border-slate-100/60 select-none">
-              <Checkbox
-                checked={allTncAccepted}
-                onChange={(e) => {
-                  const val = e.target.checked;
-                  setTnc(dynamicTerms.map(() => val));
-                }}
-                label={
-                  <span className="font-extrabold text-accent hover:text-accent-hover transition-colors text-xs uppercase tracking-widest leading-none">
-                    Toggle Accept All Conditions
-                  </span>
-                }
-              />
-            </div>
-
-            <ul className="space-y-3.5">
-              {termsLoading ? (
-                <div className="flex justify-center py-6">
-                  <Spinner size={20} className="text-purple-600 animate-spin" />
-                </div>
-              ) : dynamicTerms.map((t, i) => (
-                <li
-                  key={t.id || t.index}
-                  className={clsx(
-                    "px-4 py-4 rounded-xl border transition-all duration-200 select-none",
-                    tnc[i] 
-                      ? "bg-slate-50/60 border-slate-200/80 shadow-sm" 
-                      : "bg-white border-slate-200/50 hover:bg-slate-50/20"
-                  )}
-                >
-                  <Checkbox
-                    checked={!!tnc[i]}
-                    onChange={(e) => {
-                      const next = [...tnc];
-                      next[i] = e.target.checked;
-                      setTnc(next);
-                    }}
-                    label={
-                      <span className="text-slate-700 leading-relaxed font-sans text-xs sm:text-sm font-semibold">
-                        <span className="font-black text-slate-800 mr-1.5 uppercase text-[11px] tracking-wider">
-                          Item {t.index_no || t.index || (i + 1)}:
-                        </span>{' '}
-                        {t.text}
-                      </span>
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-
-            {!allTncAccepted ? (
-              <div
-                role="status"
-                className="mt-5 rounded-xl bg-warning/5 border border-warning/20 text-amber-700 text-xs px-4 py-3 flex items-center gap-2.5 font-semibold animate-pulse-radar"
-              >
-                <AlertCircle size={15} strokeWidth={2.3} aria-hidden="true" className="shrink-0" />
-                You must read and tick all conditions to submit this request for formal review.
-              </div>
-            ) : null}
           </section>
 
           {/* ── NATURAL FOOTER ACTIONS (At the bottom of the form column, no overlap) ── */}

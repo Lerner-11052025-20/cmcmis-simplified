@@ -80,6 +80,45 @@ function assertCanAccessLane(jc, actorOrScope) {
   }
 }
 
+const DATE_ORDER_PAIRS = [
+  ['equipment_submitted_date', 'equipment_received_date_actual', 'Equipment Submitted Date', 'Equipment Received Date'],
+  ['instrument_received_date', 'job_complete_planned_date', 'Instrument Received Date', 'Job Complete Planned Date'],
+  ['repair_job_received_date', 'repair_job_start_planned_date', 'Job Received Date', 'Job Start Planned Date'],
+  ['repair_job_start_planned_date', 'job_complete_planned_date', 'Job Start Planned Date', 'Job Complete Planned Date'],
+  ['repair_job_start_planned_date', 'repair_job_complete_date', 'Job Start Date', 'Job Complete Date'],
+  ['awaiting_from_date', 'awaiting_restarting_date', 'Awaiting From Date', 'Restarting Date'],
+  ['awaiting_from_date', 'awaiting_clear_date', 'Awaiting From Date', 'Awaiting Clear Date'],
+  ['awaiting_restarting_date', 'awaiting_clear_date', 'Restarting Date', 'Awaiting Clear Date'],
+  ['intimation_sent_on', 'sent_to_vendor_date', 'Intimation Sent On', 'Sent To Vendor Date'],
+  ['sent_to_vendor_date', 'received_from_vendor_date', 'Sent To Vendor Date', 'Received From Vendor Date'],
+  ['invoice_recd_on', 'repair_invoice_cleared_on', 'Invoice Received On', 'Invoice Cleared On'],
+  ['cal_job_started_date', 'cal_job_completed_date', 'Job Start Date', 'Job Complete Date'],
+  ['cal_sent_to_lab_date', 'cal_received_from_lab_date', 'Sent To Lab Date', 'Received From Lab Date'],
+];
+
+function dateOnly(value) {
+  if (value == null || value === '') return '';
+  return String(value).slice(0, 10);
+}
+
+function assertValidDateOrder(current, patch) {
+  const merged = { ...current, ...patch };
+  for (const [startField, endField, startLabel, endLabel] of DATE_ORDER_PAIRS) {
+    if (!Object.prototype.hasOwnProperty.call(patch, startField)
+      && !Object.prototype.hasOwnProperty.call(patch, endField)) {
+      continue;
+    }
+    const start = dateOnly(merged[startField]);
+    const end = dateOnly(merged[endField]);
+    if (start && end && start > end) {
+      throw errors.badRequest(`${startLabel} must be on or before ${endLabel}.`, {
+        field: endField,
+        start_field: startField,
+      });
+    }
+  }
+}
+
 async function syncParentJobRequestStatus(conn, jc, toStatus, actor, reason) {
   if (!jc?.parent_jr_no) return;
   const jr = await jrRepo.findForMutation(conn, jc.parent_jr_no);
@@ -481,6 +520,8 @@ async function patchJobCardTab({ sectionJobNo, body, actor }) {
       bodyForPatch.repair_attended_by_employee_id = repairAttendedByEmployeeIds[0] || '';
       delete bodyForPatch.repair_attended_by_employee_ids;
     }
+
+    assertValidDateOrder(jc, bodyForPatch);
 
     const updated = await repo.patchTab(conn, sectionJobNo, {
       ...bodyForPatch,

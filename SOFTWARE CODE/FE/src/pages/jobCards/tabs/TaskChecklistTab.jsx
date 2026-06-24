@@ -260,7 +260,7 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
       let textClass = 'text-ink';
       if (t.task_result === 'PASS') {
         rowClass = 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/60';
-        textClass = 'text-ink-soft line-through';
+        textClass = 'text-ink';
       } else if (t.task_result === 'FAIL') {
         rowClass = 'border-red-200 bg-red-50/40 hover:bg-red-50/60';
         textClass = 'text-red-700 font-semibold';
@@ -625,7 +625,7 @@ export function TaskChecklistTab({ jc, canWrite, invalidateAll }) {
                   >
                     {t.is_completed ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : null}
                   </button>
-                  <span className={'flex-1 text-sm ' + (t.is_completed ? 'text-ink-soft line-through' : 'text-ink')}>
+                  <span className={'flex-1 text-sm ' + (t.is_completed ? 'text-ink-soft' : 'text-ink')}>
                     {t.task_text}
                     {t.is_custom ? <span className="ml-2 text-xs text-emerald-700">[custom]</span> : null}
                   </span>

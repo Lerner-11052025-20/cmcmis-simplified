@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `jc_spares_used` (
   `jc_section_no`   VARCHAR(9)    NOT NULL,
   `sr_no`           SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   `spare_type`      VARCHAR(120)  NULL,
-  `source`          ENUM('CASH_PURCHASE','VENDOR','STOCK','WARRANTY','OTHER')
+  `source`          ENUM('CASH_PURCHASE','INVENTORY','LOAN','REPLACED_VENDOR_REPAIR_CONTRACT','REPLACED_UNDER_WARRANTY','SPARE_NEED_BASED_REPAIRS','TIMCD_INVENTORY','OTHERS','VENDOR','STOCK','WARRANTY','OTHER')
                                   NOT NULL DEFAULT 'CASH_PURCHASE',
   `part_no`         VARCHAR(120)  NULL,
   `part_description` TEXT         NULL,

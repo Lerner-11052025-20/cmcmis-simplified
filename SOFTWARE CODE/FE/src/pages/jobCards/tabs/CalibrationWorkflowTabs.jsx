@@ -59,6 +59,7 @@ import {
 import { TabSaveBar } from '../components/TabSaveBar.jsx';
 import { ClosureTab } from './ClosureTab.jsx';
 import { todayIstIsoDate } from '../../../lib/time.js';
+import { dateOrderFieldNames, validateJobCardDateOrder } from '../../../lib/jobCardDateValidation.js';
 
 function Label({ htmlFor, children, required = false }) {
   return (
@@ -90,7 +91,10 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
     setValue,
     formState: { isDirty, dirtyFields, isSubmitting },
     reset,
+    setError,
+    clearErrors,
   } = useForm({ defaultValues: defaults });
+  const [dateOrderError, setDateOrderError] = useState('');
 
   // Reset only when the server snapshot changes, so typing is not interrupted
   // by local re-renders while auto-save is pending.
@@ -109,6 +113,17 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
   async function manualSave() {
     const values = getDirtyValues();
     if (Object.keys(values).length === 0) return;
+    const errorFields = dateOrderFieldNames(fieldNames);
+    if (errorFields.length) clearErrors(errorFields);
+    const issues = validateJobCardDateOrder(watch(), fieldNames);
+    if (issues.length) {
+      for (const issue of issues) {
+        setError(issue.end, { type: 'date-order', message: issue.message });
+      }
+      setDateOrderError(issues[0].message);
+      return;
+    }
+    setDateOrderError('');
     await patchJobCardTab(jc.section_job_no, values);
     invalidateAll();
     if (refetch) refetch();
@@ -119,6 +134,12 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
     watch,
     setValue,
     saveBar: (
+      <>
+      {dateOrderError ? (
+        <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-medium text-danger">
+          {dateOrderError}
+        </p>
+      ) : null}
       <TabSaveBar
         saving={isSubmitting}
         dirty={isDirty}
@@ -126,6 +147,7 @@ function useCalibrationTabForm({ jc, fieldNames, canWrite, invalidateAll, refetc
         disabled={!canWrite}
         disabledReason={!canWrite ? `Cannot save: status is ${jc.status}` : null}
       />
+      </>
     ),
   };
 }
@@ -262,7 +284,6 @@ export function CalibrationDetailsTab(props) {
     'cal_procedure_ref',
     'cal_adjustment_mechanical',
     'cal_adjustment_nil',
-    'cal_adjustment_electrical',
     'cal_adjustment_software',
     'cal_timeshare',
     'cal_remarks',
@@ -394,7 +415,6 @@ export function CalibrationDetailsTab(props) {
           <div className="flex flex-wrap gap-x-7 gap-y-3">
             <CheckItem id="cal_adjustment_mechanical" name="cal_adjustment_mechanical" label="Mechanical" suffix="M" disabled={!props.canWrite} registerField={t.registerField} />
             <CheckItem id="cal_adjustment_nil" name="cal_adjustment_nil" label="Nil" suffix="N" disabled={!props.canWrite} registerField={t.registerField} />
-            <CheckItem id="cal_adjustment_electrical" name="cal_adjustment_electrical" label="Electrical" suffix="E" disabled={!props.canWrite} registerField={t.registerField} />
             <CheckItem id="cal_adjustment_software" name="cal_adjustment_software" label="Software" suffix="S" disabled={!props.canWrite} registerField={t.registerField} />
           </div>
         </Field>

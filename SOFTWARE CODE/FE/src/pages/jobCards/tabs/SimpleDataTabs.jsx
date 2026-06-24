@@ -23,6 +23,7 @@ import { Select } from '../../../components/ui/Select.jsx';
 import { useAutoSave } from '../../../lib/hooks/useAutoSave.js';
 import { patchJobCardTab } from '../../../lib/api/jobCards.js';
 import { TabSaveBar } from '../components/TabSaveBar.jsx';
+import { dateOrderFieldNames, validateJobCardDateOrder } from '../../../lib/jobCardDateValidation.js';
 import {
   JOB_TYPE_OPTIONS, REPAIR_TYPE_OPTIONS,
   AWAITING_STATUS_OPTIONS, AWAITING_REPAIR_STATUS_OPTIONS, JOB_STATUS_DISPLAY_OPTIONS,
@@ -92,8 +93,9 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
 
   const {
     register, handleSubmit, watch, formState: { isDirty, dirtyFields, isSubmitting },
-    reset,
+    reset, setError, clearErrors,
   } = useForm({ defaultValues: defaults });
+  const [dateOrderError, setDateOrderError] = useState('');
 
   // When the JC payload refetches (after auto-save), the form must reset
   // to the new server-side baseline so isDirty/dirtyFields recalibrate.
@@ -110,11 +112,27 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
     return out;
   }, [watch, dirtyFields, fieldNames]);
 
+  const validateDates = useCallback(() => {
+    const errorFields = dateOrderFieldNames(fieldNames);
+    if (errorFields.length) clearErrors(errorFields);
+    const issues = validateJobCardDateOrder(watch(), fieldNames);
+    if (issues.length === 0) {
+      setDateOrderError('');
+      return true;
+    }
+    for (const issue of issues) {
+      setError(issue.end, { type: 'date-order', message: issue.message });
+    }
+    setDateOrderError(issues[0].message);
+    return false;
+  }, [clearErrors, fieldNames, setError, watch]);
+
   // Auto-save hook — fires the same PATCH endpoint the manual buttons use.
   const auto = useAutoSave({
     enabled: canWrite && autoSavePref,
     getDirtyValues,
     onSave: async (values) => {
+      if (!validateDates()) throw new Error('Invalid date order');
       await patchJobCardTab(jc.section_job_no, values);
       invalidateAll();
       // STALE-DATA RACE FIX: explicit refetch so the parent jc payload
@@ -133,6 +151,7 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
     try {
       const values = getDirtyValues();
       if (Object.keys(values).length === 0) return;
+      if (!validateDates()) return;
       await patchJobCardTab(jc.section_job_no, values);
       invalidateAll();
       // Same race-fix as auto-save above.
@@ -160,7 +179,14 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
     registerField, isDirty, isSubmitting, watch,
     auto,
     handleSave: handleSubmit(manualSave),
+    dateOrderError,
     saveBar: (
+      <>
+      {dateOrderError ? (
+        <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-medium text-danger">
+          {dateOrderError}
+        </p>
+      ) : null}
       <TabSaveBar
         saving={isSubmitting}
         dirty={isDirty}
@@ -179,6 +205,7 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
                   : `Cannot save: status is ${jc.status}`))
           : null}
       />
+      </>
     ),
   };
 }
@@ -186,7 +213,7 @@ function useTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch, autoSave
 // Tiny helper — force RHF to reset its baseline when the server-side
 // updated_at changes (i.e. after a successful save invalidates + refetches
 // the JC). Avoids the form staying "dirty" forever after a save.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 function useMemoResetOnUpdate(reset, defaults, lastUpdatedAt) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { reset(defaults); }, [lastUpdatedAt]);

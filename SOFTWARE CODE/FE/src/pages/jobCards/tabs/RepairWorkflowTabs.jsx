@@ -13,7 +13,7 @@ import { Button } from '../../../components/ui/Button.jsx';
 import { Input } from '../../../components/ui/Input.jsx';
 import { Select } from '../../../components/ui/Select.jsx';
 import { useCalibrationPeople } from '../../../lib/hooks/useCalibrationPeople.js';
-import { searchEquipment } from '../../../lib/api/lookups.js';
+import { fetchEquipmentAccessories, searchEquipment } from '../../../lib/api/lookups.js';
 import { useRepairEquipmentRows, invalidateRepairEquipmentRows } from '../../../lib/hooks/useRepairRows.js';
 import {
   addRepairEquipmentRow,
@@ -37,6 +37,7 @@ import {
   REPAIR_TYPE_LABELS,
 } from '../../../lib/schemas/jobCardSchemas.js';
 import { TabSaveBar } from '../components/TabSaveBar.jsx';
+import { dateOrderFieldNames, validateJobCardDateOrder } from '../../../lib/jobCardDateValidation.js';
 
 const DATETIME_FIELDS_AS_DATE = new Set([
   'equipment_submitted_date',
@@ -85,7 +86,10 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) 
     setValue,
     formState: { isDirty, dirtyFields, isSubmitting },
     reset,
+    setError,
+    clearErrors,
   } = useForm({ defaultValues: defaults });
+  const [dateOrderError, setDateOrderError] = useState('');
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { reset(defaults); }, [jc.updated_at]);
@@ -102,6 +106,17 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) 
   async function manualSave() {
     const values = getDirtyValues();
     if (Object.keys(values).length === 0) return;
+    const errorFields = dateOrderFieldNames(fieldNames);
+    if (errorFields.length) clearErrors(errorFields);
+    const issues = validateJobCardDateOrder(watch(), fieldNames);
+    if (issues.length) {
+      for (const issue of issues) {
+        setError(issue.end, { type: 'date-order', message: issue.message });
+      }
+      setDateOrderError(issues[0].message);
+      return;
+    }
+    setDateOrderError('');
     await patchJobCardTab(jc.section_job_no, values);
     invalidateAll();
     if (refetch) refetch();
@@ -112,6 +127,12 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) 
     watch,
     setValue,
     saveBar: (
+      <>
+      {dateOrderError ? (
+        <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-medium text-danger">
+          {dateOrderError}
+        </p>
+      ) : null}
       <TabSaveBar
         saving={isSubmitting}
         dirty={isDirty}
@@ -119,6 +140,7 @@ function useRepairTabForm({ jc, fieldNames, canWrite, invalidateAll, refetch }) 
         disabled={!canWrite}
         disabledReason={!canWrite ? `Cannot save: status is ${jc.status}` : null}
       />
+      </>
     ),
   };
 }
@@ -395,9 +417,70 @@ function EquipmentMasterSearchInput({
 export function RepairPlugInAccessoriesTab(props) {
   const FIELDS = ['repair_accessory_selected'];
   const t = useRepairTabForm({ ...props, fieldNames: FIELDS });
+  const equipment = props.jc?.equipment || {};
+  const [accessories, setAccessories] = useState([]);
+  const [loadingAccessories, setLoadingAccessories] = useState(false);
+  const [accessoryError, setAccessoryError] = useState('');
+
+  useEffect(() => {
+    const eqmType = equipment.type || props.jc?.equipment_type;
+    const eqmId = equipment.id || props.jc?.equipment_id;
+    if (!eqmType || !eqmId) {
+      setAccessories([]);
+      setAccessoryError('');
+      return undefined;
+    }
+
+    const ctrl = new AbortController();
+    setLoadingAccessories(true);
+    setAccessoryError('');
+    fetchEquipmentAccessories(eqmType, eqmId, ctrl.signal)
+      .then((items) => setAccessories(Array.isArray(items) ? items : []))
+      .catch((e) => {
+        if (e?.name !== 'CanceledError' && e?.name !== 'AbortError') {
+          setAccessories([]);
+          setAccessoryError('Could not load registered accessories.');
+        }
+      })
+      .finally(() => setLoadingAccessories(false));
+
+    return () => ctrl.abort();
+  }, [equipment.id, equipment.type, props.jc?.equipment_id, props.jc?.equipment_type]);
 
   return (
     <div className="space-y-6">
+      <section className="rounded-lg border border-border bg-slate-50/70 p-4">
+        <h2 className="text-sm font-semibold text-ink">Registered Equipment Accessories</h2>
+        {loadingAccessories ? (
+          <p className="mt-3 text-sm text-ink-soft">Loading accessories...</p>
+        ) : accessoryError ? (
+          <p className="mt-3 text-sm text-danger">{accessoryError}</p>
+        ) : accessories.length ? (
+          <div className="mt-4 overflow-x-auto rounded-md border border-border bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-base text-xs uppercase tracking-wide text-ink-soft">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">Type</th>
+                  <th className="px-3 py-2 text-left font-semibold">Name</th>
+                  <th className="px-3 py-2 text-left font-semibold">Serial No</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accessories.map((item, idx) => (
+                  <tr key={item.id || `${item.name}-${item.serial_no}-${idx}`} className="border-t border-border">
+                    <td className="px-3 py-2 font-medium text-ink">{item.type || '-'}</td>
+                    <td className="px-3 py-2 text-ink">{item.name || '-'}</td>
+                    <td className="px-3 py-2 text-ink-soft">{item.serial_no || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink-soft">No accessories registered for this equipment.</p>
+        )}
+      </section>
+
       <div>
         <Label htmlFor="repair_accessory_selected">Select Accessory to Add</Label>
         <OptionSelect
@@ -486,7 +569,7 @@ export function RepairJobCardDetailsTab(props) {
   ];
   const t = useRepairTabForm({ ...props, fieldNames: FIELDS });
 
-  const repairTypeOrder = ['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED'];
+  const repairTypeOrder = ['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED', 'ONLY_SPARE_NEED_BASED_CONTRACT'];
 
   return (
     <div className="space-y-6">
@@ -558,7 +641,6 @@ export function RepairMaintenanceDetailsTab(props) {
     'repair_fault_description',
     'repair_action_taken_description',
     'repair_sent_to_cal_lab_on',
-    'repair_equipment_received_from_cal_lab_flag',
     'repair_job_complete_date',
     'repair_status',
     'repair_not_repairable_reason',
@@ -589,11 +671,6 @@ export function RepairMaintenanceDetailsTab(props) {
         <div>
           <Label htmlFor="repair_job_complete_date">Job Complete Date</Label>
           <Input id="repair_job_complete_date" type="date" disabled={!props.canWrite} {...t.registerField('repair_job_complete_date')} />
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-ink-soft mb-3">Eqpt. Received from Cal Lab</div>
-          <RadioOption name="repair_equipment_received_from_cal_lab_flag" value="YES" label="Yes" disabled={!props.canWrite} registerField={t.registerField} />
-          <RadioOption name="repair_equipment_received_from_cal_lab_flag" value="NO" label="No" disabled={!props.canWrite} registerField={t.registerField} />
         </div>
         <div>
           <Label htmlFor="repair_sent_to_cal_lab_on">Sent To Cal Lab On</Label>

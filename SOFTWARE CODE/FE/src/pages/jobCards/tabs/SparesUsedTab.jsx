@@ -20,10 +20,17 @@ import {
 
 const SOURCE_LABELS = {
   CASH_PURCHASE: 'Cash Purchase',
-  VENDOR:        'Vendor',
-  STOCK:         'Stock',
-  WARRANTY:      'Warranty',
-  OTHER:         'Other',
+  INVENTORY: 'Inventory',
+  LOAN: 'Loan',
+  REPLACED_VENDOR_REPAIR_CONTRACT: 'Replaced by Vendor under Repairs contract',
+  REPLACED_UNDER_WARRANTY: 'Replaced Under Warranty',
+  SPARE_NEED_BASED_REPAIRS: 'Spare under Need Based Repairs',
+  TIMCD_INVENTORY: 'TIMCD Inventory',
+  OTHERS: 'Others',
+  VENDOR: 'Vendor',
+  STOCK: 'Stock',
+  WARRANTY: 'Warranty',
+  OTHER: 'Other',
 };
 
 function emptyDraft(server) {
@@ -186,7 +193,7 @@ export function SparesUsedTab({ jc, canWrite }) {
                 <td className="px-2 py-1.5"><Input size="sm" {...textProps(row.id, 'spare_type')} /></td>
                 <td className="px-2 py-1.5">
                   <Select size="sm" {...selectProps(row.id, 'source')}>
-                    {SPARE_SOURCE_OPTIONS.map((v) => <option key={v} value={v}>{SOURCE_LABELS[v]}</option>)}
+                    {SPARE_SOURCE_OPTIONS.map((v) => <option key={v} value={v}>{SOURCE_LABELS[v] || v}</option>)}
                   </Select>
                 </td>
                 <td className="px-2 py-1.5"><Input size="sm" {...textProps(row.id, 'part_no')} /></td>

@@ -131,11 +131,6 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
   await masterDataCorrections.assertSsoEquipmentDivisionAllowed({ actor, body });
 
   // Cross-field guard (defence in depth — zod already enforces this).
-  if (wantsSubmit && body.tnc_accepted !== true) {
-    throw errors.badRequest('All terms and conditions must be accepted before submitting',
-      { field: 'tnc_accepted' });
-  }
-
   // ── Transaction ─────────────────────────────────────────────────
   const conn = await pool.getConnection();
   try {
@@ -168,8 +163,8 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
       equipment_sent_after_repair: body.equipment_sent_after_repair === true,
       priority:             body.priority || 'MEDIUM',
       status:               wantsSubmit ? 'SUBMITTED' : 'DRAFT',
-      tnc_accepted_at:      wantsSubmit ? new Date() : null,
-      tnc_version:          wantsSubmit ? (body.tnc_version || 'v1') : null,
+      tnc_accepted_at:      null,
+      tnc_version:          null,
     };
 
     await repo.insertJobRequest(conn, insertPayload);
@@ -203,7 +198,6 @@ async function createJobRequest({ body, actor, ipAddress, userAgent }) {
         equipment_name: body.equipment_name,
         priority:     body.priority || 'MEDIUM',
         accessories_count: (body.accessories || []).length,
-        tnc_accepted: wantsSubmit && body.tnc_accepted === true,
       },
     });
 
@@ -287,10 +281,7 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
   try {
     await conn.beginTransaction();
 
-    await repo.transitionStatus(conn, jrNo, newState, {
-      tnc_accepted_at: new Date(),
-      tnc_version: body.tnc_version || 'v1',
-    });
+    await repo.transitionStatus(conn, jrNo, newState, {});
 
     await repo.appendStatusHistory(conn, jrNo, jr.status, newState, actor.employeeId, null);
 
@@ -301,7 +292,7 @@ async function submitJobRequest({ jrNo, body, actor, ipAddress, userAgent }) {
       jrNo,
       ipAddress,
       userAgent,
-      details: { from: jr.status, to: newState, tnc_version: body.tnc_version || 'v1' },
+      details: { from: jr.status, to: newState },
     });
 
     // Phase 12 — notify the submitter (their request was sent for approval)

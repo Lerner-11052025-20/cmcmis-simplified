@@ -49,7 +49,7 @@ ALTER TABLE `cmms_jobcard_mst`
     COMMENT 'Phase 9: engineer-revised planned completion date',
   ADD COLUMN IF NOT EXISTS `job_type` ENUM('IN_HOUSE','VENDOR') NULL
     COMMENT 'Phase 9: whether work is done in-house or sent to vendor',
-  ADD COLUMN IF NOT EXISTS `repair_type` ENUM('BREAK_DOWN','WARRANTY','PM','NEED_BASED') NULL
+  ADD COLUMN IF NOT EXISTS `repair_type` ENUM('BREAK_DOWN','WARRANTY','PM','NEED_BASED','ONLY_SPARE_NEED_BASED_CONTRACT') NULL
     COMMENT 'Phase 9: classification of the repair work',
   ADD COLUMN IF NOT EXISTS `job_request_remarks` TEXT NULL
     COMMENT 'Phase 9: engineer remarks specific to handling this job request',
@@ -59,7 +59,7 @@ ALTER TABLE `cmms_jobcard_mst`
   -- ───── TAB 6: Awaiting Information (image 8) ────────────────────────
   ADD COLUMN IF NOT EXISTS `awaiting_for` VARCHAR(255) NULL
     COMMENT 'Phase 9: free-text descriptor of what we are waiting for',
-  ADD COLUMN IF NOT EXISTS `awaiting_status` ENUM('AWAITING_FOR_SPARES','AWAITING_FOR_VENDOR','AWAITING_FOR_CUSTOMER','AWAITING_FOR_INFO','NONE') NULL DEFAULT 'NONE'
+  ADD COLUMN IF NOT EXISTS `awaiting_status` VARCHAR(80) NULL DEFAULT 'NONE'
     COMMENT 'Phase 9: structured waiting state for the awaiting tab',
   ADD COLUMN IF NOT EXISTS `supplier_name` VARCHAR(255) NULL
     COMMENT 'Phase 9: supplier we are waiting on, if any',

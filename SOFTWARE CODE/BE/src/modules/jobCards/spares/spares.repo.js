@@ -70,7 +70,7 @@ async function updateRow(rowId, body) {
         v = (v == null || v === '') ? null : Number(v);
       } else if (col === 'source') {
         // ENUM column — leave as-is or normalise to default.
-        v = v == null || v === '' ? 'CASH_PURCHASE' : v;
+        v = v == null || v === '' ? 'CASH_PURCHASE' : String(v).slice(0, 80);
       } else {
         v = (v == null || v === '') ? null : String(v).slice(0, col === 'part_description' ? 8000 : 120);
       }

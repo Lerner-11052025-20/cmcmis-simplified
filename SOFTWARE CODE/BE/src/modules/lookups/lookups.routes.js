@@ -50,7 +50,7 @@ router.get('/equipment/search',
 
 router.get('/equipment/accessories',
   authenticate,
-  authorizeAny('job_request:create', 'equipment:read-list'),
+  authorizeAny('job_request:create', 'equipment:read-list', 'job_card:read-detail'),
   ctrl.getEquipmentAccessories,
 );
 

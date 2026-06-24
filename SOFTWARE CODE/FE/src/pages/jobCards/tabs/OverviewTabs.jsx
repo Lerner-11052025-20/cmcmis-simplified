@@ -137,7 +137,6 @@ export function ConversionPlanningDetailsTab({ jc }) {
       <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
         <InfoItem label="Job Request Received Date" value={jc.job_request_received_date} />
         <InfoItem label="Equipment Received Date" value={jc.jc_recd_date} />
-        <InfoItem label="Conversion Date" value={jc.conversion_date} />
         <InfoItem label="Assigned To" value={jc.assigned_engineer?.name || jc.assigned_engineer?.employee_id} />
         <InfoItem
           label="Planned Start Date"

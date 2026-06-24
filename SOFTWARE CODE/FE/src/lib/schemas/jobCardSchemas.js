@@ -12,7 +12,13 @@ import { z } from 'zod';
 export const JC_STATUSES = ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED_CLOSED', 'REOPENED'];
 
 export const JOB_TYPE_OPTIONS = ['IN_HOUSE', 'VENDOR'];
-export const REPAIR_TYPE_OPTIONS = ['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED'];
+export const REPAIR_TYPE_OPTIONS = [
+  'BREAK_DOWN',
+  'WARRANTY',
+  'PM',
+  'NEED_BASED',
+  'ONLY_SPARE_NEED_BASED_CONTRACT',
+];
 export const AWAITING_STATUS_OPTIONS = [
   'AWAITING_FOR_SPARES', 'AWAITING_FOR_VENDOR', 'AWAITING_FOR_CUSTOMER',
   'AWAITING_FOR_INFO', 'NONE',
@@ -22,7 +28,16 @@ export const JOB_STATUS_DISPLAY_OPTIONS = [
   'HOLD', 'RESUMED',
 ];
 
-export const SPARE_SOURCE_OPTIONS = ['CASH_PURCHASE', 'VENDOR', 'STOCK', 'WARRANTY', 'OTHER'];
+export const SPARE_SOURCE_OPTIONS = [
+  'CASH_PURCHASE',
+  'INVENTORY',
+  'LOAN',
+  'REPLACED_VENDOR_REPAIR_CONTRACT',
+  'REPLACED_UNDER_WARRANTY',
+  'SPARE_NEED_BASED_REPAIRS',
+  'TIMCD_INVENTORY',
+  'OTHERS',
+];
 export const READING_TYPE_OPTIONS = ['PRE_CAL', 'POST_CAL', 'INSPECTION', 'OTHER'];
 export const DOC_TYPE_OPTIONS = [
   'CALIBRATION_CERT', 'INSPECTION_REPORT', 'PHOTO_BEFORE', 'PHOTO_AFTER',
@@ -121,6 +136,7 @@ export const REPAIR_TYPE_LABELS = {
   WARRANTY:    'Warranty',
   PM:          'PM',
   NEED_BASED:  'Need Based Repairs',
+  ONLY_SPARE_NEED_BASED_CONTRACT: 'Only Spare Under Need Based Contract',
 };
 export const AWAITING_STATUS_LABELS = {
   AWAITING_FOR_SPARES:   'Awaiting For Spares',
@@ -241,7 +257,7 @@ export const jobCardPatchTabSchema = z.object({
   job_request_remarks:           z.string().max(8000).optional().or(z.literal('')),
   equipments_used:               z.string().max(8000).optional().or(z.literal('')),
   awaiting_for:                  z.string().max(255).optional().or(z.literal('')),
-  awaiting_status:               z.enum([...AWAITING_STATUS_OPTIONS, ...AWAITING_REPAIR_STATUS_OPTIONS]).optional(),
+  awaiting_status:               z.string().max(80).optional().or(z.literal('')),
   awaiting_restarting_date:      isoDateOrEmpty,
   supplier_name:                 z.string().max(255).optional().or(z.literal('')),
   awaiting_from_date:            isoDateOrEmpty,
@@ -352,7 +368,7 @@ export const maintenanceRowSchema = z.object({
 // ── Spares Used row ─────────────────────────────────────────────────
 export const spareRowSchema = z.object({
   spare_type:       z.string().max(120).optional().or(z.literal('')),
-  source:           z.enum(SPARE_SOURCE_OPTIONS).optional(),
+  source:           z.string().max(80).optional().or(z.literal('')),
   part_no:          z.string().max(120).optional().or(z.literal('')),
   part_description: z.string().max(8000).optional().or(z.literal('')),
   quantity:         moneyOrEmpty,

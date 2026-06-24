@@ -57,11 +57,7 @@ const listQuerySchema = z.object({
 // ============================================================================
 
 const jobTypeEnum    = z.enum(['IN_HOUSE', 'VENDOR']);
-const repairTypeEnum = z.enum(['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED']);
-const awaitingStatusEnum = z.enum([
-  'AWAITING_FOR_SPARES','AWAITING_FOR_VENDOR','AWAITING_FOR_CUSTOMER','AWAITING_FOR_INFO','NONE',
-  'AWAITING_SPARES','BER','FULLY_REPAIRED','PARTIALLY_REPAIRED',
-]);
+const repairTypeEnum = z.enum(['BREAK_DOWN', 'WARRANTY', 'PM', 'NEED_BASED', 'ONLY_SPARE_NEED_BASED_CONTRACT']);
 const jobStatusDisplayEnum = z.enum([
   'AWAITING_FOR_VENDOR','AWAITING_FOR_SPARES','IN_PROGRESS_NORMAL','HOLD','RESUMED',
 ]);
@@ -115,7 +111,7 @@ const patchTabSchema = z.object({
   equipments_used:               z.string().max(8000).optional().or(z.literal('')),
   // Awaiting Information
   awaiting_for:                  z.string().max(255).optional().or(z.literal('')),
-  awaiting_status:               awaitingStatusEnum.optional(),
+  awaiting_status:               shortTextOrEmpty(80),
   supplier_name:                 z.string().max(255).optional().or(z.literal('')),
   awaiting_from_date:            isoDateOrEmpty,
   awaiting_restarting_date:      isoDateOrEmpty,
@@ -278,7 +274,7 @@ const maintenanceRowSchema = z.object({
 
 const spareRowSchema = z.object({
   spare_type:       z.string().max(120).optional().or(z.literal('')),
-  source:           z.enum(['CASH_PURCHASE','VENDOR','STOCK','WARRANTY','OTHER']).optional(),
+  source:           shortTextOrEmpty(80),
   part_no:          z.string().max(120).optional().or(z.literal('')),
   part_description: z.string().max(8000).optional().or(z.literal('')),
   quantity:         moneyOrEmpty,

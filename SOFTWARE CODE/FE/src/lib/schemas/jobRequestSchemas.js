@@ -11,8 +11,7 @@
 // TWO-TIER VALIDATION (added 2026-05-18 after browser feedback):
 //   • jobRequestDraftSchema   — LOOSE  · used by Save-as-Draft
 //   • jobRequestSubmitSchema  — STRICT · used by Submit Request
-//                                         (adds min-10 complaint + T&C check)
-// Both share the same base shape; the strict variant enforces extra rules.
+// Both share the same base shape.
 // ============================================================================
 
 import { z } from 'zod';
@@ -52,8 +51,6 @@ const baseObject = z.object({
   remarks:                z.string().max(2000).optional().or(z.literal('')),
   equipment_sent_after_repair: z.boolean().optional().default(false),
   submit_now:             z.boolean().optional().default(false),
-  tnc_accepted:           z.boolean().optional().default(false),
-  tnc_version:            z.string().max(10).optional().default('v1'),
 });
 
 /**
@@ -64,18 +61,10 @@ const baseObject = z.object({
 export const jobRequestDraftSchema = baseObject;
 
 /**
- * Use this schema for Submit Request. It only adds the strict T&C rule;
- * complaint_description is intentionally optional.
+ * Use this schema for Submit Request. Complaint description is intentionally
+ * optional, matching the current backend contract.
  */
-export const jobRequestSubmitSchema = baseObject.superRefine((v, ctx) => {
-  if (v.tnc_accepted !== true) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['tnc_accepted'],
-      message: 'You must accept all terms and conditions before submitting',
-    });
-  }
-});
+export const jobRequestSubmitSchema = baseObject;
 
 /**
  * BACKWARD-COMPAT export: legacy code that imported `jobRequestCreateSchema`

@@ -75,12 +75,11 @@ const listQuerySchema = z.object({
 //                                          are required. Drafts are
 //                                          intentionally permissive so
 //                                          a user can save partial work.
-//   • SUBMIT (submit_now=true)   ·  STRICT — complaint_description must be
-//                                          ≥ 10 chars; tnc_accepted must be
-//                                          true; all field-length caps apply.
+//   • SUBMIT (submit_now=true)   ·  STRICT — same field caps as draft, with
+//                                          submit-specific workflow handled
+//                                          in the service layer.
 //
-// The base shape declares the LOOSE contract; .superRefine() upgrades it to
-// STRICT when submit_now=true. Either way, the upper bounds (max-length,
+// The base shape declares the shared contract. The upper bounds (max-length,
 // enum membership) ALWAYS apply — they exist to defeat malformed input
 // regardless of intent.
 const createSchema = z.object({
@@ -110,27 +109,10 @@ const createSchema = z.object({
   equipment_sent_after_repair: z.boolean().optional().default(false),
   priority:               priorityEnum.optional().default('MEDIUM'),
   submit_now:             z.boolean().optional().default(false),
-  tnc_accepted:           z.boolean().optional().default(false),
-  tnc_version:            z.string().max(10).optional().default('v1'),
-}).strict()
-  .superRefine((v, ctx) => {
-    // SUBMIT-only rules. Drafts skip every check in this block.
-    if (!v.submit_now) return;
-
-    if (v.tnc_accepted !== true) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['tnc_accepted'],
-        message: 'All terms and conditions must be accepted before submitting',
-      });
-    }
-  });
+}).strict();
 
 // ── submitSchema (POST /:id/submit) ────────────────────────────────
-const submitSchema = z.object({
-  tnc_accepted: z.literal(true),
-  tnc_version:  z.string().max(10).optional().default('v1'),
-}).strict();
+const submitSchema = z.object({}).strict();
 
 // ============================================================================
 //                          PHASE 7 SLICE 2  ·  CONVERT / REJECT
@@ -235,7 +217,7 @@ const rejectSchema = z.object({
 
 /**
  * Edit-DRAFT body schema. Same shape as createSchema's loose tier,
- * minus submit_now / tnc_* (DRAFT cannot become SUBMITTED via PATCH —
+ * minus submit_now (DRAFT cannot become SUBMITTED via PATCH —
  * use the dedicated /submit endpoint for that).
  *
  * Every field is OPTIONAL — partial PATCH is the norm.
