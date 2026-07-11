@@ -1,0 +1,320 @@
+cd "e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/BE" && \
+TOKEN=$(curl -s -c /tmp/jar.txt -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{"employee_id":"SA79900","password":"SA79900"}' | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{console.log(JSON.parse(Buffer.concat(c).toString()).data.accessToken)})") && \
+echo "=== A6: Submit without tnc_accepted=true → 400 (defence in depth) ===" && \
+curl -s -o /tmp/a6.json -w "HTTP %{http_code}\n" -X POST http://localhost:3000/api/v1/job-requests/1/submit -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"tnc_accepted":false}' && \
+cat /tmp/a6.json | head -c 400; echo && echo && \
+echo "=== A6b: Submit with tnc_accepted=true but bogus id → 404 not 422 (zod OK) ===" && \
+curl -s -o /tmp/a6b.json -w "HTTP %{http_code}\n" -X POST http://localhost:3000/api/v1/job-requests/99999999/submit -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"tnc_accepted":true}' && \
+cat /tmp/a6b.json | head -c 400; echo && echo && \
+echo "=== A4: BE ignores submitted_by_* in create body (BR-JR-06) ===" && \
+CREATE_BODY='{"job_category":"TME","job_type":"CALIBRATION","equipment_name":"SMOKE TEST EQUIPMENT","division_id":9999,"complaint_description":"Smoke test from CMCMIS Phase 6 Slice 1 - submitted_by_name field should be ignored","priority":"MEDIUM","submit_now":false,"tnc_accepted":false,"submitted_by_employee_id":"EVIL00","submitted_by_name":"FAKE PERSON"}' && \
+curl -s -o /tmp/a4.json -w "HTTP %{http_code}\n" -X POST http://localhost:3000/api/v1/job-requests -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "$CREATE_BODY" && \
+cat /tmp/a4.json | head -c 400; echo
+
+
+
+
+=== A6: Submit without tnc_accepted=true → 400 (defence in depth) ===
+HTTP 422
+{"error":{"code":"VALIDATION_ERROR","message":"Input validation failed","details":[{"path":"tnc_accepted","message":"Invalid literal value, expected true","code":"invalid_literal"}]}}
+
+=== A6b: Submit with tnc_accepted=true but bogus id → 404 not 422 (zod OK) ===
+HTTP 404
+{"error":{"code":"NOT_FOUND","message":"Job request 99999999 not found","details":null}}
+
+=== A4: BE ignores submitted_by_* in create body (BR-JR-06) ===
+HTTP 422
+{"error":{"code":"VALIDATION_ERROR","message":"Input validation failed","details":[{"path":"","message":"Unrecognized key(s) in object: 'submitted_by_employee_id', 'submitted_by_name'","code":"unrecognized_keys"}]}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cd "e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/BE" && \
+TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{"employee_id":"SA79900","password":"SA79900"}' | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{console.log(JSON.parse(Buffer.concat(c).toString()).data.accessToken)})") && \
+DRAFT_ID=$(curl -s -X POST http://localhost:3000/api/v1/job-requests -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"job_category":"TME","job_type":"CALIBRATION","equipment_name":"Phase 6 smoke draft B","serial_no":"SMOKE-002","division_id":9999,"complaint_description":"Phase 6 Slice 1 end-to-end smoke test draft - serial SMOKE-002","priority":"HIGH","submit_now":false,"tnc_accepted":false}' | node -e "let c=[]; process.stdin.on('data',d=>c.push(d)); process.stdin.on('end',()=>{console.log(JSON.parse(Buffer.concat(c).toString()).data.id)})") && \
+echo "Created DRAFT id=$DRAFT_ID" && \
+echo && echo "=== Submit it ===" && \
+curl -s -w "HTTP %{http_code}\n" -X POST "http://localhost:3000/api/v1/job-requests/$DRAFT_ID/submit" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"tnc_accepted":true,"tnc_version":"v1"}' && \
+echo && echo "=== Verify row now SUBMITTED in list ===" && \
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3000/api/v1/job-requests?q=SMOKE-002" | node -e "
+let c=[]; process.stdin.on('data',d=>c.push(d));
+process.stdin.on('end',()=>{
+  const r=JSON.parse(Buffer.concat(c).toString());
+  const found = r.data.items.find(x => String(x.id) === process.argv[1]);
+  if (!found) { console.log('NOT FOUND'); process.exit(1); }
+  console.log('code=' + found.request_code + ' status=' + found.status + ' priority=' + found.priority + ' eq=' + found.equipment_name);
+})" "$DRAFT_ID"
+
+
+
+
+
+
+Created DRAFT id=24239
+
+=== Submit it ===
+{"data":{"id":24239,"request_code":"JR-2026-24239","status":"SUBMITTED"}}HTTP 200
+
+=== Verify row now SUBMITTED in list ===
+code=JR-2026-24239 status=SUBMITTED priority=HIGH eq=Phase 6 smoke draft B
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cd "e:/SOFTWAREs By DS/cmcmis-simplified/SOFTWARE CODE/DATABASE/phase3" && node -e "
+const m=require('mysql2/promise');
+(async () => {
+  const c = await m.createConnection({host:'localhost',port:3306,user:'root',password:'',database:'final'});
+  console.log('=== Audit log entries for SMOKE-002 (JR id 24239) ===');
+  const [audit] = await c.query(\"SELECT audit_id, action, actor_employee_id, occurred_at, notes FROM audit_log WHERE entity_type='job_request' AND entity_id='24239' ORDER BY audit_id\");
+  audit.forEach(r => console.log(' ', r.audit_id, r.action, 'by', r.actor_employee_id, '@', r.occurred_at, 'notes=' + (r.notes||'').slice(0,120)));
+  console.log();
+  console.log('=== State history for JR 24239 ===');
+  const [hist] = await c.query(\"SELECT from_status, to_status, transitioned_at, transitioned_by, reason FROM job_request_status_history WHERE jr_no=24239 ORDER BY history_id\");
+  hist.forEach(r => console.log(' ', (r.from_status||'NULL'),'→',r.to_status,'by',r.transitioned_by,'@',r.transitioned_at,'reason=' + (r.reason||'-')));
+  console.log();
+  console.log('=== Phase 6 columns on the new row ===');
+  const [rows] = await c.query(\"SELECT JR_JOBREQUESTNO, JR_MVP_STATUS, JR_JOB_CATEGORY, JR_JOB_TYPE, JR_PRIORITY, JR_TNC_ACCEPTED_AT, JR_TNC_VERSION, JR_CREATED_AT, JR_SUBMITTEDBYID, JR_SUBMITTEDBYNAME FROM cmms_jobrequest_mst WHERE JR_JOBREQUESTNO=24239\");
+  console.log(JSON.stringify(rows[0], null, 2));
+  console.log();
+  console.log('=== Accessories child rows ===');
+  const [acc] = await c.query(\"SELECT acc_id, jr_no, accessory_type, accessory_name, serial_no, position FROM job_request_accessories WHERE jr_no=24239 ORDER BY position\");
+  acc.forEach(r => console.log(' ', r));
+  if (!acc.length) console.log('  (no accessories — expected for this smoke payload)');
+  await c.end();
+})().catch(e=>{console.error(e); process.exit(1)})
+" 2>&1 | head -50
+
+
+
+
+
+
+
+=== Audit log entries for SMOKE-002 (JR id 24239) ===
+  16 JR_CREATE_DRAFT by SA79900 @ 2026-05-18T03:33:41.984Z notes={"job_category":"TME","job_type":"CALIBRATION","equipment_name":"Phase 6 smoke draft B","priority":"HIGH","accessories_c
+  17 JR_SUBMIT by SA79900 @ 2026-05-18T03:33:42.065Z notes={"from":"DRAFT","to":"SUBMITTED","tnc_version":"v1"}
+
+=== State history for JR 24239 ===
+  NULL → DRAFT by SA79900 @ 2026-05-18T03:33:41.982Z reason=Saved as draft
+  DRAFT → SUBMITTED by SA79900 @ 2026-05-18T03:33:42.064Z reason=-
+
+=== Phase 6 columns on the new row ===
+{
+  "JR_JOBREQUESTNO": 24239,
+  "JR_MVP_STATUS": "SUBMITTED",
+  "JR_JOB_CATEGORY": "TME",
+  "JR_JOB_TYPE": "CALIBRATION",
+  "JR_PRIORITY": "HIGH",
+  "JR_TNC_ACCEPTED_AT": "2026-05-17T22:03:42.060Z",
+  "JR_TNC_VERSION": "v1",
+  "JR_CREATED_AT": "2026-05-18T03:33:41.977Z",
+  "JR_SUBMITTEDBYID": "SA79900",
+  "JR_SUBMITTEDBYNAME": "System Super Admin (Primary)"
+}
+
+=== Accessories child rows ===
+  (no accessories — expected for this smoke payload)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PHASE 6 SLICE 1 — READY FOR REVIEW
+What landed
+DB (final schema, applied + verified):
+
+100__phase6_jr_columns.sql — 6 ADD-only columns on cmms_jobrequest_mst (job_category, job_type, tnc_*, created_at, updated_at)
+101__phase6_accessories_table.sql — new job_request_accessories child table with FK
+102__phase6_indexes.sql — 7 covering indexes (default-sort, owner-scope, division, priority, job-type, JC defaults, JC due-date)
+Legacy data preserved — backfill from JR_JOBREQUESTDATE only touches rows with default-fresh JR_CREATED_AT.
+Backend (SOFTWARE CODE/BE/src/):
+
+New middleware: rowLevelScope.js
+New util: utils/jrCodeGenerator.js
+New module modules/jobRequests/ (6 files: routes/controller/service/validators/repo/stateMachine)
+New module modules/jobCards/ (5 files)
+New module modules/lookups/ (3 files: routes/controller/repo) — divisions + equipment typeahead
+Extended modules/users/users.{repo,controller}.js — /me now returns lab_phone/room_phone/division_*
+server.js patched with three app.use(...) lines
+Frontend (SOFTWARE CODE/FE/src/):
+
+3 api wrappers (lib/api/{jobRequests,jobCards,lookups}.js)
+2 SWR-style hooks (lib/hooks/use{JobRequest,JobCard}List.js)
+zod schema mirror (lib/schemas/jobRequestSchemas.js)
+2 reusable components (components/{StatusPill,PriorityLabel}.jsx)
+3 pages (pages/jobRequests/JobRequest{List,New}.jsx, pages/jobCards/JobCardList.jsx)
+T&C constants (pages/jobRequests/form/tncContent.js) with 6 verbatim sentences
+App.jsx patched — placeholders replaced with real routes
+Docs:
+
+BE/db/discovery/SCHEMA_PHASE6.md — canonical↔legacy column map + 11 locked decisions
+BE/db/discovery/0001_phase6_introspect.sql — read-only SHOW CREATE TABLE
+BE/db/discovery/ROUTES_PHASE6.md — endpoint table + smoke transcript + 15-criteria status
+Verified live
+BE boots clean; FE vite build → 1681 modules, zero errors.
+Create-as-draft → submit → list happy path works end-to-end (id 24239 in dev DB).
+BR-JR-06 (BE rejects tampered submitted_by_*) — 422 with unrecognized_keys.
+T&C defence-in-depth (submit with tnc_accepted: false) — 422.
+Audit log + state history written in the same transaction.
+request_code "JR-2026-24239" generated on-the-fly, no new column.
+Priority repo-aliasing works: DB stores NORMAL, FE sees MEDIUM.
+Known gaps (slice 2 territory)
+A8 — URL-search-param sync for filters (currently in component state).
+sonner not in package.json; using window.alert() placeholder.
+JR detail page, Approve/Reject UI, JC lifecycle transitions, engineer-scoped JC filter, CANCELLED status, PDF generation — all slice 2.
+A10/A11 — 100k-row EXPLAIN + latency budget validation → Phase 8 load test.
+BE running on :3000, FE on :5173. You can drive the form in a browser to verify the visual acceptance criteria (T&C counter, pagination block design, status pill colours).
